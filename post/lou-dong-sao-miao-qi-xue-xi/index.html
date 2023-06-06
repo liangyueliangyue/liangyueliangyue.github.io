@@ -1,0 +1,485 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>漏洞扫描器学习 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    漏洞扫描器学习
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-03-08 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/uKewGKucA/" class="post-tags">
+                            # 其他
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="工作原理">工作原理</h2>
+<p>漏洞扫描器向目标计算机发送数据包，然后根据对方反馈的信息来判断对方的操作系统类型、开发端口、提供的服务等敏感信息。</p>
+<p>端口扫描原理：</p>
+<blockquote>
+<p>端口扫描的原理其实非常简单，简单的利用操作系统提供的connect()系统调用（有各种协议），与目标计算机的端口进行连接。如果端口处于侦听状态，那么connect()能够成功，否则，这个端口是不能用的，就是没有提供服务。</p>
+</blockquote>
+<p>漏洞扫描原理</p>
+<blockquote>
+<p>检测扫描目标主机中可能大量已知的漏洞，如果发现潜在漏洞可能，就报告扫描者。这种扫描器的威胁更大，因为黑客可以直接利用扫描结果进行攻击。</p>
+</blockquote>
+<h2 id="理解">理解</h2>
+<p>目标为ip</p>
+<ul>
+<li>
+<p>操作系统识别</p>
+</li>
+<li>
+<p>端口扫描</p>
+<ul>
+<li>开放的服务
+<ul>
+<li>服务版本
+<ul>
+<li>服务漏洞精准poc</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>web站点
+<ul>
+<li>web指纹识别
+<ul>
+<li>确认web指纹
+<ul>
+<li>poc打击+漏洞扫描</li>
+</ul>
+</li>
+<li>非开源项目
+<ul>
+<li>漏洞扫描</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p>漏洞扫描</p>
+<ul>
+<li>
+<p>目录扫描</p>
+<ul>
+<li>目录树</li>
+</ul>
+</li>
+<li>
+<p>信息搜集</p>
+<ul>
+<li>js等静态文件中获取</li>
+<li>组件版本识别</li>
+</ul>
+</li>
+<li>
+<p>登录页面查找</p>
+</li>
+<li>
+<p>功能点测试</p>
+<ul>
+<li>sql注入</li>
+<li>xss</li>
+<li>逻辑漏洞等</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h2 id="区别">区别</h2>
+<p>也可以优缺点结合，采用AWVS接口去爬虫，Xray去漏扫</p>
+<h3 id="被动主动扫描器">被动+主动扫描器</h3>
+<h4 id="xray">xray</h4>
+<p>golang开发</p>
+<p>通过代理模式进行被动扫描</p>
+<blockquote>
+<p>代理模式下的基本架构为，<strong>扫描器作为中间人</strong>，首先原样转发流量，并返回服务器响应给浏览器等客户端，通讯两端都认为自己直接与对方对话，同时记录该流量，然后<strong>修改参数并重新发送</strong>请求进行扫描。这种原理和Burpsuite的自带的漏扫原理是一样的。</p>
+</blockquote>
+<ul>
+<li>webscan --listen监听本地端口</li>
+</ul>
+<p>爬虫模式主动扫描</p>
+<ul>
+<li>webscan --basic-crawler</li>
+</ul>
+<p>因为被动扫描的特性（设置代理即可）</p>
+<ul>
+<li>可以xray+burp</li>
+<li>xray+awvs</li>
+<li>xray+appscan</li>
+</ul>
+<p><strong>优点</strong></p>
+<ul>
+<li>支持主动、被动多种扫描方式</li>
+<li>自备盲打平台</li>
+<li>可以灵活定义 POC</li>
+<li>支持Windows /macOS /Linux 多种操作系统</li>
+</ul>
+<p><strong>缺点</strong></p>
+<ul>
+<li>容易造成差错
+<ul>
+<li>如修改密码重发，添加文章重发等</li>
+<li>不进行指纹识别直接上特定组件poc</li>
+</ul>
+</li>
+</ul>
+<h5 id="poc编写">poc编写</h5>
+<pre><code>name: poc-yaml-example-com
+rules:
+  - method: GET
+    path: &quot;/update&quot;
+    expression: &quot;true&quot;
+    search: |
+      &lt;input type=&quot;hidden&quot; name=&quot;csrftoken&quot; value=&quot;(.+?)&quot;
+  - method: POST
+    path: &quot;/update&quot;
+    body: |
+      id=';echo(md5(123));//&amp;csrftoken={{1}}
+    expression: |
+      status == 200 &amp;&amp; body.bcontains(b'202cb962ac59075b964b07152d234b70')
+</code></pre>
+<p>目标漏洞是一个简单的代码执行，但因为是POST请求，所以需要先获取当前用户的CSRF Token。所以，我们的POC分为两个Rule，第一个Rule发送GET请求，并使用search指定的正则提取返回包中的csrftoken表单值，此时expression直接执行表达式<code>true</code>，表示第一条规则一定执行成功；第二个Rule发送POST请求，此时，我们可以在path、body、headers中使用前一个规则search的结果，如<code>{{0}}</code>、<code>{{1}}</code>等。</p>
+<p>所以其实就是根据yaml文件构造请求，然后通过返回包数据判断</p>
+<p>也不能做到更复杂的利用POC</p>
+<p>也可以用在线网站编写</p>
+<pre><code>https://phith0n.github.io/xray-poc-generation/
+</code></pre>
+<h4 id="goby">Goby</h4>
+<p>go开发，跨平台</p>
+<p><strong>原理</strong></p>
+<p>Goby是一款基于网络空间测绘技术的新一代网络安全工具，它通过给目标网络建立完整的资产知识库，进行网络安全事件应急与漏洞应急。</p>
+<p>Goby可提供最全面的资产识别，目前预置了超过10万种规则识别引擎，能够针对硬件设备和软件业务系统进行自动化识别和分类，全面的分析出网络中存在的业务系统。Goby可提供最快速对目标影响最小的扫描体验，通过非常轻量级地发包能够快速的分析出端口对应的协议信息。Goby也为安全带来了高效，Goby预置了最具攻击效果的漏洞引擎，覆盖Weblogic，Tomcat等最严重漏洞。并且每日更新会被用于真实攻击的漏洞。</p>
+<p><strong>优点</strong></p>
+<ul>
+<li>速度快</li>
+<li>系统扫描+应用扫描</li>
+<li>截图验证非常直观</li>
+<li>自定义poc，自定义字典</li>
+<li>支持子域扫描</li>
+</ul>
+<h5 id="poc编写-2">POC编写</h5>
+<p>依赖查询规则</p>
+<pre><code>app=“Ruijie-NBR-Router”
+</code></pre>
+<p>图形化填写，然后生成json文件</p>
+<h3 id="主动扫描">主动扫描</h3>
+<h4 id="appscan">appscan</h4>
+<p>基于站点的扫描</p>
+<p><strong>工作原理</strong></p>
+<p>1）通过“探索”功能，利用HTTP Request和Response的内容，爬行出指定网站的整个Web应用结构</p>
+<p>2）AppScan本身有一个内置的漏洞扫描的规则库，可随版本进行更新。从探索出的url中，修改参数or目录名等方式，构造不同的url对照组向服务器发送请求or攻击</p>
+<p>3）根据HTTP Response返回的内容，和正常请求所返回的响应作对比，是否产生差异性，而这种差异性又是否符合扫描规则库的设定规则，以此来判断是否存在不同类型的安全漏洞</p>
+<p>4）若APPScan可判断存在安全漏洞，则对这些漏洞的威胁风险给出说明，进行严重程度提示，并给出修复的建议和方法，以及漏洞发现的位置提示</p>
+<p><strong>优点</strong></p>
+<ul>
+<li>详细，监测问题比较全，树结构清晰明了</li>
+<li>可自定义扫描策略</li>
+<li>准确率高</li>
+<li>验证方便，内置请求数据包对比清晰可见</li>
+<li>xss详细，可测出单一浏览器的xss</li>
+<li>可进行登录扫描</li>
+</ul>
+<p><strong>缺点</strong></p>
+<ul>
+<li>速度慢</li>
+<li>占用内存大，持续时间过长容易出现卡顿</li>
+<li>仅windows</li>
+</ul>
+<h4 id="sqlmap">sqlmap</h4>
+<p>后面会跟代码分析单独写一篇</p>
+<h4 id="nessus">nessus</h4>
+<p>Nessus采用客户/服务器体系结构，客户端提供了运行在window 下的图形界面，接受用户的命令与服务器通信，传送用户的扫描请求给服务器端，由服务器启动扫描并将扫描结果呈现给用户;扫描代码与漏洞数据相互独立，Nessus 针对每一个漏洞有一个对应的插件，漏洞插件是用NASL(NESSUS Attack Scripting Language)编写的一小段模拟攻击漏洞的代码，这种利用漏洞插件的扫描技术极大的方便了漏洞数据的维护、更新</p>
+<p>Nessus 具有扫描任意端口任意服务的能力</p>
+<p>以用户指定的格式(ASCII 文本、html 等)产生详细的输出报告，包括目标的脆弱点、怎样修补漏洞以防止黑客入侵及危险级别。</p>
+<p>Nessus的可延伸性使得扫描更具有发展空间，因为它随意增加原本没有的侦测模式，也就是可以自定义插件</p>
+<p><strong>优点</strong></p>
+<ul>
+<li>可拓展</li>
+<li>主要用于系统层扫描</li>
+<li>扫描速度快，准确率高，漏洞规则库全面，报表功能强大</li>
+</ul>
+<p><strong>缺点</strong></p>
+<ul>
+<li>但是应用层不是很好</li>
+</ul>
+<h4 id="awvs">Awvs</h4>
+<p><strong>工作原理</strong></p>
+<ul>
+<li>扫描整个网络，通过跟踪站点上的所有链接和robots.txt来实现扫描，扫描后AWVS就会映射出站点的结构并显示每个文件的细节信息。</li>
+<li>在上述的发现阶段或者扫描过程之后，AWVS就会自动地对所发现的每一个页面发动一系列的漏洞攻击，这实质上是模拟一个黑客的攻击过程（用自定义的脚本去探测是否有漏洞） 。AWVS分析每一个页面中需要输入数据的地方，进而尝试所有的输入组合。这是一个自动扫描阶段 。</li>
+<li>在它发现漏洞之后，AWVS就会在“Alerts Node(警告节点)”中报告这些漏洞，每一个警告都包含着漏洞信息和如何修补漏洞的建议。</li>
+<li>在一次扫描完成之后，它会将结果保存为文件以备日后分析以及与以前的扫描相比较，使用报告工具，就可以创建一个专业的报告来总结这次扫描</li>
+</ul>
+<p><strong>优点</strong></p>
+<ul>
+<li>速度快准确率较高，漏洞规则库较为全面。</li>
+<li>报表功能完整且美观。</li>
+<li>漏洞验证可查看请求响应代码</li>
+</ul>
+<p><strong>缺点</strong></p>
+<ul>
+<li>无中文界面。</li>
+</ul>
+<h2 id="扫描器常见问题">扫描器常见问题</h2>
+<p>WEB漏洞扫描器的好坏取决于爬行页面数、漏洞库数量、扫描效率、误报率等等</p>
+<h3 id="误报">误报</h3>
+<p>不可避免，但是要尽量减少</p>
+<p><strong>减少手段</strong></p>
+<ul>
+<li>推广，进行实战测试，去除或者修改误报率高的POC</li>
+</ul>
+<h3 id="漏洞检测">漏洞检测</h3>
+<p>插件分类</p>
+<ul>
+<li>参考awvs</li>
+</ul>
+<h3 id="流量去重">流量去重</h3>
+<p>重复请求包的定义是域名及协议和url路径相同，同时参数的key是完全一致。</p>
+<p>像这种为重复</p>
+<ul>
+<li>https://www.beysec.com/test.php?id=2&amp;name=bey0nd</li>
+<li>https://www.beysec.com/test.php?id=6&amp;name=zhangsan</li>
+</ul>
+<p>这种则需要再次扫描</p>
+<ul>
+<li>https://www.beysec.com/test.php?id=2&amp;name=bey0nd</li>
+<li>https://www.beysec.com/test.php?id=6&amp;name=zhangsan&amp;data=hello</li>
+</ul>
+<h3 id="识别同一错误页面">识别同一错误页面</h3>
+<p>访问肯定不存在页面，得到返回内容然后对比相似度&gt;90</p>
+<h3 id="大量请求造成拒绝服务或扫描行为被入侵检测设备发现">大量请求造成拒绝服务或扫描行为被入侵检测设备发现</h3>
+<ul>
+<li>
+<p>伪造请求假装正常用户交互</p>
+</li>
+<li>
+<p>根据响应，提示是否放缓请求速度</p>
+<ul>
+<li>
+<p>代理</p>
+<ul>
+<li>将所有执行扫描任务的 worker 的测试流量全转发到 proxy 服务器上，由 proxy 服务器统一调度发送测试请求频率，直接使用 proxy 方案优点是可以兼容之前没做限速功能的扫描器，缺点是所有基于 time based 的检测均无效(当然也可以让 proxy 返回真正的响应时间来进行判断，不过仍需要修改检测模块)，也不允许在检测模块中加入超时设置。</li>
+</ul>
+</li>
+<li>
+<p>双重队列</p>
+<ul>
+<li>
+<p>​    1.worker1 从队列中取到名为 target1 的任务</p>
+<p>​    2.worker1 从 target1 队列中取出和 target1 相关的任务</p>
+<p>​    3.默认单并发执行和 target1 相关任务，根据设置的 QPS 限制，主动 sleep 或者增加并发</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="漏洞特征库">漏洞特征库</h3>
+<ul>
+<li>及时跟进国内外最新漏洞</li>
+</ul>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/dirtypipezang-guan-dao-ti-quan/" class="post-title gt-a-link">
+                    DirtyPipe(脏管道)提权
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/lou-dong-sao-miao-qi-xue-xi/" class="leancloud_visitors" data-flag-title="漏洞扫描器学习">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

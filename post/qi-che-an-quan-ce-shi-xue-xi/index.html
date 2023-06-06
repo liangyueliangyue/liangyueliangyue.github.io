@@ -1,0 +1,460 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>汽车安全测试学习 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    汽车安全测试学习
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-03-14 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/Z5a4xaOEm/" class="post-tags">
+                            # 物联网
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="汽车安全测试">汽车安全测试</h1>
+<h2 id="can">CAN</h2>
+<p>controller area network - 汽车所有/某些 部件之间进行通信的中枢</p>
+<p>CAN流量是通过UDP而不是TCP进行传输的</p>
+<h2 id="obd">OBD</h2>
+<p>要访问汽车的CAN总线，您必须能够访问驾驶室诊断端口。虽然当前的诊断标准和端口有数百种之多，但如今OBD-II已经成为了事实标准，几乎所有汽车都使用这种诊断端口。实际上，汽车修理工诊断汽车故障时，使用的就是它。通过OBD可以直接访问CAN，并且是最直接的方式。另外，OBD-II也很容易找到：通常位于前排乘客或驾驶员座位附近的某个地方，而且不需要螺丝刀就能连接使用。</p>
+<p>安装SDL库</p>
+<pre><code>sudo apt-get install libsdl2-dev libsdl2-image-dev -y
+</code></pre>
+<h2 id="环境安装">环境安装</h2>
+<h3 id="安装can-utils">安装Can-utils</h3>
+<pre><code>sudo apt-get install can-utils -y
+</code></pre>
+<p>Can-utils主要由5个工具组成：</p>
+<ol>
+<li>cansniffer：用于嗅探数据包</li>
+<li>cansend：用于编写数据包</li>
+<li>candump：转储所有下载的数据包</li>
+<li>canplayer：用于重放CAN数据包</li>
+<li>cangen：用于创建随机的CAN数据包</li>
+</ol>
+<h3 id="下载表盘模拟器"><strong>下载表盘模拟器</strong></h3>
+<pre><code>git clone https://github.com/zombieCraig/ICSim
+</code></pre>
+<p><strong>准备虚拟CAN网络</strong></p>
+<p>通过浏览ICSim目录，可以找到有一个叫setup_vcan.sh的shell脚本：</p>
+<p>我们可以运行下面的命令，来设置一个虚拟接口：</p>
+<pre><code>./setup_vcan.sh
+</code></pre>
+<p>要验证vcan0接口是否能够正常工作</p>
+<pre><code>ifconfig vcan0
+</code></pre>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/30129d00b8d345cea7c732f84c6f5dc6.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<h2 id="模拟器运行">模拟器运行</h2>
+<p>现在，终于可以运行模拟器了。不过，要想运行ICSim模拟器，至少需要两个组件：一个仪表盘和一个控制器，这样才能模拟加速、刹车、门控、转向灯等。另外，操作过程中，我们至少需要3个终端窗口，其中两个窗口分析显示仪表盘、控制器，另一个窗口执行其他命令。</p>
+<p>首先编译刚刚git下载的项目</p>
+<pre><code>make
+</code></pre>
+<p><strong>控制面板的执行</strong></p>
+<p>要运行控制面板，你必须运行一个名为icsim的文件，参数为vcan0（我们之前创建的接口）：</p>
+<pre><code>./icsim vcan0
+</code></pre>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/52117842daee41b9a8b7a0285bad032d.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>到目前为止，仪表板将不会有任何动作，包括速度表、灯光、刹车或车门。这是因为vcan0接口还没有动作，为了模拟它，我们必须启动控制器。</p>
+<p>控制面板可以通过以下命令启动：</p>
+<pre><code>./controls vcan0
+</code></pre>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/977d44040a00492cbff8d51038926f5e.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>Vcan0是虚拟的CAN接口，ICSim将通过它发送和接收CAN帧。一旦启动控制面板，速度表会出现一些波动。这是由于控制面板所模拟的噪音而造成的。</p>
+<p>启动控制面板后，我们就可以使用键盘上的按键来模拟各种运动。</p>
+<p>使用以下组合键，可以对ICSim控制面板进行相应的修改：</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/9713b4b870774d6a8f14187204a8bebd.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>一旦按下向上箭头和向左箭头键，就会看到左转向灯闪烁</p>
+<h2 id="can报文">CAN报文</h2>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/8901175082e84877ac89b33b32c095dc.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_18,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>上图展示的是我们记录下来的CAN报文。如果按列看的话，第一列是接口，第二列是仲裁ID，第三列是CAN报文的大小，它不能大于8（如果你考察一下CAN帧的话，就明白为什么不能大于8了），第四列是CAN数据本身。</p>
+<p>一旦我们理解了CAN报文，我们就可以进一步通过ODB-II向CAN总线注入修改过的数据包，以篡改速度表或其他东西。</p>
+<p>在我们开始展示ICSim之前，让我们看看其他工具是如何工作的。为此，我们首先要配置一下虚拟接口。</p>
+<h3 id="设置虚拟can接口">设置虚拟CAN接口</h3>
+<pre><code>sudo modprobe can
+</code></pre>
+<p>上述命令将为CAN加载内核单元。此外，我们还需要为虚拟机加载内核单元。</p>
+<pre><code>sudo modprobe vcan
+</code></pre>
+<p>我们可以通过下面的命令，来验证是否加载了所需的内核单元：</p>
+<pre><code>lsmod | grep can
+</code></pre>
+<p>该命令将显示是否加载了CAN和VCAN。</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/a82dd4d175444e46b9d7516f92a4d5ea.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>现在，我们来配置虚拟接口：</p>
+<pre><code>sudo ip link add dev vcan0 type vcan sudo ip link setup vcan0
+</code></pre>
+<p>我们可以通过以下命令，来验证虚拟CAN接口是否已经配置成功：</p>
+<pre><code>ifconfig vcan0
+</code></pre>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/5ca81925ec90445ab543c2395bbc027d.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>一旦配置好了虚拟CAN接口，就可以通过该接口发送/接收CAN数据包了。现在，让我们使用一个名为CANEN的can-utils实用程序来创建虚拟CAN数据包。</p>
+<h3 id="cangen-创建can帧">cangen-创建can帧</h3>
+<p>实际上，cangen可以为教育用途而创建各种CAN帧。 要使用cangen，你必须指定用于创建CAN帧的接口。</p>
+<pre><code>cangen vcan0
+</code></pre>
+<p>Vcan0是我们之前创建的虚拟CAN接口。</p>
+<p>既然已经创建了CAN帧，接下来，我们不妨看看这个帧到底长啥样。实际上，有很多工具可以用来查看帧，其中之一就是Wireshark。为此，我们可以在创建完CAN帧后，启动Wireshark。</p>
+<p>其中，vcan0是用来创建CAN帧的接口。一旦点击了数据包对应的接口，就会显示CAN帧的内容。此外，我们还可以查看关于CAN帧的详细信息。</p>
+<h3 id="查看can帧">查看can帧</h3>
+<h4 id="wireshark">wireshark</h4>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/f7f1f606cca2463691356873d2251520.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>在vcan0里面还有其他的实用工具，比如cansniffer和candump，它们的作用和Wireshark差不多</p>
+<h4 id="candump">candump</h4>
+<pre><code>candump vcan0
+</code></pre>
+<p>对于各列，简单介绍如下：第一列是CAN接口，第二列是ID，第三列是CAN报文的大小，第四列是报文本身。</p>
+<p>此外，candump还可以用来记录帧。在进行重放攻击时，需要先记录相应的帧，然后，用canplayer这样的小工具来重放这些帧。为了记录CAN帧，可以添加命令选项-l。</p>
+<pre><code>candump -l vcan0
+</code></pre>
+<p>当记录CAN帧时，将创建一个前缀为candump的文件，后跟创建日期。</p>
+<p>如果想查看文件的内容，可以在Linux上使用cat命令</p>
+<p>我们使用candump记录的数据可以使用canplayer之类的实用程序进行播放。</p>
+<h3 id="canplayer-播放can数据">canplayer-播放can数据</h3>
+<p>顾名思义，canplayer可以用来播放CAN帧；当您需要进行重放攻击时，该工具就会派上用场了。首先，需要记录CAN帧，然后，使用canplayer播放这些CAN帧。</p>
+<p>假设我们想要篡改转速表，但是，我们不知道转速表读数对应于哪个ID，也不知道对应的CAN报文中含有哪些内容。理想情况下，您应该首先使用带有标志-l的candump命令来丢弃和记录帧，然后使用canplayer播放记录的帧。</p>
+<p>使用输入文件时，需要为Canplayer命令提供-i选项：</p>
+<pre><code>canplayer -I canfile.log
+</code></pre>
+<p>除此之外，canplayer还有其他几个非常有用的选项，大家可以通过man canplayer命令来学习它们。</p>
+<h3 id="cansniffer-过滤can数据">cansniffer-过滤can数据</h3>
+<p>使用CAN嗅探器来查看CAN数据的变化。这对于查看特定字节的变化是非常有用的。Cansniffer有一个-c选项，能够通过颜色来展示字节的变化。这个工具的工作方式为：比较字节当前值和之前的值，如果存在差异，就用字节的颜色变化来加以表示。当你想知道当对汽车进行的操作是否导致CAN数据发生变化时，这个功能会非常有用。</p>
+<pre><code>cansniffer -c vcan0
+</code></pre>
+<p>我发现cansniffer非常有用，因为它还可以进行ID过滤。因此，如果只想查看来自某个特定ID的帧，比如说0x011，你可以根据ID进行过滤。</p>
+<p>在开始嗅探时，我们可以先按-，后跟00000000，这将清除所有的帧；然后，使用+添加要过滤的ID，按回车。这样你就可以过滤相应ID的帧了。</p>
+<h3 id="cansend-发送can数据">cansend-发送can数据</h3>
+<p>Cansend用于将CAN帧发送到一个特定的CAN接口。</p>
+<pre><code>cansend interface frame
+</code></pre>
+<p>我们将在ICSim中用到所有这些工具。</p>
+<h2 id="icsim实战">ICSim实战</h2>
+<p>我们已经在第一篇文章中介绍了如何安装ICSim。现在，让我们启动ICSim并嗅探CAN帧。</p>
+<pre><code>./icsim vcan0 ./controls vcan0
+</code></pre>
+<p>如果您已经严格执行了上一篇文章中介绍的步骤，现在就应该能够看到上面的输出内容。你可能还注意到，速度表指针会来回抖动，这是由于噪音造成的，是很正常的现象。</p>
+<p><strong>嗅探由ICSim创建的CAN帧</strong></p>
+<p>我们将使用can-utils提供的cansniffer工具来捕获数据包。下面，我们可以打开一个新的终端，用以下命令来启动cansniffer：</p>
+<pre><code>cansniffer -c vcan0
+</code></pre>
+<p>命令选项-c的作用，是用颜色指示帧字节的变化情况。</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/bd2e98c1a8b442debf7e15000d1a58aa.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>CAN帧的变化非常快，这是因为有大量数据高速传输。在一辆真正的汽车中，这是非常常见的。</p>
+<p>为此，我们可以使用ID进行过滤。如果你想只考察ID为40C的帧，你可以先按-，然后按00000000，再按回车键，以从cansniffer中删除所有的ID对应的数据；然后，按+，然后按要过滤的ID，再按回车键即可。</p>
+<p>这里，我用上面提到方法过滤了ID为40c的帧。我们可以试着按向上的方向键来加油门，然后观察CAN帧的变化速度。在这里，变化是通过颜色来指示的。大家可以多尝试一下。</p>
+<p><strong>重放攻击</strong></p>
+<p>理解如此庞大的数据将是相当困难的。另外，从这个大量的数据中找到所需帧的ID也是不可能的。</p>
+<p>因此，你需要捕获数据包，然后执行一些操作，比如打开闪光灯或在连接后踩油门，然后分割数据包，进行重放攻击，看看是否有效。</p>
+<p>现在，我们要用ICSim执行重放攻击，前提是已经启动了ICSim，并且能够用cansniffer查看帧。现在，我们将使用带有-l选项的candump命令来记录和保存帧，与此同时，我们将通过按左、右方向键来加油门，以激活闪光灯。</p>
+<pre><code>candump -l vcan0
+</code></pre>
+<p>现在，停止candump，我们将看到一个candump-XXXXX.log文件被创建。</p>
+<p><strong>重放CAN帧</strong></p>
+<p>为了重放这些数据包，我们将使用canplayer工具。由于我们要使用一个文件作为canplayer工具的输入，所以，我们需要启用-I选项。</p>
+<pre><code>canplayer -I candump-2019XXXXXX.log
+</code></pre>
+<p>你可以看到，重放攻击已经发生了，闪光灯以及速度表应该像我们之前那样工作。</p>
+<p>在真实的汽车中，CAN总线可能会复杂得多，而且CAN帧的出现速度也会快得多，所以定位ID可能相当困难。因此，为了方便识别ID，你可以按照下面的步骤进行操作</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/e76dfb31d4c44dee98053a4fd6fe9405.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_19,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>分割CAN帧并执行重放攻击</strong></p>
+<p>如果你想把CAN帧分成两份，并分别进行重放攻击，最好的方法是使用candump捕获CAN帧，并使用工具wc来计算CAN帧的数量，然后使用split把它平均分成两份。</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/85c4d3ab81c40134331c32f55e636016.png" alt="1.png" loading="lazy"></figure>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/124410ea2818cedda95861e09983231f.png" alt="1.png" loading="lazy"></figure>
+<p>现在，你可以使用canplayer来单独重放这些CAN帧。</p>
+<p>好了，本系列的第二篇文章到此就要结束了。我们已经表明，一旦我们能够进入车辆并执行一些动作，如加油门、打开转向灯和打开车门，我们就可以进行进一步的安全测试。因此，通过一些程序和低成本的组件，我们能够获得一辆车的全部访问权限。</p>
+<h2 id="savvycan">SavvyCAN</h2>
+<p>如今，已经有很多种软件都可以用于监控和过滤CAN通信。其中，有昂贵的专有工具，也有免费的开源工具。</p>
+<p>这篇文章的目的，是向大家介绍如何免费对汽车进行安全测试，所以，昂贵的工具不在我们的介绍范围之内。</p>
+<p>在前面的文章中，我已经详细介绍了这些昂贵的CAN通信工具的廉价和免费的替代品。实际上，像can-utils、Wireshark这样的工具就非常好用。</p>
+<p>但是，SavvyCAN为我们提供了更多的功能。对于初学者来说，它提供了一个很好的GUI，可以帮助你轻松地浏览、过滤数据包、ID等。对于那些已经进入汽车安全测试领域的人来说，SavvyCAN提供了真正伟大的功能——我个人最喜欢的功能包括以脚本方式来处理CAN帧。</p>
+<p>下面，让我们来看看官方网站对SavvyCAN的定义：</p>
+<pre><code>“SavvyCAN是一个基于多个QT平台的C++程序，主要用于CAN数据的逆向分析和捕获。它最初是为了介绍EVTVDue和CANDUE等EVTV硬件的用法而编写的。此后，它被扩展到适用于任何socketCAN兼容设备，以及Macchina M2和Teensy 3.x板。它可以同时捕获并发送至多个总线和CAN摄像机。”
+</code></pre>
+<p>与can-utils相比，SavvyCAN非常容易上手。还是那句话，争论哪个工具最好，哪个工具不好是没有意义的，主要看是否适合自己。</p>
+<h3 id="在ubuntu上安装和运行savvycan">在Ubuntu上安装和运行SavvyCAN</h3>
+<pre><code>wget https://github.com/collin80/SavvyCAN/releases/download/V199.1/SavvyCAN-305dafd-x86_64.AppImage
+</code></pre>
+<p>下载appimage时，无需安装，直接运行相应的可执行文件即可！</p>
+<pre><code>chmod 744 SavvyCAN-305dafd-x86_64.AppImage
+./SavvyCAN-305dafd-x86_64.AppImage
+</code></pre>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/954eb81b91964cc7a34bb3c9ec85a7cc.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>我们建议大家不妨花点时间来熟悉SavvyCAN的界面。如果您想在Macchina M2或其他兼容的硬件上使用SavvyCAN，无需额外安装任何东西。</p>
+<p>我们打算将SavvyCAN与ICSim搭配使用，所以，我们还需要安装qtserialbus。</p>
+<p>打开SavvyCAN窗口后，导航到Connection -&gt; Open Connection Window -&gt; Add New Connection选项，会发现qtserialbus是处于关闭状态的。</p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/539173323ba84fd692cac872f525f73f.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>为了在SavvyCAN中使用qtserialbus，首先需要完成相应的安装工作。</p>
+<h3 id="安装qt5">安装qt5</h3>
+<pre><code>wget https://download.qt.io/archive/qt/5.14/5.14.2/qt-opensource-linux-x64-5.14.2.run
+</code></pre>
+<p>下载qt5后，我们需要安装/运行它，具体命令如下所示：</p>
+<pre><code>chmod a+x ./qt-opensource-linux-x64-5.14.2.run
+./qt-opensource-linux-x64-5.14.2.run
+</code></pre>
+<p>这里需要注册或者登录，记下路由名称，因为后面会用到的。</p>
+<p>一旦安装了qt5，接下来就得安装qtserialbus了，因为该软件没有包含在官方的Ubuntu存储库中，所以，我们还得自己动手，才能丰衣足食。</p>
+<h3 id="安装qtserialbus">安装qtserialbus</h3>
+<pre><code>sudo apt install qtdeclarative5-dev qttools5-dev g++
+git clone https://github.com/qt/qtserialbus
+cd qtserialbus
+/home/y0g3sh/Qt5.14.2/5.14.2/gcc_64/bin/qmake .
+make
+sudo make install
+</code></pre>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/d21be10beaae44919d03440bb31ab87b.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<h3 id="编译savvycan">编译SavvyCAN</h3>
+<p>为了使用qtserialbus，我们还需要通过qmake编译之前下载的SavvyCAN的AppImage文件，具体命令如下所示：</p>
+<pre><code>git clone https://github.com/collin80/SavvyCAN 
+cd SavvyCAN
+/home/y0g3sh/Qt5.14.2/5.14.2/gcc_64/bin/qmake CONFIG += debug
+make
+</code></pre>
+<p>注意，安装过程可能需要一些时间，请耐心等待。</p>
+<p>安装就绪后，请启动ICSim模拟器，以及除can-utils以外的所有工具——在这里，我们不会借助于can-utils来记录CAN通信，而是使用SocketCAN。</p>
+<p><strong>原理和can-utils一样，只不过图形界面更加直观以及方便</strong></p>
+<h2 id="总结">总结</h2>
+<ul>
+<li>CAN操作
+<ul>
+<li>创建</li>
+<li>重放</li>
+<li>过滤</li>
+<li>发送</li>
+</ul>
+</li>
+<li>通过OBD-II获得对CAN的访问权限
+<ul>
+<li>真实环境操作</li>
+</ul>
+</li>
+<li>嗅探CAN流量
+<ul>
+<li>ICsim模拟</li>
+<li>wireshark/candump嗅探</li>
+</ul>
+</li>
+<li>CAN流量的分析与逆向工程
+<ul>
+<li>数据包分析
+<ul>
+<li>第一列是接口</li>
+<li>第二列是仲裁ID</li>
+<li>第三列是CAN报文的大小</li>
+<li>第四列是CAN数据本身。</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>重放攻击
+<ul>
+<li>candump记录can包</li>
+<li>canplayer重放can包</li>
+</ul>
+</li>
+</ul>
+<h2 id="参考">参考</h2>
+<ul>
+<li>https://en.iguru.gr/car-hacking-apolytos-odigos-part/</li>
+<li>https://en.iguru.gr/car-hacking-apolytos-odigos-part-2/</li>
+<li>https://en.iguru.gr/car-hacking-apolytos-odigos-part-iii/</li>
+</ul>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/spel-biao-da-shi-zhu-ru-lou-dong-xue-xi/" class="post-title gt-a-link">
+                    SpEL表达式注入漏洞学习
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/qi-che-an-quan-ce-shi-xue-xi/" class="leancloud_visitors" data-flag-title="汽车安全测试学习">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

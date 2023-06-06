@@ -1,0 +1,266 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>微信小程序渗透学习 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    微信小程序渗透学习
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-02-22 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/9meamuYXO/" class="post-tags">
+                            # APP
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="微信小程序">微信小程序</h1>
+<p>小程序测试流程</p>
+<p>分为两个方面，解包可以挖掘信息泄露问题、隐藏的接口，抓包可以测试一些逻辑漏洞、API安全问题。两者结合起来就可以边调试边进行测试，更方便于安全测试。</p>
+<p>搜索目标小程序</p>
+<p>目标搜索不能仅仅局限于主体单位，支撑单位、供应商、全资子公司等都可能是入口点，所以小程序当然也不能放过它们。</p>
+<p>小程序主体信息确认</p>
+<p>查看小程序账号主体信息，否则打偏了花费了时间不说，还可能有法律风险。点击小程序，点更多资料就能看到小程序相关信息</p>
+<h2 id="小程序包获取"><img src="https://img-blog.csdnimg.cn/img_convert/54827e2aa8f850cd8bf1082941f8ab21.png" alt="image-20220221184434374" loading="lazy">小程序包获取</h2>
+<h3 id="pc端">PC端</h3>
+<p>首先在微信中搜索到小程序，并打开简单浏览</p>
+<p>然后在自己微信文件保存路径下找到applet下找到该小程序包，可以通过时间或者小程序的appid快速定位到目标包</p>
+<p>微信电脑端小程序包存在加密，需要使用工具进行解密下载地址</p>
+<pre><code>https://share.weiyun.com/uMqNGOXv
+</code></pre>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/1786d035598047b6df0ba07f70f6e7fe.png" alt="image-20220221185311116" loading="lazy"></figure>
+<p>至于位置在微信文件夹Applet下</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/fb74e42aac75953759a64da76e1b29a1.png" alt="image-20220221185339833" loading="lazy"></figure>
+<h3 id="移动端">移动端</h3>
+<p>找到对应目录，把包拉出来即可</p>
+<p>安卓保存路径：/data/data/com.tencent.mm/MicroMsg/{⽤户ID}/appbrand/pkg/</p>
+<p>iOS保存路径：/var/mobile/Containers/Data/Application/{程序 UUID}/Library/WechatPrivate/{⽤户ID}/WeApp/LocalCache/release/{⼩程序ID}/ ）</p>
+<p>由于安卓data目录需要root权限访问，所以需要手机或模拟器root</p>
+<h4 id="android模拟器获取小程序包流程">android模拟器获取小程序包流程</h4>
+<p>这里我用到的是夜神模拟器，登录微信，找到小程序</p>
+<p>方法是将复制的内容放到mnt-&gt;shared-&gt;orther下，就会自动同步到PC端，这是模拟器的共享目录</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/60729742951a8313f21625cb02244420.png" alt="image-20220221190016998" loading="lazy"></figure>
+<h2 id="解包">解包</h2>
+<p>工具地址</p>
+<pre><code>https://github.com/xuedingmiaojun/wxappUnpacker
+</code></pre>
+<p>kali安装npm</p>
+<pre><code>apt-get update
+apt install npm
+</code></pre>
+<p>环境安装</p>
+<pre><code>npm install uglify-es --save
+npm install esprima --save
+npm install css-tree --save
+npm install cssbeautify --save
+npm install vm2 --save
+npm install js-beautify --save
+npm install escodegen --save
+npm install cheerio --save
+</code></pre>
+<p>执行node wuWxapkg.js xxxxxx.wxapkg</p>
+<pre><code>node wuWxapkg.js wx6693076a088ea68e.wxapkg 
+</code></pre>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/ffaca5b0408c3334a9b56be15adeb9bd.png" alt="image-20220221190506201" loading="lazy"></figure>
+<h2 id="调试">调试</h2>
+<p>打开微信开发者工具，选择导入项目,即可调试</p>
+<h1 id="后记">后记</h1>
+<p>因为解包获取到的都是静态资源，所以小程序更多的是进行敏感信息的测试（例如对js文件中的接口进行渗透测试）</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/quan-xian-wei-chi-zhi-notepad/" class="post-title gt-a-link">
+                    权限维持之notepad++
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/wei-xin-xiao-cheng-xu-shen-tou-xue-xi/" class="leancloud_visitors" data-flag-title="微信小程序渗透学习">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

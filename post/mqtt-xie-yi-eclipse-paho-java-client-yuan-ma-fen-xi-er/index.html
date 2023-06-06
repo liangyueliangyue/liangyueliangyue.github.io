@@ -1,0 +1,779 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>MQTT协议-Eclipse Paho Java Client源码分析（二） | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    MQTT协议-Eclipse Paho Java Client源码分析（二）
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-06-28 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/Z5a4xaOEm/" class="post-tags">
+                            # 物联网
+                        </a>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/_1xjK2YDa/" class="post-tags">
+                            # Java安全
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="文章首发于跳跳糖httpstttangcomarchive1627">文章首发于跳跳糖：https://tttang.com/archive/1627/</h2>
+<p>前文讲到主要从五个点来进行源码学习</p>
+<ul>
+<li>连接broker</li>
+<li>创建主题</li>
+<li>发布主题内容</li>
+<li>订阅主题</li>
+<li>接收主题内容</li>
+</ul>
+<h2 id="连接broker">连接broker</h2>
+<p>上文写过的简单例子可以知道首先调用的是MqttClient的connect方法</p>
+<figure data-type="image" tabindex="1"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121633.png" alt="image-20220517140035502" loading="lazy"></figure>
+<p>而aClient是MqttAsyncClient所以调用的是MqttAsyncClient的connect方法，最终指向都是如下（代码太长就不贴图了）</p>
+<pre><code class="language-java">public IMqttToken connect(MqttConnectOptions options, Object userContext, IMqttActionListener callback) throws MqttException, MqttSecurityException {
+        if (this.comms.isConnected()) {
+            throw ExceptionHelper.createMqttException(32100);
+        } else if (this.comms.isConnecting()) {
+            throw new MqttException(32110);
+        } else if (this.comms.isDisconnecting()) {
+            throw new MqttException(32102);
+        } else if (this.comms.isClosed()) {
+            throw new MqttException(32111);
+        } else {
+            if (options == null) {
+                options = new MqttConnectOptions();
+            }
+
+            this.connOpts = options;
+            this.userContext = userContext;
+            boolean automaticReconnect = options.isAutomaticReconnect();
+            log.fine(CLASS_NAME, &quot;connect&quot;, &quot;103&quot;, new Object[]{options.isCleanSession(), new Integer(options.getConnectionTimeout()), new Integer(options.getKeepAliveInterval()), options.getUserName(), options.getPassword() == null ? &quot;[null]&quot; : &quot;[notnull]&quot;, options.getWillMessage() == null ? &quot;[null]&quot; : &quot;[notnull]&quot;, userContext, callback});
+            this.comms.setNetworkModules(this.createNetworkModules(this.serverURI, options));
+            this.comms.setReconnectCallback(new MqttAsyncClient.MqttReconnectCallback(automaticReconnect));
+            MqttToken userToken = new MqttToken(this.getClientId());
+            ConnectActionListener connectActionListener = new ConnectActionListener(this, this.persistence, this.comms, options, userToken, userContext, callback, this.reconnecting);
+            userToken.setActionCallback(connectActionListener);
+            userToken.setUserContext(this);
+            if (this.mqttCallback instanceof MqttCallbackExtended) {
+                connectActionListener.setMqttCallbackExtended((MqttCallbackExtended)this.mqttCallback);
+            }
+
+            this.comms.setNetworkModuleIndex(0);
+            connectActionListener.connect();
+            return userToken;
+        }
+    }
+</code></pre>
+<p>首先调用了MqttAsyncClient中创建的ClientComms对象中isConnected、isConnecting、isDisconnecting、isClosed四个方法（这样的方法存在6个）</p>
+<figure data-type="image" tabindex="2"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121634.png" alt="image-20220517141018924" loading="lazy"></figure>
+<p>通过conState的值去判断Clinet当前的状态，如果是连接中，正在连接，正在断开，关闭这几个状态就会进入异常处理</p>
+<figure data-type="image" tabindex="3"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121635.png" alt="image-20220517141059088" loading="lazy"></figure>
+<p>也就是正常连接时ClientComms.conState应该为3</p>
+<figure data-type="image" tabindex="4"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121636.png" alt="image-20220517142838058" loading="lazy"></figure>
+<p>再往下判断options是否为null，如果为null会创建一个MqttConnectOptions对象，下面就会用到</p>
+<p>之后再调用MqttConnectOptions#isAutomaticReconnect，返回automaticReconnect，默认为false</p>
+<pre><code class="language-java">private boolean automaticReconnect = false;
+</code></pre>
+<figure data-type="image" tabindex="5"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121637.png" alt="image-20220517143241060" loading="lazy"></figure>
+<p>这个标志位的作用就是客户端断开是否会自动尝试重新连接，默认不进行重连</p>
+<h3 id="networkmodules">NetworkModules</h3>
+<p>首先是MqttAsyncClient#createNetworkModules方法来创建NetworkModule对象</p>
+<pre><code class="language-java">protected NetworkModule[] createNetworkModules(String address, MqttConnectOptions options)
+			throws MqttException, MqttSecurityException {
+		final String methodName = &quot;createNetworkModules&quot;;
+		// @TRACE 116=URI={0}
+		log.fine(CLASS_NAME, methodName, &quot;116&quot;, new Object[] { address });
+
+		NetworkModule[] networkModules = null;
+		String[] serverURIs = options.getServerURIs();
+		String[] array = null;
+		if (serverURIs == null) {
+			array = new String[] { address };
+		} else if (serverURIs.length == 0) {
+			array = new String[] { address };
+		} else {
+			array = serverURIs;
+		}
+
+		networkModules = new NetworkModule[array.length];
+		for (int i = 0; i &lt; array.length; i++) {
+			networkModules[i] = createNetworkModule(array[i], options);
+		}
+
+		log.fine(CLASS_NAME, methodName, &quot;108&quot;);
+		return networkModules;
+	}
+
+</code></pre>
+<p>尝试从MqttConnectOptions中获取serverURL，如果获取不到会使用传入的serverURL，然后new 了一个实现NetworkModule接口的对象</p>
+<figure data-type="image" tabindex="6"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202205241121638.png" alt="image-20220517144523202" loading="lazy"></figure>
+<p>通过循环将serverURL数组中的值调用createNetworkModule然后存入networkModules返回。</p>
+<p>看下createNetworkModule</p>
+<pre><code class="language-java">private NetworkModule createNetworkModule(String address, MqttConnectOptions options) throws MqttException, MqttSecurityException {
+		final String methodName = &quot;createNetworkModule&quot;;
+		// @TRACE 115=URI={0}
+		log.fine(CLASS_NAME,methodName, &quot;115&quot;, new Object[] {address});
+
+		NetworkModule netModule;
+		SocketFactory factory = options.getSocketFactory();
+
+		int serverURIType = MqttConnectOptions.validateURI(address);
+
+		URI uri;
+		try {
+			uri = new URI(address);
+			// If the returned uri contains no host and the address contains underscores,
+			// then it's likely that Java did not parse the URI
+			if(uri.getHost() == null &amp;&amp; address.contains(&quot;_&quot;)){
+				try {
+					final Field hostField = URI.class.getDeclaredField(&quot;host&quot;);
+					hostField.setAccessible(true);
+					// Get everything after the scheme://
+					String shortAddress = address.substring(uri.getScheme().length() + 3);
+					hostField.set(uri, getHostName(shortAddress));
+					
+				} catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException e) {
+					throw ExceptionHelper.createMqttException(e.getCause());
+				} 
+				
+			}
+		} catch (URISyntaxException e) {
+			throw new IllegalArgumentException(&quot;Malformed URI: &quot; + address + &quot;, &quot; + e.getMessage());
+		}
+
+		String host = uri.getHost();
+		int port = uri.getPort(); // -1 if not defined
+
+		switch (serverURIType) {
+		case MqttConnectOptions.URI_TYPE_TCP :
+			if (port == -1) {
+				port = 1883;
+			}
+			if (factory == null) {
+				factory = SocketFactory.getDefault();
+			}
+			else if (factory instanceof SSLSocketFactory) {
+				throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_SOCKET_FACTORY_MISMATCH);
+			}
+			netModule = new TCPNetworkModule(factory, host, port, clientId);
+			((TCPNetworkModule)netModule).setConnectTimeout(options.getConnectionTimeout());
+			break;
+		case MqttConnectOptions.URI_TYPE_SSL:
+			if (port == -1) {
+				port = 8883;
+			}
+			SSLSocketFactoryFactory factoryFactory = null;
+			if (factory == null) {
+//				try {
+					factoryFactory = new SSLSocketFactoryFactory();
+					Properties sslClientProps = options.getSSLProperties();
+					if (null != sslClientProps)
+						factoryFactory.initialize(sslClientProps, null);
+					factory = factoryFactory.createSocketFactory(null);
+//				}
+//				catch (MqttDirectException ex) {
+//					throw ExceptionHelper.createMqttException(ex.getCause());
+//				}
+			}
+			else if ((factory instanceof SSLSocketFactory) == false) {
+				throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_SOCKET_FACTORY_MISMATCH);
+			}
+
+			// Create the network module...
+			netModule = new SSLNetworkModule((SSLSocketFactory) factory, host, port, clientId);
+			((SSLNetworkModule)netModule).setSSLhandshakeTimeout(options.getConnectionTimeout());
+			((SSLNetworkModule)netModule).setSSLHostnameVerifier(options.getSSLHostnameVerifier());
+			// Ciphers suites need to be set, if they are available
+			if (factoryFactory != null) {
+				String[] enabledCiphers = factoryFactory.getEnabledCipherSuites(null);
+				if (enabledCiphers != null) {
+					((SSLNetworkModule) netModule).setEnabledCiphers(enabledCiphers);
+				}
+			}
+			break;
+		case MqttConnectOptions.URI_TYPE_WS:
+			if (port == -1) {
+				port = 80;
+			}
+			if (factory == null) {
+				factory = SocketFactory.getDefault();
+			}
+			else if (factory instanceof SSLSocketFactory) {
+				throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_SOCKET_FACTORY_MISMATCH);
+			}
+			netModule = new WebSocketNetworkModule(factory, address, host, port, clientId);
+			((WebSocketNetworkModule)netModule).setConnectTimeout(options.getConnectionTimeout());
+			break;
+		case MqttConnectOptions.URI_TYPE_WSS:
+			if (port == -1) {
+				port = 443;
+			}
+			SSLSocketFactoryFactory wSSFactoryFactory = null;
+			if (factory == null) {
+				wSSFactoryFactory = new SSLSocketFactoryFactory();
+					Properties sslClientProps = options.getSSLProperties();
+					if (null != sslClientProps)
+						wSSFactoryFactory.initialize(sslClientProps, null);
+					factory = wSSFactoryFactory.createSocketFactory(null);
+
+			}
+			else if ((factory instanceof SSLSocketFactory) == false) {
+				throw ExceptionHelper.createMqttException(MqttException.REASON_CODE_SOCKET_FACTORY_MISMATCH);
+			}
+
+			// Create the network module...
+			netModule = new WebSocketSecureNetworkModule((SSLSocketFactory) factory, address, host, port, clientId);
+			((WebSocketSecureNetworkModule)netModule).setSSLhandshakeTimeout(options.getConnectionTimeout());
+			// Ciphers suites need to be set, if they are available
+			if (wSSFactoryFactory != null) {
+				String[] enabledCiphers = wSSFactoryFactory.getEnabledCipherSuites(null);
+				if (enabledCiphers != null) {
+					((SSLNetworkModule) netModule).setEnabledCiphers(enabledCiphers);
+				}
+			}
+			break;
+		default:
+			// This shouldn't happen, as long as validateURI() has been called.
+			log.fine(CLASS_NAME,methodName, &quot;119&quot;, new Object[] {address});
+			netModule = null;
+		}
+		return netModule;
+	}
+</code></pre>
+<p>代码很多但是不难读，首先作用是工厂方法创建正确的网络模块。开始通过getSocketFactory获取工厂，默认为null，然后利用之前讲过的MqttConnectOptions#validateURI去判断serverURI的类型</p>
+<ul>
+<li>tcp-&gt;0</li>
+<li>ssl-&gt;1</li>
+<li>local-&gt;2</li>
+<li>ws-&gt;3</li>
+<li>wss-&gt;4</li>
+</ul>
+<p>然后创建URL对象</p>
+<ul>
+<li>如果address包含_或者URL对象获取Host失败，就会尝试利用反射已经MqttAsyncClient#getHostName方法去解析不正常的address</li>
+<li>正常就通过URL对象直接获取Host和Port</li>
+</ul>
+<p>在通过不同的serverURL类型来进入不同的处理，这里以tcp为例讲一下（ssl和wss会因为加密多一些步骤）</p>
+<p>首先如果port没有给出，会根据不同类型赋一个默认的值</p>
+<ul>
+<li>tcp-&gt;1883</li>
+<li>ssl-&gt;8883</li>
+<li>ws-&gt;80</li>
+<li>wss-&gt;443</li>
+</ul>
+<p>然后SocketFactory#getDefault返回环境默认套接字工厂的副本，在利用这个套接字去创建TCP的网络模块TCPNetworkModule对象去返回</p>
+<p>然后ClientComms#setNetworkModules获取到TCPNetworkModule并赋值给networkModules</p>
+<p>回到org.eclipse.paho.client.mqttv3.MqttAsyncClient#connect</p>
+<p>networkModules之后将automaticReconnect值作为参数传入（默认为false）创建MqttReconnectCallback对象，然后赋值给CommsCallback的reconnectInternalCallback参数</p>
+<h3 id="connectactionlistener">ConnectActionListener</h3>
+<p>通过ClientId创建了MqttToken，MqttToken是提供一种机制来跟踪异步操作的完成情况（这里不着重讲了）。</p>
+<p>再往下创建ConnectActionListener对象，用来处理 AsyncClient 到可用 URL 之一的连接。</p>
+<p>在创建客户端时作提供单一URL ，或者作为连接选项中的列表提供，尝试连接到列表中的每个 URL，直到连接尝试成功或尝试了所有 URL</p>
+<p>此类使用自己的 onSuccess 和 onFailure 回调，而不是用户提供的回调</p>
+<p>如果连接成功，则通知用户令牌并调用 用户的onSuccess 回调函数</p>
+<figure data-type="image" tabindex="7"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701254.png" alt="image-20220613145552470" loading="lazy"></figure>
+<p>如果连接失败，则尝试列表中的另一个 URL</p>
+<figure data-type="image" tabindex="8"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701256.png" alt="image-20220613145804411" loading="lazy"></figure>
+<p>如果已经没有URL则通知用户令牌并调用 onFailure 回调</p>
+<figure data-type="image" tabindex="9"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701257.png" alt="image-20220613145819629" loading="lazy"></figure>
+<p>回到org.eclipse.paho.client.mqttv3.MqttAsyncClient#connect</p>
+<p>调用了MqttToken#setActionCallback来将ConnectActionListener对象注册为侦听器以在操作完成时收到通知。</p>
+<p>再调用MqttToken#setUserContext上下文来存储MqttAsyncClient对象。</p>
+<p>后面是一个可选项</p>
+<pre><code class="language-java"> If we are using the MqttCallbackExtended, set it on the
+// connectActionListener
+if (this.mqttCallback instanceof MqttCallbackExtended) {
+			connectActionListener.setMqttCallbackExtended((MqttCallbackExtended) this.mqttCallback);
+		}
+</code></pre>
+<p>如果使用 MqttCallbackExtended，请将其设置在connectActionListener里，而MqttCallbackExtended是用来扩展<a href="https://www.eclipse.org/paho/files/javadoc/org/eclipse/paho/client/mqttv3/MqttCallback.html"><code>MqttCallback</code></a>以允许新的回调而不破坏现有应用程序的 API实现此接口的类可以在两种类型的客户端上注册：<a href="https://www.eclipse.org/paho/files/javadoc/org/eclipse/paho/client/mqttv3/IMqttClient.html#setCallback-org.eclipse.paho.client.mqttv3.MqttCallback-"><code>IMqttClient.setCallback(MqttCallback)</code></a> 和<a href="https://www.eclipse.org/paho/files/javadoc/org/eclipse/paho/client/mqttv3/IMqttAsyncClient.html#setCallback-org.eclipse.paho.client.mqttv3.MqttCallback-"><code>IMqttAsyncClient.setCallback(MqttCallback)</code></a></p>
+<p>之后ClientComms#setNetworkModuleIndex设置了网络模块的索引</p>
+<p>然后调用ConnectActionListener#connect（这里才是连接的开始），也就是上面创建的ConnectActionListener对象</p>
+<figure data-type="image" tabindex="10"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701258.png" alt="image-20220613150304274" loading="lazy"></figure>
+<p>MqttToken已经说过了，而org.eclipse.paho.client.mqttv3.MqttClientPersistence#open是用来初始化持久存储，在之前MqttClient类对象的创建里指定<a href="https://www.eclipse.org/paho/files/javadoc/org/eclipse/paho/client/mqttv3/MqttClient.html"><code>MqttClient</code></a>它将用于持久化 QoS 1 和 2 消息。</p>
+<p>之后是参数的配置1.是否会话维持2.设置MQTT版本</p>
+<p>然后调用了org.eclipse.paho.client.mqttv3.internal.ClientComms#connect，如果失败调用onFailure这里前文讲了</p>
+<figure data-type="image" tabindex="11"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701259.png" alt="image-20220613151142241" loading="lazy"></figure>
+<p>漆面是通过MqttConnectOptions传递进来的参数来创建MqttConnect对象，然后进行一些配置设置，基本上前文都涉及到了。</p>
+<h3 id="connectbg">ConnectBG</h3>
+<p>这里重点看一下连接的实现org.eclipse.paho.client.mqttv3.internal.ClientComms.ConnectBG#start</p>
+<p>ConnectBG是实现了Runnable的类，运行在线程池中</p>
+<figure data-type="image" tabindex="12"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701260.png" alt="image-20220613152411548" loading="lazy"></figure>
+<p>这里看一下线程体的run方法</p>
+<figure data-type="image" tabindex="13"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701261.png" alt="image-20220613152521599" loading="lazy"></figure>
+<p>首先看关键主题内容，启动网络模块，发起网络连接</p>
+<pre><code class="language-java">NetworkModule networkModule = networkModules[networkModuleIndex]; 
+networkModule.start(); 
+</code></pre>
+<p>进入到org.eclipse.paho.client.mqttv3.internal.NetworkModule#start</p>
+<p>四个实现类</p>
+<figure data-type="image" tabindex="14"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701262.png" alt="image-20220613152755964" loading="lazy"></figure>
+<p>这里我们进入TCP分析</p>
+<figure data-type="image" tabindex="15"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701263.png" alt="image-20220613152818845" loading="lazy"></figure>
+<p>可以看到调用了socket去实现连接</p>
+<p>连接完成后，启动receiver和，负责从broker接收消息以及向broker发送消息，两个类都实现了Runnable的类，运行在线程池中，直接看run函数</p>
+<pre><code class="language-java">receiver = new CommsReceiver(clientComms, clientState, tokenStore, networkModule.getInputStream());
+receiver.start(&quot;MQTT Rec: &quot;+getClient().getClientId(), executorService);
+sender = new CommsSender(clientComms, clientState, tokenStore, networkModule.getOutputStream());   	 
+sender.start(&quot;MQTT Snd: &quot;+getClient().getClientId(), executorService); 
+</code></pre>
+<p>receiver收到消息后，响应消息的消息类型为MqttAck，由于CONACK数据包是MqttAck类型，且token不为null，故会执行clientState.notifyReceivedAck函数.</p>
+<pre><code class="language-java">public void run() {
+		recThread = Thread.currentThread();
+		recThread.setName(threadName);
+		final String methodName = &quot;run&quot;;
+		MqttToken token = null;
+
+		try {
+			runningSemaphore.acquire();
+		} catch (InterruptedException e) {
+			running = false;
+			return;
+		}
+
+		while (running &amp;&amp; (in != null)) {
+			try {
+				//@TRACE 852=network read message
+				log.fine(CLASS_NAME,methodName,&quot;852&quot;);
+				receiving = in.available() &gt; 0;
+				MqttWireMessage message = in.readMqttWireMessage();
+				receiving = false;
+
+				// instanceof checks if message is null
+				if (message instanceof MqttAck) {
+					token = tokenStore.getToken(message);
+					if (token!=null) {
+						synchronized (token) {
+							// Ensure the notify processing is done under a lock on the token
+							// This ensures that the send processing can complete  before the
+							// receive processing starts! ( request and ack and ack processing
+							// can occur before request processing is complete if not!
+							clientState.notifyReceivedAck((MqttAck)message);
+						}
+					} else if(message instanceof MqttPubRec || message instanceof MqttPubComp || message instanceof MqttPubAck) {
+						//This is an ack for a message we no longer have a ticket for.
+						//This probably means we already received this message and it's being send again
+						//because of timeouts, crashes, disconnects, restarts etc.
+						//It should be safe to ignore these unexpected messages.
+						log.fine(CLASS_NAME, methodName, &quot;857&quot;);
+					} else {
+						// It its an ack and there is no token then something is not right.
+						// An ack should always have a token assoicated with it.
+						throw new MqttException(MqttException.REASON_CODE_UNEXPECTED_ERROR);
+					}
+				} else {
+					if (message != null) {
+						// A new message has arrived
+						clientState.notifyReceivedMsg(message);
+					}
+				}
+			}
+			catch (MqttException ex) {
+				//@TRACE 856=Stopping, MQttException
+				log.fine(CLASS_NAME,methodName,&quot;856&quot;,null,ex);
+				running = false;
+				// Token maybe null but that is handled in shutdown
+				clientComms.shutdownConnection(token, ex);
+			}
+			catch (IOException ioe) {
+				//@TRACE 853=Stopping due to IOException
+				log.fine(CLASS_NAME,methodName,&quot;853&quot;);
+
+				running = false;
+				// An EOFException could be raised if the broker processes the
+				// DISCONNECT and ends the socket before we complete. As such,
+				// only shutdown the connection if we're not already shutting down.
+				if (!clientComms.isDisconnecting()) {
+					clientComms.shutdownConnection(token, new MqttException(MqttException.REASON_CODE_CONNECTION_LOST, ioe));
+				}
+			}
+			finally {
+				receiving = false;
+				runningSemaphore.release();
+			}
+		}
+
+		//@TRACE 854=&lt;
+		log.fine(CLASS_NAME,methodName,&quot;854&quot;);
+	}
+</code></pre>
+<p>notifyReceivedAck函数中，处理各种broker返回消息，而连接消息处理最后会到connected()连接完成的方法中，该方法设置连接完成状态以及开始发送心跳。</p>
+<pre><code class="language-java">protected void notifyReceivedMsg(MqttWireMessage message) throws MqttException {
+		final String methodName = &quot;notifyReceivedMsg&quot;;
+		this.lastInboundActivity = System.currentTimeMillis();
+
+		// @TRACE 651=received key={0} message={1}
+		log.fine(CLASS_NAME, methodName, &quot;651&quot;, new Object[] {
+				new Integer(message.getMessageId()), message });
+		
+		if (!quiescing) {
+			if (message instanceof MqttPublish) {
+				MqttPublish send = (MqttPublish) message;
+				switch (send.getMessage().getQos()) {
+				case 0:
+				case 1:
+					if (callback != null) {
+						callback.messageArrived(send);
+					}
+					break;
+				case 2:
+					persistence.put(getReceivedPersistenceKey(message),
+							(MqttPublish) message);
+					inboundQoS2.put(new Integer(send.getMessageId()), send);
+					this.send(new MqttPubRec(send), null);
+					break;
+
+				default:
+					//should NOT reach here
+				}
+			} else if (message instanceof MqttPubRel) {
+				MqttPublish sendMsg = (MqttPublish) inboundQoS2
+						.get(new Integer(message.getMessageId()));
+				if (sendMsg != null) {
+					if (callback != null) {
+						callback.messageArrived(sendMsg);
+					}
+				} else {
+					// Original publish has already been delivered.
+					MqttPubComp pubComp = new MqttPubComp(message
+							.getMessageId());
+					this.send(pubComp, null);
+				}
+			}
+		}
+	}
+</code></pre>
+<p>sender不断循环从clientState获取待发送的消息然后通过org.eclipse.paho.client.mqttv3.internal.ClientState#notifySent将 MQTT连接的消息发送出去</p>
+<pre><code class="language-java">public void run() {
+		sendThread = Thread.currentThread();
+		sendThread.setName(threadName);
+		final String methodName = &quot;run&quot;;
+		MqttWireMessage message = null;
+
+		try {
+			runningSemaphore.acquire();
+		} catch (InterruptedException e) {
+			running = false;
+			return;
+		}
+
+		try {
+			while (running &amp;&amp; (out != null)) {
+				try {
+					message = clientState.get();
+					if (message != null) {
+						//@TRACE 802=network send key={0} msg={1}
+						log.fine(CLASS_NAME,methodName,&quot;802&quot;, new Object[] {message.getKey(),message});
+
+						if (message instanceof MqttAck) {
+							out.write(message);
+							out.flush();
+						} else {
+							MqttToken token = tokenStore.getToken(message);
+							// While quiescing the tokenstore can be cleared so need
+							// to check for null for the case where clear occurs
+							// while trying to send a message.
+							if (token != null) {
+								synchronized (token) {
+									out.write(message);
+									try {
+										out.flush();
+									} catch (IOException ex) {
+										// The flush has been seen to fail on disconnect of a SSL socket
+										// as disconnect is in progress this should not be treated as an error
+										if (!(message instanceof MqttDisconnect)) {
+											throw ex;
+										}
+									}
+									clientState.notifySent(message);
+								}
+							}
+						}
+					} else { // null message
+						//@TRACE 803=get message returned null, stopping}
+						log.fine(CLASS_NAME,methodName,&quot;803&quot;);
+
+						running = false;
+					}
+				} catch (MqttException me) {
+					handleRunException(message, me);
+				} catch (Exception ex) {
+					handleRunException(message, ex);
+				}
+			} // end while
+		} finally {
+			running = false;
+			runningSemaphore.release();
+		}
+
+		//@TRACE 805=&lt;
+		log.fine(CLASS_NAME, methodName,&quot;805&quot;);
+
+	}
+</code></pre>
+<p>然后启动回调监听</p>
+<pre><code class="language-java">callback.start(&quot;MQTT Call: &quot;+getClient().getClientId(), executorService);
+</code></pre>
+<p>最后调用internalSend发送mqtt的CONNECT数据包</p>
+<pre><code class="language-java">internalSend(conPacket, conToken);
+</code></pre>
+<figure data-type="image" tabindex="16"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701264.png" alt="image-20220613154539660" loading="lazy"></figure>
+<p>org.eclipse.paho.client.mqttv3.internal.ClientState#send来进行发送</p>
+<p>单单连接broker的流程分析就十分繁琐，剩下的流程分析创建主题和发布主题内容是一个入口，订阅主题和接收主题内容也是一个入口，这里给出流程的入口，感兴趣可以一步一步调试分析</p>
+<ul>
+<li>创建主题&amp;发布主题内容
+<ul>
+<li>入口函数：org.eclipse.paho.client.mqttv3.MqttAsyncClient#publish()</li>
+</ul>
+</li>
+<li>订阅主题&amp;接收主题内容
+<ul>
+<li>入口函数：org.eclipse.paho.client.mqttv3.MqttAsyncClient#subscribe()</li>
+</ul>
+</li>
+</ul>
+<h2 id="mqtt安全">MQTT安全</h2>
+<p>直接通过实例来了解一下MQTT安全。由于MQTT运用也比较新，而java库Eclipse Paho Java Client相关漏洞就更少，对于他本身并没有什么漏洞，而是有两个MQTT信息接收之后存储输出不当的例子。</p>
+<p>分别是hivemq(CVE-2020-13821)和apache-artemis(CVE-2020-13932)</p>
+<p>这里使用mosquitto作为客户端去实现</p>
+<h3 id="hivemqcve-2020-13821">hivemq(CVE-2020-13821)</h3>
+<p>这里是利用clintid来进行攻击</p>
+<figure data-type="image" tabindex="17"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701265.png" alt="image-20220509155307161" loading="lazy"></figure>
+<p>连接broker</p>
+<figure data-type="image" tabindex="18"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701266.png" alt="image-20220509155402873" loading="lazy"></figure>
+<p>刷新snapshot，没有过滤直接打印了客户端的clintid导致xss</p>
+<figure data-type="image" tabindex="19"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701267.png" alt="image-20220509155428340" loading="lazy"></figure>
+<h3 id="apache-artemiscve-2020-13932">apache-artemis(CVE-2020-13932)</h3>
+<p>访问</p>
+<ul>
+<li>http://192.168.100.247:8161/</li>
+</ul>
+<figure data-type="image" tabindex="20"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701268.png" alt="image-20220509170516354" loading="lazy"></figure>
+<p>构造恶意的clientid或topics名字来攻击控制台</p>
+<pre><code>&lt;img src=x onerror=alert(1)&gt;
+</code></pre>
+<figure data-type="image" tabindex="21"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701269.png" alt="image-20220509172749949" loading="lazy"></figure>
+<p>这里通过主题名称来进行攻击，在Diagram模块将未过滤的主题名称直接打印导致xss</p>
+<figure data-type="image" tabindex="22"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202206131701270.png" alt="image-20220509172734304" loading="lazy"></figure>
+<p>上面两个例子虽然在MQTT协议中都不属于客户端而是Broker，但是也可以看到在MQTT中web漏洞的重点是信息的交互</p>
+<p>如果应用了客户端，用来连接broker以及接收和发送主题信息</p>
+<ul>
+<li>发送是自己控制所以不可控的就是接收的主题信息，就要做好过滤以及减少可能的危险操作</li>
+</ul>
+<p>如果是应用的broker，用来处理连接的信息以及客户端之间交互的主题信息</p>
+<ul>
+<li>那么连接信息和客户端之间交互的信息都是不可控的，更要做好充足的过滤以及防护手段</li>
+</ul>
+<p>在web应用层对于MQTT协议来说，更多的漏洞是在于你对信息的处理不当</p>
+<p>除了以上两个项目还有很多使用mqtt客户端或broker的物联网项目如</p>
+<ul>
+<li>wso2</li>
+<li>thingsboard</li>
+</ul>
+<p>也可以根据信息获取之后的利用来进行漏洞分析</p>
+<h2 id="参考">参考</h2>
+<ul>
+<li>mqttv3文档：https://www.eclipse.org/paho/files/javadoc/index.html</li>
+<li>mqttv3项目：https://github.com/eclipse/paho.mqtt.java</li>
+<li>apache-artemis漏洞环境：https://www.apache.org/dyn/closer.cgi?filename=activemq/activemq-artemis/2.22.0/apache-artemis-2.22.0-bin.tar.gz&amp;action=download</li>
+<li>hivemq漏洞环境：docker pull hivemq/hivemq4:4.3.2</li>
+</ul>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/shao-nian-hei-liao-te-si-la-cve-2022-23126-fen-xi-yu-fu-xian/" class="post-title gt-a-link">
+                    少年黑了特斯拉？CVE-2022-23126分析与复现
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/mqtt-xie-yi-eclipse-paho-java-client-yuan-ma-fen-xi-er/" class="leancloud_visitors" data-flag-title="MQTT协议-Eclipse Paho Java Client源码分析（二）">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

